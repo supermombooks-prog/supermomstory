@@ -969,14 +969,14 @@ create policy "public write notices" on notices for all using (true);</div>
           <!-- 드래그 편집 캔버스 -->
           <div style="position:relative;flex-shrink:0;">
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-align:center;">드래그로 위치 조정</div>
-            <div id="photo-crop-wrap" style="width:160px;height:160px;border-radius:50%;overflow:hidden;border:3px solid var(--accent);cursor:move;position:relative;background:var(--surface);">
-              <canvas id="photo-crop-canvas" width="160" height="160" style="display:block;"></canvas>
+            <div id="photo-crop-wrap" style="width:160px;height:210px;border-radius:8px;overflow:hidden;border:3px solid var(--accent);cursor:move;position:relative;background:var(--surface);">
+              <canvas id="photo-crop-canvas" width="160" height="210" style="display:block;"></canvas>
             </div>
           </div>
           <!-- 컨트롤 -->
           <div style="flex:1;min-width:160px;">
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">미리보기</div>
-            <canvas id="photo-preview-small" width="64" height="64" style="border-radius:50%;border:2px solid var(--border);display:block;margin-bottom:12px;"></canvas>
+            <canvas id="photo-preview-small" width="64" height="84" style="border-radius:6px;border:2px solid var(--border);display:block;margin-bottom:12px;"></canvas>
             <div style="font-size:12px;font-weight:600;margin-bottom:6px;">🔍 확대/축소</div>
             <input type="range" id="photo-zoom" min="0.5" max="3" step="0.01" value="1"
               style="width:100%;accent-color:var(--accent);" oninput="redrawCropCanvas()">
@@ -987,7 +987,7 @@ create policy "public write notices" on notices for all using (true);</div>
       </div>
       <!-- 결과 미리보기 (저장 후) -->
       <div id="t-photo-saved-preview" style="display:none;margin-top:8px;display:flex;align-items:center;gap:10px;">
-        <img id="t-photo-saved-img" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--accent3);">
+        <img id="t-photo-saved-img" style="width:48px;height:64px;border-radius:6px;object-fit:cover;object-position:top center;border:2px solid var(--accent3);">
         <span style="font-size:12px;color:var(--accent3);">✅ 저장됨</span>
       </div>
       <input type="hidden" id="t-photo">
@@ -1310,7 +1310,7 @@ function renderEnroll(){
     return `<div class="catalog-card ${isEnrolled?'enrolled':''} animate-in">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
-        <div style="flex:1;min-width:0;">
+        <div style="flex:1;min-width:0;padding:14px 12px 12px;">
           <div class="catalog-name">${cat.name}</div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
@@ -3268,11 +3268,11 @@ function renderAdminTeachers(){
     const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
     const myCats=S.catalog.filter(c=>c.teacher===t.name);
     const avatar=t.photo
-      ?`<img src="${t.photo}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid ${color};flex-shrink:0;" onerror="this.style.display='none'">`
-      :`<div style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--surface);border:3px solid ${color};flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
+      ?`<img src="${t.photo}" style="width:72px;align-self:stretch;object-fit:cover;object-position:top center;border-radius:var(--radius-sm) 0 0 var(--radius-sm);flex-shrink:0;border-right:3px solid ${color};" onerror="this.style.display='none'">`
+      :`<div style="width:72px;min-height:80px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface);border-right:3px solid ${color};border-radius:var(--radius-sm) 0 0 var(--radius-sm);flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
     const subjectRow=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:600;">${flagInline(s)} ${s}</span>`).join('<span style="color:var(--border);padding:0 2px;">·</span>');
     return `<div class="notice-card animate-in" style="border-top:3px solid ${color};">
-      <div style="display:flex;gap:14px;align-items:center;">
+      <div style="display:flex;align-items:stretch;">
         ${avatar}
         <div style="flex:1;min-width:0;">
           <div style="font-size:20px;font-weight:800;margin-bottom:5px;">${t.name}</div>
@@ -3328,13 +3328,10 @@ function redrawCropCanvas(){
   // 미리보기 소형 업데이트
   const small=document.getElementById('photo-preview-small');
   const sctx=small.getContext('2d');
-  sctx.clearRect(0,0,64,64);
-  sctx.save();
-  sctx.beginPath();sctx.arc(32,32,32,0,Math.PI*2);sctx.clip();
-  const sx=_cropX*(64/160), sy=_cropY*(64/160);
-  const sw=_cropImg.width*_cropZoom*(64/160), sh=_cropImg.height*_cropZoom*(64/160);
+  sctx.clearRect(0,0,64,84);
+  const sx=_cropX*(64/160), sy=_cropY*(84/210);
+  const sw=_cropImg.width*_cropZoom*(64/160), sh=_cropImg.height*_cropZoom*(84/210);
   sctx.drawImage(_cropImg, sx, sy, sw, sh);
-  sctx.restore();
 }
 
 function initCropDrag(){
@@ -3368,13 +3365,12 @@ function initCropDrag(){
 
 function applyCrop(){
   if(!_cropImg) return;
-  // 원형으로 잘라서 base64 저장
+  // 직사각형으로 잘라서 base64 저장 (3:4 비율)
   const out=document.createElement('canvas');
-  out.width=200; out.height=200;
+  out.width=300; out.height=400;
   const ctx=out.getContext('2d');
-  ctx.beginPath();ctx.arc(100,100,100,0,Math.PI*2);ctx.clip();
-  const scale=200/160;
-  ctx.drawImage(_cropImg, _cropX*scale, _cropY*scale, _cropImg.width*_cropZoom*scale, _cropImg.height*_cropZoom*scale);
+  const scaleX=300/160, scaleY=400/210;
+  ctx.drawImage(_cropImg, _cropX*scaleX, _cropY*scaleY, _cropImg.width*_cropZoom*scaleX, _cropImg.height*_cropZoom*scaleY);
   const b64=out.toDataURL('image/jpeg',0.85);
   document.getElementById('t-photo').value=b64;
   // 저장됨 미리보기

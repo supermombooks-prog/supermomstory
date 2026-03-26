@@ -3153,7 +3153,7 @@ function renderTeachers(){
       <div style="display:flex;align-items:center;gap:16px;padding:20px 20px 14px;">
         ${avatarEl}
         <div style="flex:1;min-width:0;">
-          <div style="font-size:19px;font-weight:800;margin-bottom:5px;">${t.name}</div>
+          <div style="font-size:24px;font-weight:900;margin-bottom:6px;">${t.name}</div>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
             ${(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'var(--accent)'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('')}
           </div>
@@ -3266,25 +3266,26 @@ function renderAdminTeachers(){
     return;
   }
   grid.innerHTML=S.teachers.map(t=>{
-    const color=SC[t.subject]||'var(--accent)';
+    const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
     const myCats=S.catalog.filter(c=>c.teacher===t.name);
     const avatar=t.photo
-      ?`<img src="${t.photo}" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid ${color};" onerror="this.style.display='none'">`
-      :`<div style="width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--surface);border:2px solid ${color};">${flagInline(t.subject)}</div>`;
+      ?`<img src="${t.photo}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid ${color};flex-shrink:0;" onerror="this.style.display='none'">`
+      :`<div style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;background:var(--surface);border:3px solid ${color};flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
+    const subjectRow=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:600;">${flagInline(s)} ${s}</span>`).join('<span style="color:var(--border);padding:0 2px;">·</span>');
     return `<div class="notice-card animate-in" style="border-top:3px solid ${color};">
-      <div style="display:flex;gap:12px;align-items:center;">
+      <div style="display:flex;gap:14px;align-items:center;">
         ${avatar}
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:700;">${t.name}</div>
-          <div style="font-size:12px;color:var(--text-muted);display:flex;flex-wrap:wrap;align-items:center;gap:4px;">${(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('<span style="opacity:0.4;">·</span>')} <span style="opacity:0.4;">·</span> 수업 ${myCats.length}개</div>
-          ${t.tagline?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${t.tagline}</div>`:''}
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:20px;font-weight:800;margin-bottom:5px;">${t.name}</div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:${t.tagline?'4px':'0'};">${subjectRow} <span style="font-size:11px;color:var(--text-muted);">· 수업 ${myCats.length}개</span></div>
+          ${t.tagline?`<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">${t.tagline}</div>`:''}
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
+        <div style="display:flex;gap:6px;flex-shrink:0;align-self:flex-start;">
           <button class="btn btn-edit btn-sm" onclick="openEditTeacher('${t.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">🗑️</button>
         </div>
       </div>
-      ${(t.career||t.bio)?`<div style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.6;border-top:1px solid var(--border);padding-top:8px;">📌 ${(t.career||t.bio||'').slice(0,100)}${(t.career||t.bio||'').length>100?'...':''}</div>`:''}
+      ${(t.career||t.bio)?`<div style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.6;border-top:1px solid var(--border);padding-top:8px;">📌 ${(t.career||t.bio||'').slice(0,120)}${(t.career||t.bio||'').length>120?'...':''}</div>`:''}
     </div>`;
   }).join('');
 }

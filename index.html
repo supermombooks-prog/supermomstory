@@ -3268,24 +3268,30 @@ function renderAdminTeachers(){
     const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
     const myCats=S.catalog.filter(c=>c.teacher===t.name);
     const avatar=t.photo
-      ?`<img src="${t.photo}" style="width:110px;height:110px;object-fit:cover;object-position:top center;border-radius:var(--radius-sm) 0 0 var(--radius-sm);flex-shrink:0;border-right:3px solid ${color};" onerror="this.style.display='none'">`
-      :`<div style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface);border-right:3px solid ${color};border-radius:var(--radius-sm) 0 0 var(--radius-sm);flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
-    const subjectRow=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:600;">${flagInline(s)} ${s}</span>`).join('<span style="color:var(--border);padding:0 2px;">·</span>');
-    return `<div class="notice-card animate-in" style="border-top:3px solid ${color};">
-      <div style="display:flex;align-items:stretch;gap:0;">
+      ?`<img src="${t.photo}" style="width:110px;height:110px;object-fit:cover;object-position:top center;border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;border-right:3px solid ${color};" onerror="this.style.display='none'">`
+      :`<div style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface);border-right:3px solid ${color};border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
+    const subjectRow=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:600;background:${SC[s]||'var(--accent)'}18;padding:2px 8px;border-radius:20px;">${flagInline(s)} ${s}</span>`).join('');
+    return `<div class="notice-card animate-in" style="border-top:3px solid ${color};padding:0;overflow:hidden;">
+      <!-- 상단: 사진 + 이름/언어/수정삭제 -->
+      <div style="display:flex;align-items:stretch;">
         ${avatar}
-        <div style="width:12px;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:20px;font-weight:800;margin-bottom:5px;">${t.name}</div>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:${t.tagline?'4px':'0'};">${subjectRow} <span style="font-size:11px;color:var(--text-muted);">· 수업 ${myCats.length}개</span></div>
-          ${t.tagline?`<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">${t.tagline}</div>`:''}
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;align-self:flex-start;">
-          <button class="btn btn-edit btn-sm" onclick="openEditTeacher('${t.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">🗑️</button>
+        <div style="flex:1;min-width:0;padding:12px 14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+            <div style="font-size:20px;font-weight:800;">${t.name}</div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn btn-edit btn-sm" onclick="openEditTeacher('${t.id}')">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">🗑️</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">${subjectRow}</div>
+          <div style="font-size:11px;color:var(--text-muted);">수업 ${myCats.length}개</div>
         </div>
       </div>
-      ${(t.career||t.bio)?`<div style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.6;border-top:1px solid var(--border);padding-top:8px;">📌 ${(t.career||t.bio||'').slice(0,120)}${(t.career||t.bio||'').length>120?'...':''}</div>`:''}
+      <!-- 하단: 한 줄 소개 + 경력 미리보기 -->
+      ${(t.tagline||t.career||t.bio)?`<div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);">
+        ${t.tagline?`<div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:${(t.career||t.bio)?'4px':'0'};">${t.tagline}</div>`:''}
+        ${(t.career||t.bio)?`<div style="font-size:11px;color:var(--text-muted);line-height:1.6;">📌 ${(t.career||t.bio||'').slice(0,100)}${(t.career||t.bio||'').length>100?'...':''}</div>`:''}
+      </div>`:''}
     </div>`;
   }).join('');
 }

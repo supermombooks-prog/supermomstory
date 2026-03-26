@@ -821,16 +821,10 @@ create policy "public write notices" on notices for all using (true);</div>
         <div class="icon-opt" data-subject="기타" onclick="selectCatIcon(this)" style="width:66px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:8px;" title="기타">🌐</div>
       </div>
     </div>
-    <div class="form-row"><label class="form-label">색상</label>
-      <div class="color-picker" id="cat-color-picker">
-        <div class="color-dot selected" data-color="#6c8aff" style="background:#6c8aff" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#ff7eb3" style="background:#ff7eb3" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#43e8c2" style="background:#43e8c2" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#ffb547" style="background:#ffb547" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#ff7043" style="background:#ff7043" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#ab47bc" style="background:#ab47bc" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#26a69a" style="background:#26a69a" onclick="selectCatColor(this)"></div>
-        <div class="color-dot" data-color="#ef5350" style="background:#ef5350" onclick="selectCatColor(this)"></div>
+    <div class="form-row"><label class="form-label">색상 <span style="font-size:11px;color:var(--text-muted);">언어별 자동 설정</span></label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="cat-color-preview" style="width:32px;height:32px;border-radius:8px;background:#6c8aff;border:2px solid rgba(255,255,255,0.2);flex-shrink:0;"></div>
+        <span id="cat-color-label" style="font-size:13px;color:var(--text-muted);">영어 — #6c8aff</span>
       </div>
     </div>
     <div class="form-row"><label class="form-label">수업 설명</label><input class="form-input" id="cat-desc" placeholder="수업에 대한 간단한 설명"></div>
@@ -1870,6 +1864,13 @@ function autoSelectIconBySubject(){
   document.querySelectorAll('#cat-icon-picker .icon-opt').forEach(d=>{
     d.classList.toggle('selected', d.dataset.subject===subj || (!SUBJECT_CODE[subj] && d.dataset.subject==='기타'));
   });
+  // 언어별 자동 색상 설정
+  const autoColor=SC[subj]||'#6c8aff';
+  S.catColor=autoColor;
+  const preview=document.getElementById('cat-color-preview');
+  const label=document.getElementById('cat-color-label');
+  if(preview) preview.style.background=autoColor;
+  if(label) label.textContent=`${subj||'기타'} — ${autoColor}`;
   // 과목 바뀌면 강사 목록도 갱신
   const curTeacher=document.getElementById('cat-teacher')?.value||'';
   populateTeacherSelect(curTeacher, subj);
@@ -1885,7 +1886,7 @@ function openAddCatalog(){
   populateTeacherSelect('','영어');
   initAllGroupRows(); // 10:00~22:50 전체 조 자동 생성
   document.querySelectorAll('#cat-days .day-toggle').forEach(d=>d.classList.remove('selected'));
-  document.querySelectorAll('#cat-color-picker .color-dot').forEach((d,i)=>d.classList.toggle('selected',i===0));
+  // 색상은 autoSelectIconBySubject()에서 자동 설정
   autoSelectIconBySubject();
   openModal('catalogModal');
 }
@@ -1906,7 +1907,7 @@ function editCatalog(id){
   document.getElementById('cat-capacity').value=cat.capacity||0;
   populateTeacherSelect(cat.teacher||'', cat.subject||'영어');
   document.querySelectorAll('#cat-days .day-toggle').forEach(d=>d.classList.toggle('selected',cat.days.includes(+d.dataset.day)));
-  document.querySelectorAll('#cat-color-picker .color-dot').forEach(d=>d.classList.toggle('selected',d.dataset.color===cat.color));
+  // 색상은 언어별 자동 설정 — autoSelectIconBySubject에서 처리
   // Populate group rows - 기존 조 시간으로 탭 자동 감지
   document.getElementById('cat-groups-list').innerHTML='';
   const groups=cat.groups||[];

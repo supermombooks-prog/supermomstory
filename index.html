@@ -2648,8 +2648,10 @@ function getGroupsFromForm(){
 // SUPABASE INTEGRATION
 // ═══════════════════════════════════════
 function getSupaConfig(){
-  const url=localStorage.getItem('supa_url')||'';
-  const key=localStorage.getItem('supa_key')||'';
+  const SUPA_URL='https://nlckttnjiueydhdgtbjv.supabase.co';
+  const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY2t0dG5qaXVleWRoZGd0Ymp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MTc2MzEsImV4cCI6MjA4OTk5MzYzMX0.zntufY80tbO9SlC-gkMCo-oigmZVjQPHohY23xIpT9c';
+  const url=localStorage.getItem('supa_url')||SUPA_URL;
+  const key=localStorage.getItem('supa_key')||SUPA_KEY;
   return {url,key,ready:!!(url&&key)};
 }
 

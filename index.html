@@ -798,13 +798,13 @@ create policy "public write notices" on notices for all using (true);</div>
     </div>
     <div class="form-row"><label class="form-label">수업 요일 *</label>
       <div class="days-selector" id="cat-days">
-        <div class="day-toggle" data-day="0" onclick="this.classList.toggle('selected')">월</div>
-        <div class="day-toggle" data-day="1" onclick="this.classList.toggle('selected')">화</div>
-        <div class="day-toggle" data-day="2" onclick="this.classList.toggle('selected')">수</div>
-        <div class="day-toggle" data-day="3" onclick="this.classList.toggle('selected')">목</div>
-        <div class="day-toggle" data-day="4" onclick="this.classList.toggle('selected')">금</div>
-        <div class="day-toggle" data-day="5" onclick="this.classList.toggle('selected')">토</div>
-        <div class="day-toggle" data-day="6" onclick="this.classList.toggle('selected')">일</div>
+        <div class="day-toggle" data-day="0" onclick="this.classList.toggle('selected');autoCalcSessions()">월</div>
+        <div class="day-toggle" data-day="1" onclick="this.classList.toggle('selected');autoCalcSessions()">화</div>
+        <div class="day-toggle" data-day="2" onclick="this.classList.toggle('selected');autoCalcSessions()">수</div>
+        <div class="day-toggle" data-day="3" onclick="this.classList.toggle('selected');autoCalcSessions()">목</div>
+        <div class="day-toggle" data-day="4" onclick="this.classList.toggle('selected');autoCalcSessions()">금</div>
+        <div class="day-toggle" data-day="5" onclick="this.classList.toggle('selected');autoCalcSessions()">토</div>
+        <div class="day-toggle" data-day="6" onclick="this.classList.toggle('selected');autoCalcSessions()">일</div>
       </div>
     </div>
     <div class="form-row">
@@ -820,11 +820,11 @@ create policy "public write notices" on notices for all using (true);</div>
     <div class="form-grid">
       <div class="form-row">
         <label class="form-label">📆 수업 시작일</label>
-        <input class="form-input" id="cat-date-start" type="date">
+        <input class="form-input" id="cat-date-start" type="date" oninput="autoCalcSessions()">
       </div>
       <div class="form-row">
         <label class="form-label">📆 수업 종료일</label>
-        <input class="form-input" id="cat-date-end" type="date">
+        <input class="form-input" id="cat-date-end" type="date" oninput="autoCalcSessions()">
       </div>
     </div>
     <div class="form-row"><label class="form-label">줌 링크 (수업 입장용)</label><input class="form-input" id="cat-zoom" placeholder="https://zoom.us/j/..."></div>
@@ -860,8 +860,14 @@ create policy "public write notices" on notices for all using (true);</div>
       </div>
     </div>
     <div class="form-row">
-      <label class="form-label">🔢 총 수업 회차 <span style="font-size:11px;color:var(--text-muted);">(예: 12회 → 시작일 기준 자동 계산)</span></label>
-      <input class="form-input" id="cat-total-sessions" type="number" min="0" placeholder="0 = 무제한" value="0">
+      <label class="form-label">🔢 총 수업 회차
+        <span id="session-auto-badge" style="display:none;font-size:11px;font-weight:600;color:var(--accent3);background:rgba(67,232,194,0.12);padding:2px 8px;border-radius:20px;margin-left:6px;">자동 계산됨</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input class="form-input" id="cat-total-sessions" type="number" min="0" placeholder="0 = 무제한" value="0" style="flex:1;" oninput="document.getElementById('session-auto-badge').style.display='none'">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="autoCalcSessions(true)" style="white-space:nowrap;flex-shrink:0;">🔄 자동 계산</button>
+      </div>
+      <div id="session-calc-preview" style="display:none;font-size:12px;color:var(--text-muted);margin-top:5px;"></div>
     </div>
     <div class="form-row"><label class="form-label">수업 설명</label><input class="form-input" id="cat-desc" placeholder="수업에 대한 간단한 설명"></div>
     <div class="form-actions">
@@ -930,6 +936,18 @@ create policy "public write notices" on notices for all using (true);</div>
 
 
 
+
+<!-- GROUP PICK MODAL -->
+<div class="modal-overlay" id="groupPickModal">
+  <div class="modal" style="width:380px;">
+    <div class="modal-title" id="groupPickTitle">조 선택</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">수강할 조를 선택하세요. 여러 조 동시 선택도 가능합니다.</div>
+    <div id="groupPickList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="closeModal('groupPickModal');renderEnroll();">완료</button>
+    </div>
+  </div>
+</div>
 
 <!-- HOMEWORK MODAL -->
 <div class="modal-overlay" id="homeworkModal">
@@ -1337,6 +1355,8 @@ function renderEnroll(){
     const isEnrolled=enrollsForCat.length>0;
     const daysStr=cat.days.map(d=>DN[d]).join('·');
     const period=formatDateRange(cat.dateStart,cat.dateEnd);
+    const profId=S.currentProfileId||'default';
+    const groups=cat.groups||[];
 
     const detailBtn=cat.detailUrl
       ?`<a href="${cat.detailUrl}" target="_blank" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">🔍 상세보기</a>`
@@ -1346,6 +1366,15 @@ function renderEnroll(){
       ?`<a href="${cat.enrollUrl}" target="_blank" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">📝 접수하기</a>`
       :'';
 
+    // 체크박스 버튼
+    const checkBtn=`<button onclick="event.stopPropagation();toggleEnrollCard('${cat.id}')"
+      title="${isEnrolled?'내 수업 목록에서 제거':'내 수업 목록에 추가'}"
+      style="width:36px;height:36px;border-radius:50%;border:2px solid ${isEnrolled?'var(--accent3)':'var(--border)'};
+      background:${isEnrolled?'rgba(67,232,194,0.15)':'transparent'};
+      color:${isEnrolled?'var(--accent3)':'var(--text-muted)'};
+      font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;">${isEnrolled?'✅':'○'}</button>`;
+
     return `<div class="catalog-card ${isEnrolled?'enrolled':''} animate-in">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
@@ -1353,13 +1382,20 @@ function renderEnroll(){
           <div class="catalog-name">${cat.name}</div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
-        ${isEnrolled?`<div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--accent3);background:rgba(67,232,194,0.1);padding:4px 10px;border-radius:20px;white-space:nowrap;">✅ 수강중</div>`:''}
+        ${checkBtn}
       </div>
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${period?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${period}</span>`:''}
       </div>
+      ${isEnrolled?`<div style="display:flex;flex-wrap:wrap;gap:5px;">
+        ${groups.filter(g=>enrollsForCat.find(e=>e.groupId===g.id)).map(g=>`
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--accent3);background:rgba(67,232,194,0.1);padding:3px 10px;border-radius:20px;border:1px solid rgba(67,232,194,0.3);">
+            ✅ ${g.label} ${formatAmPmRange(g.start,g.end)}
+            <button onclick="event.stopPropagation();quickCancelEnrollGroup('${cat.id}','${g.id}')" style="background:none;border:none;cursor:pointer;color:var(--accent3);font-size:13px;padding:0;margin-left:1px;line-height:1;">✕</button>
+          </span>`).join('')}
+      </div>`:''}
       ${cat.desc?`<div class="catalog-desc">${cat.desc}</div>`:''}
       <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border);margin-top:auto;">
         ${enrollBtn}
@@ -1958,6 +1994,47 @@ function populateTeacherSelect(selectedName, subject){
   }
   sel.innerHTML=opts;
 }
+
+function autoCalcSessions(force){
+  const startVal=document.getElementById('cat-date-start')?.value;
+  const endVal=document.getElementById('cat-date-end')?.value;
+  const days=[...document.querySelectorAll('#cat-days .day-toggle.selected')].map(d=>+d.dataset.day);
+  const preview=document.getElementById('session-calc-preview');
+  const badge=document.getElementById('session-auto-badge');
+  if(!preview||!badge) return;
+
+  if(!startVal||!endVal||!days.length){
+    preview.style.display='none';
+    return;
+  }
+
+  // 시작일~종료일 사이 선택 요일 수 계산
+  const start=new Date(startVal);
+  const end=new Date(endVal);
+  if(end<start){ preview.style.display='none'; return; }
+
+  let count=0;
+  const cur=new Date(start);
+  while(cur<=end){
+    const dow=(cur.getDay()+6)%7; // 0=월
+    if(days.includes(dow)) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+
+  // 미리보기 표시
+  const startFmt=startVal.replace(/-/g,'.').slice(2);
+  const endFmt=endVal.replace(/-/g,'.').slice(2);
+  preview.style.display='block';
+  preview.innerHTML=`📅 ${startFmt} ~ ${endFmt} · ${days.length}요일 기준 → <b style="color:var(--accent3);">${count}회</b> 수업`;
+
+  // 자동으로 값 채우기 (force=true이거나 현재 값이 0일 때)
+  const cur2=parseInt(document.getElementById('cat-total-sessions').value)||0;
+  if(force||cur2===0){
+    document.getElementById('cat-total-sessions').value=count;
+    badge.style.display='inline';
+  }
+}
+
 
 function autoSelectIconBySubject(){
   const subj=document.getElementById('cat-subject')?.value;
@@ -2625,6 +2702,67 @@ function getNoticeForCat(catId){ return S.notices[catId]||''; }
 // ═══════════════════════════════════════
 // GROUP-BASED ENROLLMENT FUNCTIONS
 // ═══════════════════════════════════════
+function toggleEnrollCard(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  const profId=S.currentProfileId||'default';
+  const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
+  const groups=cat.groups||[];
+
+  if(enrolled.length>0){
+    // 이미 수강중 → 전체 취소 확인
+    if(!confirm(`"${cat.name}" 수강을 취소하시겠습니까?`)) return;
+    S.enrollments=S.enrollments.filter(e=>!(e.catalogId===catId&&(e.profileId||'default')===profId));
+    save(); showToast('☑️ 수강이 취소되었습니다');
+    renderEnroll(); renderSidebarKids(); return;
+  }
+
+  if(groups.length===1){
+    // 조가 1개면 바로 추가
+    quickEnrollGroup(catId, groups[0].id);
+    return;
+  }
+
+  // 조가 여러 개 → 모달로 선택
+  openGroupPickModal(catId);
+}
+
+function openGroupPickModal(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  const profId=S.currentProfileId||'default';
+  const groups=cat.groups||[];
+  const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
+
+  document.getElementById('groupPickTitle').textContent=`📚 ${cat.name} — 조 선택`;
+  document.getElementById('groupPickList').innerHTML=groups.map(g=>{
+    const isIn=enrolled.find(e=>e.groupId===g.id);
+    return `<button onclick="pickGroup('${catId}','${g.id}')"
+      style="width:100%;padding:14px 16px;border-radius:var(--radius-sm);border:2px solid ${isIn?'var(--accent3)':'var(--border)'};
+      background:${isIn?'rgba(67,232,194,0.1)':'var(--surface2)'};
+      color:${isIn?'var(--accent3)':'var(--text)'};
+      text-align:left;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.15s;
+      display:flex;align-items:center;justify-content:space-between;">
+      <span>${g.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted);">${formatAmPmRange(g.start,g.end)}</span></span>
+      <span>${isIn?'✅ 수강중':'+ 담기'}</span>
+    </button>`;
+  }).join('');
+  openModal('groupPickModal');
+}
+
+function pickGroup(catId, groupId){
+  const profId=S.currentProfileId||'default';
+  const already=S.enrollments.find(e=>e.catalogId===catId&&e.groupId===groupId&&(e.profileId||'default')===profId);
+  if(already){
+    S.enrollments=S.enrollments.filter(e=>e.id!==already.id);
+    save(); showToast('☑️ 수강이 취소되었습니다');
+  } else {
+    quickEnrollGroup(catId, groupId);
+  }
+  openGroupPickModal(catId); // 모달 새로고침
+  renderEnroll();
+}
+
 function quickEnrollGroup(catId, groupId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;

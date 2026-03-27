@@ -655,9 +655,10 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
   <div class="page-view" id="page-admin-notices">
     <div class="admin-bar">🔑 관리자 모드</div><div style="height:22px;"></div>
     <div class="page-header">
-      <div><div class="page-title" style="color:var(--admin);">수업별 공지사항 📢</div><div class="page-sub">수업별 공지사항을 등록하면 수강생 수업 목록에 표시됩니다</div></div>
+      <div><div class="page-title" style="color:var(--admin);">수업별 공지사항 📢</div><div class="page-sub">수업별 공지사항과 휴강 날짜를 관리하세요</div></div>
     </div>
-    <div id="adminNoticesGrid" style="display:flex;flex-direction:column;gap:16px;"></div>
+    <div id="adminNoticesFilterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;"></div>
+    <div id="adminNoticesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
   </div>
 
   <!-- ADMIN ROSTER -->
@@ -1022,6 +1023,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <input type="hidden" id="t-photo">
     </div>
     <div class="form-row"><label class="form-label">SNS / 링크 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label><input class="form-input" id="t-link" placeholder="https://..."></div>
+    <div class="form-row"><label class="form-label">🎬 유튜브 소개 영상 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label><input class="form-input" id="t-youtube" placeholder="https://youtu.be/... 또는 https://youtube.com/watch?v=..."></div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('teacherModal')">취소</button>
       <button class="btn btn-admin" onclick="saveTeacher()">저장</button>
@@ -2457,45 +2459,82 @@ function downloadPDF(){
 // ═══════════════════════════════════════
 // FEATURE 2: NOTICES (Admin)
 // ═══════════════════════════════════════
+let _noticesFilter='전체';
 function renderAdminNotices(){
+  const bar=document.getElementById('adminNoticesFilterBar');
   const el=document.getElementById('adminNoticesGrid');
   if(!S.catalog.length){
-    el.innerHTML=`<div class="empty-state"><div class="empty-icon">📢</div><div class="empty-text">등록된 수업이 없습니다</div></div>`;
+    if(bar) bar.innerHTML='';
+    el.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📢</div><div class="empty-text">등록된 수업이 없습니다</div></div>`;
     return;
   }
-  el.innerHTML=S.catalog.map(cat=>{
+
+  // 필터 탭
+  const subjects=['전체',...new Set(S.catalog.map(c=>c.subject).filter(Boolean))];
+  if(bar){
+    bar.innerHTML=subjects.map(s=>{
+      const isActive=_noticesFilter===s;
+      const color=SC[s];
+      const flag=s!=='전체'?`<span style="display:inline-flex;align-items:center;margin-right:4px;">${flagInline(s)}</span>`:'';
+      const cnt=s==='전체'?S.catalog.length:S.catalog.filter(c=>c.subject===s).length;
+      return `<div class="filter-chip ${isActive?'active':''}"
+        style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
+        onclick="_noticesFilter='${s}';renderAdminNotices()">
+        ${flag}${s} <span style="font-size:10px;opacity:0.7;margin-left:3px;">${cnt}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const cats=_noticesFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_noticesFilter);
+  const today=new Date().toISOString().slice(0,10);
+
+  el.innerHTML=cats.map(cat=>{
     const notice=S.notices[cat.id]||'';
     const vacList=(S.vacations[cat.id]||[]).sort();
-    const today=new Date().toISOString().slice(0,10);
     const upcoming=vacList.filter(d=>d>=today);
     const past=vacList.filter(d=>d<today);
-    return `<div class="notice-card animate-in">
-      <div class="notice-card-head">
-        <div style="width:54px;height:36px;border-radius:7px;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,36)}</div>
-        <div>
-          <div class="notice-class-name">${cat.name}</div>
-          <div style="font-size:11px;color:var(--text-muted);">${cat.subject} · ${cat.days.map(d=>DN[d]).join('·')}요일 · ${cat.teacher||'선생님 미정'}</div>
+    const hasNotice=!!notice;
+    const hasVac=upcoming.length>0;
+
+    return `<div class="admin-cat-card animate-in" style="--card-color:${cat.color};">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${cat.color};border-radius:var(--radius) var(--radius) 0 0;"></div>
+      <!-- 카드 헤더 -->
+      <div class="admin-cat-top">
+        <div class="admin-cat-icon" style="background:${cat.color}22;overflow:hidden;padding:0;">${flagImg(cat.subject,46)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="admin-cat-name">${cat.name}</div>
+          <div class="admin-cat-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">📅 ${cat.days.map(d=>DN[d]).join('·')}요일${formatDateRange(cat.dateStart,cat.dateEnd)?' · '+formatDateRange(cat.dateStart,cat.dateEnd):''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          ${hasNotice?`<span style="font-size:10px;background:rgba(255,126,179,0.15);color:var(--admin);padding:2px 8px;border-radius:20px;font-weight:700;">📢 공지중</span>`:''}
+          ${hasVac?`<span style="font-size:10px;background:rgba(255,92,92,0.12);color:var(--danger);padding:2px 8px;border-radius:20px;font-weight:700;">🚫 휴강 ${upcoming.length}개</span>`:''}
         </div>
       </div>
-      <textarea class="notice-textarea" id="notice-${cat.id}" placeholder="수업 공지사항을 입력하세요...">${notice}</textarea>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 공지 저장</button>
-        ${notice?`<button class="btn btn-danger btn-sm" onclick="clearNotice('${cat.id}')">🗑️ 삭제</button>`:''}
+
+      <!-- 공지사항 입력 -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--admin);margin-bottom:6px;">📢 공지사항</div>
+        <textarea class="notice-textarea" id="notice-${cat.id}" placeholder="수업 공지사항을 입력하세요...">${notice}</textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
+          ${hasNotice?`<button class="btn btn-danger btn-sm" onclick="clearNotice('${cat.id}')">🗑️ 삭제</button>`:''}
+          <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 저장</button>
+        </div>
       </div>
-      ${notice?`<div style="font-size:11px;color:var(--text-muted);">📢 현재 공지: <span style="color:var(--accent3);">수업 카드에 표시 중</span></div>`:''}
-      <!-- 휴강 관리 -->
-      <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
-        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--admin);">🚫 휴강 날짜 관리</div>
+
+      <!-- 휴강 날짜 -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:8px;">🚫 휴강 날짜 관리</div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:140px;font-size:12px;padding:6px 10px;" min="${today}">
-          <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 휴강 추가</button>
+          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;" min="${today}">
+          <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
         </div>
-        ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-          ${upcoming.map(d=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,92,92,0.12);color:var(--danger);border-radius:20px;padding:3px 10px;font-size:12px;border:1px solid rgba(255,92,92,0.3);">
+        ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">
+          ${upcoming.map(d=>`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,92,92,0.1);color:var(--danger);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid rgba(255,92,92,0.25);">
             🚫 ${d} <button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
           </span>`).join('')}
         </div>`:`<div style="font-size:11px;color:var(--text-muted);">예정된 휴강 없음</div>`}
-        ${past.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">지난 휴강: ${past.map(d=>`<span style="opacity:0.5;">${d}</span>`).join(', ')}</div>`:''}
+        ${past.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;opacity:0.6;">지난 휴강: ${past.join(', ')}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3366,6 +3405,23 @@ function selectTeacher(id){
   }
 }
 
+function getYoutubeEmbedUrl(url){
+  if(!url) return '';
+  // youtu.be/VIDEO_ID
+  let m=url.match(/youtu\.be\/([^?&\s]+)/);
+  if(m) return `https://www.youtube.com/embed/${m[1]}`;
+  // youtube.com/watch?v=VIDEO_ID
+  m=url.match(/[?&]v=([^&\s]+)/);
+  if(m) return `https://www.youtube.com/embed/${m[1]}`;
+  // youtube.com/embed/VIDEO_ID (already embed)
+  m=url.match(/youtube\.com\/embed\/([^?&\s]+)/);
+  if(m) return `https://www.youtube.com/embed/${m[1]}`;
+  // youtube.com/shorts/VIDEO_ID
+  m=url.match(/youtube\.com\/shorts\/([^?&\s]+)/);
+  if(m) return `https://www.youtube.com/embed/${m[1]}`;
+  return url;
+}
+
 function showTeacherDetail(id){
   const t=S.teachers.find(x=>x.id===id);
   const detail=document.getElementById('teacherDetailPanel');
@@ -3434,7 +3490,21 @@ function showTeacherDetail(id){
           </div>
           <div style="font-size:13px;line-height:1.9;color:var(--text);white-space:pre-wrap;">${t.style}</div>
         </div>`:''}
-      </div>`:''}      <!-- 수업 목록 -->
+      </div>`:''}
+      <!-- 유튜브 영상 -->
+      ${t.youtube?`<div style="padding:20px 28px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+          <span style="font-size:16px;">🎬</span>
+          <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">소개 영상</span>
+        </div>
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:var(--radius-sm);">
+          <iframe src="${getYoutubeEmbedUrl(t.youtube)}" title="${t.name} 소개 영상"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:var(--radius-sm);"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>`:''}
+      <!-- 수업 목록 -->
       <div style="padding:20px 28px;">
         <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;">진행 중인 수업 <span style="color:${color};">${myCats.length}</span></div>
         <div style="display:flex;flex-direction:column;gap:8px;">${classCards}</div>
@@ -3613,7 +3683,7 @@ function switchBioTab(tab){
 function openAddTeacher(){
   _editingTeacherId=null;
   document.getElementById('teacherModalTitle').textContent='👩‍🏫 강사 등록';
-  ['t-name','t-tagline','t-career','t-specialty','t-style','t-link'].forEach(id=>{
+  ['t-name','t-tagline','t-career','t-specialty','t-style','t-link','t-youtube'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   setSelectedSubjects(['영어']);
@@ -3642,6 +3712,7 @@ function openEditTeacher(id){
   switchBioTab('career');
   document.getElementById('t-photo').value=t.photo||'';
   document.getElementById('t-link').value=t.link||'';
+  document.getElementById('t-youtube').value=t.youtube||'';
   // 사진 미리보기 (기존 저장된 사진)
   document.getElementById('t-photo-editor').style.display='none';
   _cropImg=null;
@@ -3674,6 +3745,7 @@ function saveTeacher(){
     style:document.getElementById('t-style')?.value.trim()||'',
     photo:document.getElementById('t-photo').value.trim(),
     link:document.getElementById('t-link').value.trim(),
+    youtube:document.getElementById('t-youtube').value.trim(),
   };
   if(_editingTeacherId){
     const i=S.teachers.findIndex(t=>t.id===_editingTeacherId);

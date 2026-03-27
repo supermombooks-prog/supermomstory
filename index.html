@@ -3158,7 +3158,7 @@ function renderTeachers(){
       const isActive=_teacherFilter===s;
       const color=SC[s];
       const flag=s!=='전체'?`<span style="display:inline-flex;align-items:center;margin-right:4px;">${flagInline(s)}</span>`:'';
-      const cnt=s==='전체'?S.teachers.length:S.teachers.filter(t=>t.subject===s).length;
+      const cnt=s==='전체'?S.teachers.length:S.teachers.filter(t=>(t.subjects||[t.subject]).includes(s)).length;
       return `<div class="filter-chip ${isActive?'active':''}"
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
         onclick="_teacherFilter='${s}';_selectedTeacherId=null;renderTeachers()">

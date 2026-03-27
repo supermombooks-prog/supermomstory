@@ -1413,6 +1413,32 @@ function quickDeleteEnroll(catId){
 // ═══ MONTHLY CALENDAR ═══
 let selectedDate = null;
 
+// 한국 공휴일 데이터 (고정 공휴일 + 설/추석은 연도별)
+function getKoreanHolidays(year){
+  const fixed={
+    '01-01':'신정',
+    '03-01':'삼일절',
+    '05-05':'어린이날',
+    '06-06':'현충일',
+    '08-15':'광복절',
+    '10-03':'개천절',
+    '10-09':'한글날',
+    '12-25':'크리스마스',
+  };
+  // 음력 공휴일 (양력 환산 - 주요 연도)
+  const lunar={
+    2024:{'02-09':'설날전날','02-10':'설날','02-11':'설날다음날','05-15':'부처님오신날','09-16':'추석전날','09-17':'추석','09-18':'추석다음날'},
+    2025:{'01-28':'설날전날','01-29':'설날','01-30':'설날다음날','05-05':'부처님오신날','10-05':'추석전날','10-06':'추석','10-07':'추석다음날'},
+    2026:{'02-16':'설날전날','02-17':'설날','02-18':'설날다음날','05-24':'부처님오신날','09-24':'추석전날','09-25':'추석','09-26':'추석다음날'},
+    2027:{'02-05':'설날전날','02-06':'설날','02-07':'설날다음날','05-13':'부처님오신날','09-14':'추석전날','09-15':'추석','09-16':'추석다음날'},
+  };
+  const result={};
+  Object.entries(fixed).forEach(([md,name])=>result[`${year}-${md}`]=name);
+  const ly=lunar[year]||{};
+  Object.entries(ly).forEach(([md,name])=>result[`${year}-${md}`]=name);
+  return result;
+}
+
 function renderMonthlyCal() {
   const now = new Date();
   const year = now.getFullYear() + Math.floor((now.getMonth() + S.monthOffset) / 12);
@@ -1422,6 +1448,8 @@ function renderMonthlyCal() {
   const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
   document.getElementById('monthLabel').textContent = `${year}년 ${MONTH_NAMES[month]}`;
+
+  const holidays = getKoreanHolidays(year);
 
   // Build grid: start from Sunday of the first week
   const startDow = firstDay.getDay(); // 0=Sun
@@ -1448,17 +1476,25 @@ function renderMonthlyCal() {
     const shown = classes.slice(0, MAX_SHOW);
     const extra = classes.length - MAX_SHOW;
 
-    const pillsHtml = shown.map(x =>
-      `<div class="mcal-pill" style="background:${x.cat.color}22;color:${x.cat.color};"
+    const pillsHtml = shown.map(x => {
+      const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const isVac=(S.vacations[x.cat.id]||[]).includes(dateStr);
+      return `<div class="mcal-pill" style="background:${isVac?'rgba(255,92,92,0.12)':x.cat.color+'22'};color:${isVac?'var(--danger)':x.cat.color};${isVac?'text-decoration:line-through;opacity:0.8;':''}"
         onclick="event.stopPropagation();selectDay(${year},${month},${dayNum})"
-        title="${x.cat.name} ${formatKoreanTime(x.cat.start)}">
-        ${flagInline(x.cat.subject)} ${x.cat.name}
-      </div>`
-    ).join('');
+        title="${x.cat.name} ${formatKoreanTime(x.cat.start)}${isVac?' 🚫 휴강':''}">
+        ${isVac?'🚫 ':''}${flagInline(x.cat.subject)} ${x.cat.name}
+      </div>`;
+    }).join('');
+
+    const dateStr2=isOther?'':`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+    const holidayName=dateStr2?holidays[dateStr2]:'';
+    const isHoliday=!!holidayName;
+    const isRedDay=isWeekend||isHoliday;
 
     cells += `<div class="mcal-cell ${isToday?'today':''} ${isSelected?'selected':''} ${isOther?'other-month':''}"
       onclick="${isOther?'':'selectDay('+year+','+month+','+dayNum+')'}" >
-      <div class="mcal-date ${isWeekend&&!isToday?'weekend':''}">${isOther?date.getDate():dayNum}</div>
+      <div class="mcal-date ${isRedDay&&!isToday?'weekend':''}">${isOther?date.getDate():dayNum}</div>
+      ${holidayName?`<div style="font-size:8px;color:#ef4444;font-weight:700;line-height:1.2;padding:0 1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${holidayName}</div>`:''}
       ${pillsHtml}
       ${extra > 0 ? `<div class="mcal-more">+${extra}개 더</div>` : ''}
     </div>`;
@@ -1496,22 +1532,29 @@ function renderDayDetail(date) {
   const isToday = date.toDateString() === now.toDateString();
   const nowMin = isToday ? now.getHours()*60 + now.getMinutes() : -1;
 
+  const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+
   body.innerHTML = classes.map(x => {
     const sm = toMin(x.cat.start), em = toMin(x.cat.end);
     const isDone = isToday && nowMin > em;
     const isNow  = isToday && nowMin >= sm && nowMin <= em;
     const zoomLink = x.enroll.myZoom || x.cat.zoom;
-    return `<div class="detail-class-item" style="opacity:${isDone?0.45:1};${isNow?'border-color:var(--accent3);background:rgba(67,232,194,0.05);':''}">
+    const isVac = (S.vacations[x.cat.id]||[]).includes(dateStr);
+    return `<div class="detail-class-item" style="opacity:${isDone||isVac?0.55:1};${isNow&&!isVac?'border-color:var(--accent3);background:rgba(67,232,194,0.05);':''}${isVac?'border-color:var(--danger);background:rgba(255,92,92,0.05);':''}">
       <div class="detail-class-dot" style="background:${x.cat.color}22;overflow:hidden;padding:0;width:51px;height:34px;border-radius:6px;">${flagImg(x.cat.subject,34)}</div>
       <div class="detail-class-info">
-        <div class="detail-class-name">${x.cat.name}${isNow?' <span style="font-size:9px;color:var(--accent3);font-weight:900;letter-spacing:1px;">LIVE</span>':''}</div>
+        <div class="detail-class-name" style="${isVac?'text-decoration:line-through;color:var(--text-muted);':''}">
+          ${x.cat.name}
+          ${isNow&&!isVac?' <span style="font-size:9px;color:var(--accent3);font-weight:900;letter-spacing:1px;">LIVE</span>':''}
+          ${isVac?' <span style="font-size:9px;color:var(--danger);font-weight:700;">🚫 휴강</span>':''}
+        </div>
         <div class="detail-class-meta">
           ⏰ ${formatKoreanRange(x.cat.start,x.cat.end)}
           ${x.cat.teacher ? `&nbsp;👩‍🏫 ${x.cat.teacher}` : ''}
           &nbsp;<span style="color:${x.cat.color};">● ${x.cat.subject}</span>
         </div>
       </div>
-      ${zoomLink ? `<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-xs">입장</a>` : ''}
+      ${zoomLink&&!isVac ? `<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-xs">입장</a>` : ''}
     </div>`;
   }).join('');
 }

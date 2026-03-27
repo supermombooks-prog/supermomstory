@@ -12,8 +12,14 @@
   --accent3:#43e8c2;--accent4:#ffb547;--danger:#ff5c5c;--admin:#ff7eb3;
   --radius:16px;--radius-sm:10px;
 }
+/* 라이트 모드 */
+[data-theme="light"]{
+  --bg:#f4f6fb;--surface:#ffffff;--surface2:#f0f2f8;--border:rgba(0,0,0,0.09);
+  --text:#1a1d2e;--text-muted:#6b7280;--accent:#5b7af0;--accent2:#e85d9a;
+  --accent3:#10b981;--accent4:#f59e0b;--danger:#ef4444;--admin:#e85d9a;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background 0.3s,color 0.3s;}
 body::before{content:'';position:fixed;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(108,138,255,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
 body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(255,126,179,0.05) 0%,transparent 70%);pointer-events:none;z-index:0;}
 
@@ -459,7 +465,11 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
   </div>
 
   <div id="profileBar" class="profile-bar"></div>
-</div>
+  <div style="padding:12px 22px;border-top:1px solid var(--border);margin-top:8px;">
+    <button onclick="toggleTheme()" id="themeBtn" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-muted);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+      <span id="themeIcon">☀️</span><span id="themeLabel">라이트 모드</span>
+    </button>
+  </div>
 
 <!-- MAIN -->
 <div class="main">
@@ -3566,6 +3576,30 @@ navigateTo=function(page){
   closeMobileNav();
 };
 cleanOldHomework();
+
+// ── 테마 전환 ──
+function toggleTheme(){
+  const isLight=document.documentElement.getAttribute('data-theme')==='light';
+  const newTheme=isLight?'dark':'light';
+  if(newTheme==='light') document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('zc4_theme',newTheme);
+  updateThemeBtn(newTheme);
+}
+function updateThemeBtn(theme){
+  const icon=document.getElementById('themeIcon');
+  const label=document.getElementById('themeLabel');
+  if(!icon||!label) return;
+  if(theme==='light'){icon.textContent='🌙';label.textContent='다크 모드';}
+  else {icon.textContent='☀️';label.textContent='라이트 모드';}
+}
+// 저장된 테마 복원
+(()=>{
+  const saved=localStorage.getItem('zc4_theme')||'dark';
+  if(saved==='light') document.documentElement.setAttribute('data-theme','light');
+  setTimeout(()=>updateThemeBtn(saved),0);
+})();
+
 renderProfileBar();
 renderDashboard();
 setInterval(()=>{

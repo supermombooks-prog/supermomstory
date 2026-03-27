@@ -812,6 +812,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <div style="display:flex;gap:6px;margin-bottom:10px;">
         <button type="button" id="tab-20min" class="btn btn-primary btn-sm" onclick="switchGroupTab('20min')" style="font-size:12px;">⏱ 20분 수업</button>
         <button type="button" id="tab-1hour" class="btn btn-ghost btn-sm" onclick="switchGroupTab('1hour')" style="font-size:12px;">🕐 1시간 수업</button>
+        <button type="button" id="tab-90min" class="btn btn-ghost btn-sm" onclick="switchGroupTab('90min')" style="font-size:12px;">⏰ 90분 수업</button>
         <button type="button" id="tab-custom" class="btn btn-ghost btn-sm" onclick="switchGroupTab('custom')" style="font-size:12px;">✏️ 커스텀</button>
       </div>
       <div id="cat-groups-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
@@ -936,6 +937,18 @@ create policy "public write notices" on notices for all using (true);</div>
 
 
 
+
+<!-- CHANGE GROUP MODAL -->
+<div class="modal-overlay" id="changeGroupModal">
+  <div class="modal" style="width:360px;">
+    <div class="modal-title" id="changeGroupTitle">🔄 조 변경</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">변경할 조를 선택하세요.</div>
+    <div id="changeGroupList" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeModal('changeGroupModal')">취소</button>
+    </div>
+  </div>
+</div>
 
 <!-- GROUP PICK MODAL -->
 <div class="modal-overlay" id="groupPickModal">
@@ -1690,9 +1703,10 @@ function renderMyClasses(){
       <td>${cat.days.map(d=>DN[d]).join('·')}요일</td>
       <td>${formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);font-size:11px;">미정</span>'}</td>
       <td id="time-cell-${e.id}">
-        <div style="display:flex;align-items:center;gap:5px;">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
           ${grpLabel?`<span class="group-badge enrolled" style="cursor:default;">${grpLabel}</span>`:''}
           <span style="font-family:'Gmarket Sans';font-weight:600;font-size:12px;color:var(--accent4);">${formatAmPmRange(dispStart,dispEnd)}</span>
+          ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px;" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
         </div>
       </td>
       <td>${cat.teacher||'—'}</td>
@@ -2095,11 +2109,14 @@ function editCatalog(id){
   if(firstGrp){
     const pairs20=buildTimePairs('20min');
     const pairs1h=buildTimePairs('1hour');
+    const pairs90=buildTimePairs('90min');
+    const allKeys90=new Set(pairs90.map(p=>`${p.start}_${p.end}`));
     const allKeys20=new Set(pairs20.map(p=>`${p.start}_${p.end}`));
     const allKeys1h=new Set(pairs1h.map(p=>`${p.start}_${p.end}`));
     // 모든 조가 해당 슬롯에 있어야 해당 탭으로 인식
     if(groups.every(g=>allKeys20.has(`${g.start}_${g.end}`))) _groupTabType='20min';
     else if(groups.every(g=>allKeys1h.has(`${g.start}_${g.end}`))) _groupTabType='1hour';
+    else if(groups.every(g=>allKeys90.has(`${g.start}_${g.end}`))) _groupTabType='90min';
     else _groupTabType='custom'; // 하나라도 비표준이면 커스텀
   } else {
     _groupTabType='20min';
@@ -2107,7 +2124,7 @@ function editCatalog(id){
   (cat.groups||[{label:'1조',start:cat.start||'09:00',end:cat.end||'09:20'}]).forEach(g=>addGroupRow(g));
   if(!document.getElementById('cat-groups-list').children.length) addGroupRow({label:'1조',start:'09:00',end:'09:20'});
   // 탭 버튼 스타일 동기화 (커스텀 포함)
-  ['20min','1hour','custom'].forEach(t=>{
+  ['20min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary',_groupTabType===t);
@@ -2702,12 +2719,43 @@ function getNoticeForCat(catId){ return S.notices[catId]||''; }
 // ═══════════════════════════════════════
 // GROUP-BASED ENROLLMENT FUNCTIONS
 // ═══════════════════════════════════════
+function openChangeGroupModal(enrollId, catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  const enroll=S.enrollments.find(e=>e.id===enrollId);
+  if(!cat||!enroll) return;
+  document.getElementById('changeGroupTitle').textContent=`🔄 ${cat.name} — 조 변경`;
+  document.getElementById('changeGroupList').innerHTML=(cat.groups||[]).map(g=>{
+    const isCurrent=enroll.groupId===g.id;
+    return `<button onclick="changeGroup('${enrollId}','${g.id}')"
+      style="width:100%;padding:14px 16px;border-radius:var(--radius-sm);
+      border:2px solid ${isCurrent?'var(--accent)':'var(--border)'};
+      background:${isCurrent?'rgba(108,138,255,0.1)':'var(--surface2)'};
+      color:${isCurrent?'var(--accent)':'var(--text)'};
+      text-align:left;cursor:${isCurrent?'default':'pointer'};
+      font-size:14px;font-weight:600;transition:all 0.15s;
+      display:flex;align-items:center;justify-content:space-between;">
+      <span>${g.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted);">${formatAmPmRange(g.start,g.end)}</span></span>
+      <span style="font-size:12px;">${isCurrent?'✅ 현재 조':''}</span>
+    </button>`;
+  }).join('');
+  openModal('changeGroupModal');
+}
+
+function changeGroup(enrollId, newGroupId){
+  const enroll=S.enrollments.find(e=>e.id===enrollId);
+  if(!enroll||enroll.groupId===newGroupId) return;
+  const cat=S.catalog.find(c=>c.id===enroll.catalogId);
+  const grp=(cat?.groups||[]).find(g=>g.id===newGroupId);
+  enroll.groupId=newGroupId;
+  save();
+  closeModal('changeGroupModal');
+  showToast(`✅ ${grp?.label||''} (${formatAmPmRange(grp?.start,grp?.end)})으로 변경됐습니다`);
+  renderMyClasses();
+}
+
+
 function toggleEnrollCard(catId){
   const cat=S.catalog.find(c=>c.id===catId);
-  if(!cat) return;
-  const profId=S.currentProfileId||'default';
-  const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
-  const groups=cat.groups||[];
 
   if(enrolled.length>0){
     // 이미 수강중 → 전체 취소 확인
@@ -2819,6 +2867,20 @@ function buildTimePairs(type='20min'){
       pairs.push({start:`${hh}:00`,end:`${hh}:20`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(hh,'20')}`});
       pairs.push({start:`${hh}:30`,end:`${hh}:50`,label:`${toAmPm(hh,'30')} ~ ${toAmPm(hh,'50')}`});
     }
+  } else if(type==='90min'){
+    for(let h=9;h<=21;h++){
+      const hh=String(h).padStart(2,'0');
+      const endMin=h*60+90;
+      const eh=String(Math.floor(endMin/60)).padStart(2,'0');
+      const em=String(endMin%60).padStart(2,'0');
+      pairs.push({start:`${hh}:00`,end:`${eh}:${em}`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(eh,em)}`});
+      if(h<=20){
+        const endMin2=h*60+90+30;
+        const eh2=String(Math.floor(endMin2/60)).padStart(2,'0');
+        const em2=String(endMin2%60).padStart(2,'0');
+        pairs.push({start:`${hh}:30`,end:`${eh2}:${em2}`,label:`${toAmPm(hh,'30')} ~ ${toAmPm(eh2,em2)}`});
+      }
+    }
   } else {
     for(let h=9;h<=22;h++){
       const hh=String(h).padStart(2,'0');
@@ -2836,7 +2898,7 @@ let _groupTabType='20min'; // 현재 선택된 탭
 
 function switchGroupTab(type){
   _groupTabType=type;
-  ['20min','1hour','custom'].forEach(t=>{
+  ['20min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary', type===t);
@@ -2915,7 +2977,7 @@ function initAllGroupRows(){
     addGroupRow({label:(i+1)+'조', start:p.start, end:p.end});
   });
   // 탭 버튼 스타일 동기화
-  ['20min','1hour','custom'].forEach(t=>{
+  ['20min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary',_groupTabType===t);

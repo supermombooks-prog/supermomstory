@@ -2626,7 +2626,7 @@ function renderAdminNotices(){
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:8px;">🚫 휴강 날짜 관리</div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;" min="${today}">
+          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;">
           <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
         </div>
         ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">
@@ -2634,7 +2634,7 @@ function renderAdminNotices(){
             🚫 ${d} <button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
           </span>`).join('')}
         </div>`:`<div style="font-size:11px;color:var(--text-muted);">예정된 휴강 없음</div>`}
-        ${past.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;opacity:0.6;">지난 휴강: ${past.join(', ')}</div>`:''}
+        ${past.length?`<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">지난 휴강</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${past.map(d=>`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,0.06);color:var(--text-muted);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid var(--border);">🚫 ${d}<button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button></span>`).join('')}</div></div>`:''}
       </div>
     </div>`;
   }).join('');

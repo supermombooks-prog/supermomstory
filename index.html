@@ -858,6 +858,10 @@ create policy "public write notices" on notices for all using (true);</div>
         <span id="cat-color-label" style="font-size:13px;color:var(--text-muted);">영어 — #6c8aff</span>
       </div>
     </div>
+    <div class="form-row">
+      <label class="form-label">🔢 총 수업 회차 <span style="font-size:11px;color:var(--text-muted);">(예: 12회 → 시작일 기준 자동 계산)</span></label>
+      <input class="form-input" id="cat-total-sessions" type="number" min="0" placeholder="0 = 무제한" value="0">
+    </div>
     <div class="form-row"><label class="form-label">수업 설명</label><input class="form-input" id="cat-desc" placeholder="수업에 대한 간단한 설명"></div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('catalogModal')">취소</button>
@@ -884,7 +888,7 @@ create policy "public write notices" on notices for all using (true);</div>
 <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">
   <div class="modal" style="width:340px;">
-    <div class="modal-title" id="profileModalTitle">👦 아이 추가</div>
+    <div class="modal-title" id="profileModalTitle">👦🏻 아이 추가</div>
     <div class="form-row">
       <label class="form-label">이름 *</label>
       <input class="form-input" id="profile-name" placeholder="예: 민준" onkeydown="if(event.key==='Enter')saveProfile()">
@@ -892,14 +896,14 @@ create policy "public write notices" on notices for all using (true);</div>
     <div class="form-row">
       <label class="form-label">아이콘</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;" id="profileEmojiPicker">
-        <span class="emoji-opt selected" onclick="selectProfileEmoji(this)">👦</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👧</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">🧒</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👶</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">🧑</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👩</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👨</span>
-        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👩‍🦱</span>
+        <span class="emoji-opt selected" onclick="selectProfileEmoji(this)">👦🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👧🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">🧒🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👶🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">🧑🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👩🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👨🏻</span>
+        <span class="emoji-opt" onclick="selectProfileEmoji(this)">👩🏻‍🦱</span>
       </div>
     </div>
     <div class="form-row">
@@ -1033,9 +1037,9 @@ create policy "public write notices" on notices for all using (true);</div>
 const S = {
   isAdmin:false, catalog:[], enrollments:[], kids:[],
   monthOffset:0, editingCatalogId:null, editingKidId:null,
-  catIcon:'📚', catColor:'#6c8aff', kidEmoji:'👦', kidColor:'#ffb547',
+  catIcon:'📚', catColor:'#6c8aff', kidEmoji:'👦🏻', kidColor:'#ffb547',
   enrollOpenId:null, currentPage:'dashboard', filterSubject:'전체',
-  notices:{}, roster:{}, teachers:[], homework:{},
+  notices:{}, roster:{}, teachers:[], homework:{}, vacations:{},
   profiles:[], currentProfileId:null,
 };
 const ADMIN_PW='admin1234';
@@ -1047,7 +1051,7 @@ function save(){
   // Always save personal data locally
   localStorage.setItem('zc4_personal',JSON.stringify({enrollments:S.enrollments,roster:S.roster,profiles:S.profiles,currentProfileId:S.currentProfileId,homework:S.homework}));
   // Save catalog+notices locally as fallback cache
-  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers}));
+  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations}));
 }
 function load(){
   // Migrate old key
@@ -1065,7 +1069,7 @@ function load(){
   S.kids=[];
   // Load catalog from local cache (Supabase load happens async after)
   const catCache=localStorage.getItem('zc4_catalog');
-  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];}
+  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];S.vacations=p.vacations||{};}
   if(!S.catalog.length) seed();
   normalizeCatalog();
 }
@@ -1245,17 +1249,25 @@ function renderDashboard(){
       const sm=toMin(x.cat.start),em=toMin(x.cat.end);
       const isDone=nowMin>em,isNow=nowMin>=sm&&nowMin<=em;
       const zoomLink=x.enroll.myZoom||x.cat.zoom;
-      return `<div class="class-card ${isDone?'done':''} ${isNow?'now':''}">
+      const isVacation=isTodayVacation(x.cat.id);
+      const sessionNum=calcSessionNumber(x.cat, new Date());
+      const totalSess=x.cat.totalSessions||0;
+      const sessionBadge=sessionNum?`<span style="font-size:11px;font-weight:700;background:var(--accent)22;color:var(--accent);padding:2px 8px;border-radius:20px;white-space:nowrap;">${sessionNum}회차${totalSess?` / ${totalSess}회`:''}</span>`:'';
+      return `<div class="class-card ${isDone?'done':''} ${isNow?'now':''} ${isVacation?'vacation':''}">
         <div><div class="class-time">${formatKoreanTime(x.cat.start)}</div><div class="class-time-end">~${formatKoreanTime(x.cat.end)}</div></div>
         <div class="class-divider"></div>
-        <div class="class-info">
-          <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
+        <div class="class-info" style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
+            ${sessionBadge}
+            ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
+          </div>
           <div class="class-meta">
             ${x.cat.teacher?`<span>👩‍🏫 ${x.cat.teacher}</span>`:''}
             <span style="color:${x.cat.color};">● ${x.cat.subject}</span>
           </div>
         </div>
-        ${zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
+        ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
         ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
       </div>`;
     }).join('');
@@ -1925,6 +1937,7 @@ function openAddCatalog(){
   S.editingCatalogId=null; S.catColor='#6c8aff';
   document.getElementById('catalogModalTitle').textContent='📋 수업 등록';
   ['cat-name','cat-teacher','cat-zoom','cat-enroll-url','cat-detail-url','cat-desc','cat-age','cat-date-start','cat-date-end'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cat-total-sessions').value='0';
   document.getElementById('cat-subject').value='영어';
   document.getElementById('cat-capacity').value='0';
   populateTeacherSelect('','영어');
@@ -1949,6 +1962,7 @@ function editCatalog(id){
   document.getElementById('cat-date-end').value=cat.dateEnd||'';
   document.getElementById('cat-subject').value=cat.subject||'영어';
   document.getElementById('cat-capacity').value=cat.capacity||0;
+  document.getElementById('cat-total-sessions').value=cat.totalSessions||0;
   populateTeacherSelect(cat.teacher||'', cat.subject||'영어');
   document.querySelectorAll('#cat-days .day-toggle').forEach(d=>d.classList.toggle('selected',cat.days.includes(+d.dataset.day)));
   // 색상은 언어별 자동 설정 — autoSelectIconBySubject에서 처리
@@ -1993,6 +2007,7 @@ function saveCatalog(){
   const icon=subject;
   const data={
     name,teacher:document.getElementById('cat-teacher').value.trim(),
+    totalSessions:parseInt(document.getElementById('cat-total-sessions')?.value||0)||0,
     zoom:document.getElementById('cat-zoom').value.trim(),
     enrollUrl:document.getElementById('cat-enroll-url').value.trim(),
     detailUrl:document.getElementById('cat-detail-url').value.trim(),
@@ -2407,6 +2422,10 @@ function renderAdminNotices(){
   }
   el.innerHTML=S.catalog.map(cat=>{
     const notice=S.notices[cat.id]||'';
+    const vacList=(S.vacations[cat.id]||[]).sort();
+    const today=new Date().toISOString().slice(0,10);
+    const upcoming=vacList.filter(d=>d>=today);
+    const past=vacList.filter(d=>d<today);
     return `<div class="notice-card animate-in">
       <div class="notice-card-head">
         <div style="width:54px;height:36px;border-radius:7px;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,36)}</div>
@@ -2417,10 +2436,24 @@ function renderAdminNotices(){
       </div>
       <textarea class="notice-textarea" id="notice-${cat.id}" placeholder="수업 공지사항을 입력하세요...">${notice}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 저장</button>
+        <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 공지 저장</button>
         ${notice?`<button class="btn btn-danger btn-sm" onclick="clearNotice('${cat.id}')">🗑️ 삭제</button>`:''}
       </div>
       ${notice?`<div style="font-size:11px;color:var(--text-muted);">📢 현재 공지: <span style="color:var(--accent3);">수업 카드에 표시 중</span></div>`:''}
+      <!-- 휴강 관리 -->
+      <div style="margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--admin);">🚫 휴강 날짜 관리</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:140px;font-size:12px;padding:6px 10px;" min="${today}">
+          <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 휴강 추가</button>
+        </div>
+        ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          ${upcoming.map(d=>`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,92,92,0.12);color:var(--danger);border-radius:20px;padding:3px 10px;font-size:12px;border:1px solid rgba(255,92,92,0.3);">
+            🚫 ${d} <button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
+          </span>`).join('')}
+        </div>`:`<div style="font-size:11px;color:var(--text-muted);">예정된 휴강 없음</div>`}
+        ${past.length?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">지난 휴강: ${past.map(d=>`<span style="opacity:0.5;">${d}</span>`).join(', ')}</div>`:''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -2728,7 +2761,7 @@ async function pullCatalogFromSupa(){
     ]);
     if(rows&&rows.length){
       const teacherRow=rows.find(r=>r.id==='__teachers__');
-      if(teacherRow) S.teachers=teacherRow.data.teachers||[];
+      if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; }
       S.catalog=rows.filter(r=>r.id!=='__teachers__').map(r=>r.data);
       normalizeCatalog();
     }
@@ -2753,7 +2786,7 @@ async function pushCatalogToSupa(){
     // Upsert catalog rows
     const rows=S.catalog.map(cat=>({id:cat.id, data:cat, updated_at:new Date().toISOString()}));
     // Save teachers in a special catalog entry
-    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers}, updated_at:new Date().toISOString()});
+    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers,vacations:S.vacations}, updated_at:new Date().toISOString()});
     await supaFetch('catalog', 'POST', rows);
     // Upsert notices
     const noticeRows=Object.entries(S.notices).map(([k,v])=>({catalog_id:k,content:v,updated_at:new Date().toISOString()}));
@@ -2847,7 +2880,7 @@ async function initSupabase(){
 // ═══════════════════════════════════════
 // PROFILE SYSTEM
 // ═══════════════════════════════════════
-let _profileEmoji = '👦';
+let _profileEmoji = '👦🏻';
 let _profileColor = '#6c8aff';
 let _editingProfileId = null;
 
@@ -2861,7 +2894,7 @@ function switchProfile(profileId){
   save();
   renderProfileBar();
   renderPage(S.currentPage);
-  showToast(`👦 ${S.profiles.find(p=>p.id===profileId)?.name} 시간표로 전환됐습니다`);
+  showToast(`👦🏻 ${S.profiles.find(p=>p.id===profileId)?.name} 시간표로 전환됐습니다`);
 }
 
 function renderProfileBar(){
@@ -2903,10 +2936,10 @@ function renderProfileBar(){
 
 function openAddProfile(){
   _editingProfileId = null;
-  _profileEmoji = '👦';
+  _profileEmoji = '👦🏻';
   _profileColor = '#6c8aff';
   document.getElementById('profile-name').value = '';
-  document.getElementById('profileModalTitle').textContent = '👦 아이 추가';
+  document.getElementById('profileModalTitle').textContent = '👦🏻 아이 추가';
   document.querySelectorAll('#profileEmojiPicker .emoji-opt').forEach((s,i)=>s.classList.toggle('selected',i===0));
   document.querySelectorAll('#profileColorPicker .pcolor-dot').forEach((d,i)=>d.classList.toggle('active',i===0));
   openModal('profileModal');
@@ -3047,6 +3080,65 @@ function copyCatalog(id){
 }
 
 
+
+// ═══════════════════════════════════════
+// VACATION & SESSION SYSTEM
+// ═══════════════════════════════════════
+function calcSessionNumber(cat, targetDate){
+  if(!cat.dateStart||!cat.days||!cat.days.length) return null;
+  const start=new Date(cat.dateStart);
+  const target=targetDate?new Date(targetDate):new Date();
+  target.setHours(23,59,59,0);
+  if(target<start) return null;
+  let count=0;
+  const cur=new Date(start);
+  cur.setHours(0,0,0,0);
+  const vacList=S.vacations[cat.id]||[];
+  while(cur<=target){
+    const dow=(cur.getDay()+6)%7;
+    if(cat.days.includes(dow)){
+      const dateStr=cur.toISOString().slice(0,10);
+      if(!vacList.includes(dateStr)) count++;
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  return count>0?count:null;
+}
+
+function isTodayVacation(catId){
+  const today=new Date().toISOString().slice(0,10);
+  return (S.vacations[catId]||[]).includes(today);
+}
+
+function addVacationDate(catId, dateStr){
+  if(!S.vacations[catId]) S.vacations[catId]=[];
+  if(!S.vacations[catId].includes(dateStr)){
+    S.vacations[catId].push(dateStr);
+    S.vacations[catId].sort();
+  }
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+}
+function removeVacationDate(catId, dateStr){
+  if(!S.vacations[catId]) return;
+  S.vacations[catId]=S.vacations[catId].filter(d=>d!==dateStr);
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+}
+function addVacation(catId){
+  const input=document.getElementById(`vac-date-${catId}`);
+  if(!input||!input.value){showToast('⚠️ 날짜를 선택해주세요');return;}
+  const dateStr=input.value;
+  addVacationDate(catId,dateStr);
+  input.value='';
+  renderAdminNotices();
+  showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);
+}
+function removeVacation(catId,dateStr){
+  removeVacationDate(catId,dateStr);
+  renderAdminNotices();
+  showToast('✅ 휴강이 취소됐습니다');
+}
 
 // ═══════════════════════════════════════
 // HOMEWORK SYSTEM
@@ -3598,7 +3690,7 @@ function updateThemeBtn(theme){
 }
 // 저장된 테마 복원
 (()=>{
-  const saved=localStorage.getItem('zc4_theme')||'dark';
+  const saved=localStorage.getItem('zc4_theme')||'light';
   if(saved==='light') document.documentElement.setAttribute('data-theme','light');
   setTimeout(()=>updateThemeBtn(saved),0);
 })();

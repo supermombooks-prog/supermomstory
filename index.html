@@ -306,6 +306,13 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
   .data-table th,.data-table td{padding:8px 10px;}
   .mode-badge{display:none;}
   .sidebar-kids{display:none;}
+  /* 캘린더 모바일 */
+  .cal-layout{grid-template-columns:1fr!important;}
+  #dayDetailPanel{position:static!important;}
+  .mcal-cell{min-height:52px!important;padding:3px!important;}
+  .mcal-date{font-size:11px!important;width:20px!important;height:20px!important;}
+  .mcal-pill{font-size:8px!important;padding:1px 3px!important;}
+  .mcal-dow{font-size:10px!important;}
 }
 /* ── PRINT ── */
 @media print{
@@ -508,7 +515,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       <div><div class="page-title">월간 캘린더 📅</div><div class="page-sub">이번 달 수업 일정을 한눈에 확인하세요</div></div>
       <button class="btn btn-ghost btn-sm" onclick="goToToday()">오늘로</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start;">
+    <div style="display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start;" class="cal-layout">
       <div class="section">
         <div class="section-header">
           <button class="week-btn" onclick="changeMonth(-1)">◀</button>

@@ -2812,7 +2812,8 @@ async function pullCatalogFromSupa(){
       S.notices={};
       noticeRows.forEach(r=>{S.notices[r.catalog_id]=r.content;});
     }
-    save();
+    // catalog만 저장 (personal 데이터인 profiles/enrollments 건드리지 않음)
+    localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations}));
     return true;
   } catch(e){
     console.error('Supabase pull error:',e);

@@ -753,7 +753,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <div><div class="page-title">강사 소개 👩‍🏫</div><div class="page-sub">강사를 클릭하면 상세 소개와 수업 목록을 볼 수 있어요</div></div>
     </div>
     <div id="teacherFilterBar" class="filter-bar" style="margin-bottom:18px;"></div>
-    <div id="teacherGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;"></div>
+    <div id="teacherGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;align-items:start;grid-auto-rows:1fr;"></div>
     <!-- 강사 상세 패널 -->
     <div id="teacherDetailPanel" style="display:none;margin-top:24px;"></div>
   </div>
@@ -3192,7 +3192,7 @@ function renderTeachers(){
     const avatarEl=t.photo
       ?`<img src="${t.photo}" style="width:110px;height:110px;object-fit:cover;object-position:top center;border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;border-right:3px solid ${color};">`
       :`<div style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--surface);border-right:3px solid ${color};border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
-    return `<div class="teacher-card ${isActive?'active-card':''}" style="flex-direction:column;text-align:left;gap:0;padding:0;overflow:hidden;cursor:default;">
+    return `<div class="teacher-card ${isActive?'active-card':''}" style="flex-direction:column;text-align:left;gap:0;padding:0;overflow:hidden;cursor:default;display:flex;height:100%;">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color};border-radius:var(--radius) var(--radius) 0 0;"></div>
       <!-- 상단: 사진 + 이름/언어 -->
       <div style="display:flex;align-items:stretch;">
@@ -3204,8 +3204,10 @@ function renderTeachers(){
           </div>
         </div>
       </div>
-      <!-- 한 줄 소개 -->
-      ${t.tagline?`<div style="padding:8px 14px;border-top:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-muted);line-height:1.5;">${t.tagline}</div>`:''}
+      <!-- 한 줄 소개 (flex-grow로 높이 균등) -->
+      <div style="flex:1;padding:8px 14px;border-top:1px solid var(--border);background:var(--surface);font-size:12px;color:var(--text-muted);line-height:1.6;">
+        ${t.tagline||''}
+      </div>
       <!-- 하단: 상세보기 버튼 -->
       <div style="border-top:1px solid var(--border);padding:8px 14px;">
         <button onclick="selectTeacher('${t.id}')" style="width:100%;background:${isActive?color+'22':'transparent'};border:1px solid ${isActive?color:'var(--border)'};color:${isActive?color:'var(--text-muted)'};border-radius:var(--radius-sm);padding:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;">

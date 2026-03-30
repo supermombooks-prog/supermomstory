@@ -588,7 +588,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
       </div>
       <div class="section-body" style="padding:0;">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th>📚</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
       </div>
     </div>
@@ -3226,29 +3226,28 @@ function openCurriculumModal(catId, enrollId){
     return;
   }
 
+  // isDone: 오늘 회차보다 이전 회차만 완료 (오늘 수업은 진행중)
   body.innerHTML=curriculum.map(c=>{
-    const isDone=todaySession>c.session;
-    const isToday=todaySession===c.session;
-    const isFuture=todaySession<c.session;
+    const isDone=todaySession>0&&c.session<todaySession; // 오늘 회차 미포함
+    const isToday=todaySession>0&&todaySession===c.session;
+    const isFuture=todaySession===0||c.session>todaySession;
     const title=c.title||c.topic||'';
     const content=c.content||c.progress||'';
     const contentId='curr-content-'+c.session+'-'+catId.slice(-4);
 
-    return `<div style="border-radius:var(--radius-sm);border:${isToday?'2px solid var(--accent)':'1px solid var(--border)'};background:${isToday?'rgba(108,138,255,0.05)':isDone?'var(--surface2)':'var(--surface)'};padding:12px 16px;position:relative;opacity:${isFuture?0.7:1};">
+    return `<div style="border-radius:var(--radius-sm);border:${isToday?'2px solid var(--accent)':'1px solid var(--border)'};background:${isToday?'rgba(108,138,255,0.05)':isDone?'var(--surface2)':'var(--surface)'};padding:12px 16px;opacity:${isFuture&&!isToday?0.6:1};">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <!-- 회차 뱃지 -->
         <div style="min-width:40px;text-align:center;flex-shrink:0;">
           ${isDone
-            ?`<div style="width:36px;height:36px;border-radius:50%;background:rgba(67,232,194,0.15);border:2px solid var(--accent3);display:flex;align-items:center;justify-content:center;font-size:16px;">✅</div>`
+            ?`<div style="width:36px;height:36px;border-radius:50%;background:rgba(67,232,194,0.15);border:2px solid var(--accent3);display:flex;align-items:center;justify-content:center;font-size:18px;">✅</div>`
             :isToday
               ?`<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">${c.session}</div>`
               :`<div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text-muted);">${c.session}</div>`
           }
           ${isToday?`<div style="font-size:9px;color:var(--accent);font-weight:700;margin-top:2px;text-align:center;">오늘</div>`:''}
         </div>
-        <!-- 내용 -->
         <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:${isToday?800:700};color:${isDone?'var(--text-muted)':isToday?'var(--accent)':'var(--text)'};${isDone?'text-decoration:line-through;':''};margin-bottom:${content?'6px':'0'};">${title||c.session+'회차'}</div>
+          <div style="font-size:14px;font-weight:${isToday?800:700};color:${isToday?'var(--accent)':'var(--text)'};margin-bottom:${content?'6px':'0'};">${title||c.session+'회차'}</div>
           ${content?`<div>
             <div id="${contentId}" style="display:${isToday?'block':'none'};font-size:12px;color:var(--text-muted);line-height:1.8;white-space:pre-wrap;">${content}</div>
             <button onclick="const el=document.getElementById('${contentId}');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'▼ 내용 보기':'▲ 접기'"
@@ -3261,16 +3260,17 @@ function openCurriculumModal(catId, enrollId){
     </div>`;
   }).join('');
 
-  // 진행 상황 헤더
+  // 진행 현황: 완료 회차 = 오늘 회차-1
+  const completedCount=Math.max(0,(todaySession||1)-1);
   const progressHtml=totalSess>0?`<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;">
     <div style="flex:1;">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">진행 현황</div>
       <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
-        <div style="width:${Math.min(100,Math.round((Math.max(0,todaySession-1))/totalSess*100))}%;height:100%;background:var(--accent3);border-radius:4px;transition:width 0.5s;"></div>
+        <div style="width:${Math.min(100,Math.round(completedCount/totalSess*100))}%;height:100%;background:var(--accent3);border-radius:4px;"></div>
       </div>
     </div>
-    <div style="font-size:14px;font-weight:700;color:var(--accent3);white-space:nowrap;">${Math.max(0,todaySession-1)} / ${totalSess}회</div>
-  </div>`:'' ;
+    <div style="font-size:14px;font-weight:700;color:var(--accent3);white-space:nowrap;">${completedCount} / ${totalSess}회 완료</div>
+  </div>`:'';
   body.innerHTML=progressHtml+body.innerHTML;
 
   openModal('curriculumModal');

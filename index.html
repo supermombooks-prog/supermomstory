@@ -2992,7 +2992,10 @@ function renderAdminNotices(){
 
       <!-- 휴강 날짜 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:8px;">🚫 휴강 날짜 관리</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--danger);">🚫 휴강 날짜 관리</div>
+          ${cat.totalSessions?`<button class="btn btn-ghost btn-sm" onclick="autoExtendEndDate('${cat.id}')" style="font-size:11px;color:var(--accent4);border-color:rgba(255,181,71,0.4);" title="휴강 일수만큼 종료일 자동 연장">📅 종료일 자동 재계산</button>`:''}
+        </div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
           <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;">
           <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
@@ -3852,6 +3855,47 @@ function removeVacation(catId,dateStr){
   removeVacationDate(catId,dateStr);
   renderAdminNotices();
   showToast('✅ 휴강이 취소됐습니다');
+}
+
+// 휴강을 고려해 totalSessions 회차가 끝나는 날짜를 자동 계산해 dateEnd 업데이트
+function autoExtendEndDate(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat){showToast('⚠️ 수업을 찾을 수 없습니다');return;}
+  if(!cat.dateStart){showToast('⚠️ 수업 시작일이 없습니다');return;}
+  if(!cat.totalSessions){showToast('⚠️ 총 수업 회차가 설정되지 않았습니다');return;}
+  if(!cat.days||!cat.days.length){showToast('⚠️ 수업 요일이 설정되지 않았습니다');return;}
+
+  const vacList=S.vacations[catId]||[];
+  let count=0;
+  const cur=new Date(cat.dateStart);
+  cur.setHours(0,0,0,0);
+  let lastClassDate=null;
+
+  // 최대 5년치까지 탐색 (무한루프 방지)
+  const maxDate=new Date(cat.dateStart);
+  maxDate.setFullYear(maxDate.getFullYear()+5);
+
+  while(cur<=maxDate){
+    const dow=(cur.getDay()+6)%7; // 0=월
+    if(cat.days.includes(dow)){
+      const dateStr=cur.toISOString().slice(0,10);
+      if(!vacList.includes(dateStr)){
+        count++;
+        lastClassDate=dateStr;
+        if(count>=cat.totalSessions) break;
+      }
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+
+  if(!lastClassDate){showToast('⚠️ 계산 오류: 날짜를 찾을 수 없습니다');return;}
+
+  const oldEnd=cat.dateEnd||'없음';
+  cat.dateEnd=lastClassDate;
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  renderAdminNotices();
+  showToast(`📅 종료일이 ${lastClassDate}로 업데이트됐습니다 (기존: ${oldEnd})`);
 }
 
 // ═══════════════════════════════════════

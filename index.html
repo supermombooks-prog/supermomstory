@@ -103,7 +103,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .class-divider{width:2px;height:40px;background:var(--border);flex-shrink:0;border-radius:2px;}
 .class-info{flex:1;min-width:0;}
 .class-subject{font-size:17px;font-weight:800;}
-.class-meta{font-size:13px;color:var(--text-muted);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
+.class-meta{font-size:15px;color:var(--text-muted);margin-top:5px;display:flex;gap:12px;flex-wrap:wrap;}
 .kid-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:1px 7px;border-radius:20px;font-weight:500;}
 
 /* CATALOG GRID */
@@ -882,7 +882,12 @@ create policy "public write notices" on notices for all using (true);</div>
     </div>
     <div class="form-row"><label class="form-label">수업 설명</label><input class="form-input" id="cat-desc" placeholder="수업에 대한 간단한 설명"></div>
 
-    <!-- 휴강 날짜 관리 -->
+    <!-- 커리큘럼 -->
+    <div class="form-row">
+      <label class="form-label">📚 회차별 커리큘럼 <span style="font-size:11px;color:var(--text-muted);">대시보드 오늘의 수업에 자동 표시</span></label>
+      <div id="cat-curriculum-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addCurriculumRow()" style="width:100%;justify-content:center;">+ 회차 추가</button>
+    </div>
     <div class="form-row">
       <label class="form-label">🚫 휴강 날짜 <span style="font-size:11px;color:var(--text-muted);">과거/미래 모두 등록 가능</span></label>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -1320,7 +1325,6 @@ function renderDashboard(){
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
             ${sessionBadge}
-            ${isGraduation?`<span style="font-size:11px;font-weight:700;background:rgba(255,181,71,0.2);color:var(--accent4);padding:2px 10px;border-radius:20px;border:1px solid rgba(255,181,71,0.4);">🎓 종강일</span>`:''}
             ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
           </div>
           <div class="class-meta">
@@ -1329,8 +1333,17 @@ function renderDashboard(){
           </div>
         </div>
         ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
-        ${getAdminHwForDashboard(x.cat.id)}
-        ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
+      </div>
+      ${(()=>{
+        const curric=getTodayCurriculum(x.cat);
+        if(!curric||(!curric.topic&&!curric.progress)) return '';
+        return `<div style="margin-top:8px;padding:8px 12px;background:rgba(108,138,255,0.06);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;">
+          ${curric.topic?`<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">📖 ${curric.topic}</div>`:''}
+          ${curric.progress?`<div style="font-size:12px;color:var(--text-muted);">📄 ${curric.progress}</div>`:''}
+        </div>`;
+      })()}
+      ${getAdminHwForDashboard(x.cat.id)}
+      ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
       </div>`;
     }).join('');
   }
@@ -1819,7 +1832,13 @@ function renderMyClasses(){
         </div>
       </td>
       <td>${cat.teacher||'—'}</td>
-      <td>${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);max-width:180px;white-space:pre-wrap;">${getNoticeForCat(cat.id)}</div>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
+          ${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${getNoticeForCat(cat.id)}</div>`:''}
+          ${S.adminHomework?.[cat.id]?`<div style="font-size:11px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${S.adminHomework[cat.id]}</div>`:''}
+          ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:11px;">—</span>`:''}
+        </div>
+      </td>
       <td id="hw-cell-${e.id}" style="min-width:140px;">
         ${getHomeworkCell(e.id, e.catalogId)}
       </td>
@@ -2199,6 +2218,8 @@ function openAddCatalog(){
   document.getElementById('cat-total-sessions').value='0';
   _modalVacDates=[];
   renderModalVacList();
+  _modalCurriculum=[];
+  renderModalCurriculumList();
   document.getElementById('cat-subject').value='영어';
   document.getElementById('cat-capacity').value='0';
   populateTeacherSelect('','영어');
@@ -2226,6 +2247,8 @@ function editCatalog(id){
   document.getElementById('cat-total-sessions').value=cat.totalSessions||0;
   _modalVacDates=[...(S.vacations[cat.id]||[])];
   renderModalVacList();
+  _modalCurriculum=JSON.parse(JSON.stringify(cat.curriculum||[]));
+  renderModalCurriculumList();
   populateTeacherSelect(cat.teacher||'', cat.subject||'영어');
   document.querySelectorAll('#cat-days .day-toggle').forEach(d=>d.classList.toggle('selected',cat.days.includes(+d.dataset.day)));
   // 색상은 언어별 자동 설정 — autoSelectIconBySubject에서 처리
@@ -2293,6 +2316,51 @@ function addVacationFromModal(){
   renderModalVacList();
 }
 
+
+// ═══════════════════════════════════════
+// CURRICULUM SYSTEM
+// ═══════════════════════════════════════
+let _modalCurriculum = []; // [{session, topic, progress}]
+
+function renderModalCurriculumList(){
+  const el=document.getElementById('cat-curriculum-list');
+  if(!el) return;
+  if(!_modalCurriculum.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">등록된 커리큘럼 없음</div>';
+    return;
+  }
+  el.innerHTML=_modalCurriculum.map((c,i)=>`
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-size:12px;font-weight:700;color:var(--accent);min-width:32px;text-align:center;background:var(--accent)18;padding:4px 6px;border-radius:6px;flex-shrink:0;">${c.session}회</span>
+      <input class="form-input" style="flex:2;font-size:12px;padding:6px 10px;" placeholder="수업 주제 (예: 알파벳 & 발음)" value="${c.topic||''}"
+        oninput="_modalCurriculum[${i}].topic=this.value">
+      <input class="form-input" style="flex:3;font-size:12px;padding:6px 10px;" placeholder="진도 (예: Unit 1 p.2~8)" value="${c.progress||''}"
+        oninput="_modalCurriculum[${i}].progress=this.value">
+      <button onclick="_modalCurriculum.splice(${i},1);renderModalCurriculumList()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;padding:0;flex-shrink:0;">🗑</button>
+    </div>`).join('');
+}
+
+function addCurriculumRow(){
+  const nextSession=_modalCurriculum.length>0
+    ?Math.max(..._modalCurriculum.map(c=>c.session))+1
+    :1;
+  _modalCurriculum.push({session:nextSession, topic:'', progress:''});
+  renderModalCurriculumList();
+  // 포커스를 새로 추가된 행의 주제 입력란으로
+  setTimeout(()=>{
+    const inputs=document.querySelectorAll('#cat-curriculum-list input[placeholder*="수업 주제"]');
+    inputs[inputs.length-1]?.focus();
+  },50);
+}
+
+// 오늘 수업의 커리큘럼 가져오기
+function getTodayCurriculum(cat){
+  if(!cat.curriculum||!cat.curriculum.length) return null;
+  const sessionNum=calcSessionNumber(cat, new Date());
+  if(!sessionNum) return null;
+  return cat.curriculum.find(c=>c.session===sessionNum)||null;
+}
+
 function saveCatalog(){
   const name=document.getElementById('cat-name').value.trim();
   const days=[...document.querySelectorAll('#cat-days .day-toggle.selected')].map(d=>+d.dataset.day);
@@ -2316,7 +2384,8 @@ function saveCatalog(){
     dateEnd:document.getElementById('cat-date-end').value,
     subject,
     capacity:parseInt(document.getElementById('cat-capacity').value)||0,
-    start,end,days,groups,icon,color:S.catColor
+    start,end,days,groups,icon,color:S.catColor,
+    curriculum:JSON.parse(JSON.stringify(_modalCurriculum))
   };
   if(S.editingCatalogId){
     const i=S.catalog.findIndex(c=>c.id===S.editingCatalogId);
@@ -2646,6 +2715,58 @@ function downloadPDF(){
       <td>${r.period}</td>
     </tr>`).join('');
 
+  // ── 월간 캘린더 생성 ──
+  const calYear=now.getFullYear();
+  const calMonth=now.getMonth();
+  const MONTH_KR=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const holidays=getKoreanHolidays(calYear);
+  const firstDay=new Date(calYear,calMonth,1);
+  const lastDay2=new Date(calYear,calMonth+1,0);
+  const startDow2=firstDay.getDay();
+  const totalCells2=Math.ceil((startDow2+lastDay2.getDate())/7)*7;
+
+  // dayMap JS 기준 (0=일)
+  const dayMapCal={0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+  targetEnrollments.forEach(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return;
+    cat.days.forEach(d=>{
+      const jsDay=(d+1)%7;
+      dayMapCal[jsDay].push(cat);
+    });
+  });
+
+  let calCells2='';
+  for(let i=0;i<totalCells2;i++){
+    const dayNum=i-startDow2+1;
+    const isOther=dayNum<1||dayNum>lastDay2.getDate();
+    const dateObj=new Date(calYear,calMonth,dayNum);
+    const dow=dateObj.getDay();
+    const isToday=!isOther&&dayNum===now.getDate();
+    const isWeekend=dow===0||dow===6;
+    const dateKey=isOther?'':dateObj.toISOString().slice(0,10);
+    const holidayName=dateKey?holidays[dateKey]:'';
+    const isHoliday=!!holidayName;
+    const isRed=isWeekend||isHoliday;
+    const classes=isOther?[]:dayMapCal[dow];
+    const vacList=classes.filter(cat=>(S.vacations[cat.id]||[]).includes(dateKey));
+    const pills=classes.map(cat=>{
+      const isVac=vacList.includes(cat);
+      const bg=isVac?'#fee2e2':CPDF[cat.subject]||'#e0f2fe';
+      return `<div style="font-size:8px;padding:1px 3px;border-radius:3px;margin-top:1px;background:${bg};color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isVac?'text-decoration:line-through;':''}">${cat.name}</div>`;
+    }).join('');
+
+    calCells2+=`<td style="border:1px solid #e2e8f0;padding:4px;vertical-align:top;height:75px;overflow:hidden;${isOther?'background:#f8fafc;opacity:0.4;':''}${isToday?'background:#eff6ff;':''}">
+      <div style="font-size:11px;font-weight:${isToday?800:500};color:${isToday?'#2563eb':isRed?'#ef4444':'#374151'};margin-bottom:1px;">${isOther?dateObj.getDate():dayNum}</div>
+      ${holidayName?`<div style="font-size:7px;color:#ef4444;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${holidayName}</div>`:''}
+      ${pills}
+    </td>`;
+  }
+  const calRows2=[];
+  for(let r=0;r<totalCells2/7;r++){
+    calRows2.push(`<tr>${calCells2.split('</td>').slice(r*7,(r+1)*7).join('</td>')}</td></tr>`);
+  }
+
   const html=`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2675,8 +2796,20 @@ function downloadPDF(){
 </style>
 </head>
 <body>
-<h1>📚 내 수업 시간표</h1>
+<h1>📚 ${targetName} 수업 시간표</h1>
 <div class="sub">${dateStr}</div>
+
+<h2>📆 ${calYear}년 ${MONTH_KR[calMonth]}</h2>
+<table style="table-layout:fixed;">
+  <thead><tr style="background:#1e293b;color:#fff;">
+    <th style="width:14.28%;color:#fca5a5;">일</th>
+    <th style="width:14.28%;">월</th><th style="width:14.28%;">화</th>
+    <th style="width:14.28%;">수</th><th style="width:14.28%;">목</th>
+    <th style="width:14.28%;">금</th>
+    <th style="width:14.28%;color:#93c5fd;">토</th>
+  </tr></thead>
+  <tbody>${calRows2.join('')}</tbody>
+</table>
 
 <h2>📅 요일별 시간표</h2>
 <table>

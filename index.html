@@ -1098,7 +1098,7 @@ const S = {
   monthOffset:0, editingCatalogId:null, editingKidId:null,
   catIcon:'📚', catColor:'#6c8aff', kidEmoji:'👦🏻', kidColor:'#ffb547',
   enrollOpenId:null, currentPage:'dashboard', filterSubject:'전체',
-  notices:{}, roster:{}, teachers:[], homework:{}, vacations:{}, adminHomework:{},
+  notices:{}, roster:{}, teachers:[], homework:{}, vacations:{}, adminHomework:{}, makeup:{},
   profiles:[], currentProfileId:null,
 };
 const ADMIN_PW='admin1234';
@@ -1110,7 +1110,7 @@ function save(){
   // Always save personal data locally
   localStorage.setItem('zc4_personal',JSON.stringify({enrollments:S.enrollments,roster:S.roster,profiles:S.profiles,currentProfileId:S.currentProfileId,homework:S.homework}));
   // Save catalog+notices locally as fallback cache
-  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework}));
+  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
 }
 function load(){
   // Migrate old key
@@ -1128,7 +1128,7 @@ function load(){
   S.kids=[];
   // Load catalog from local cache (Supabase load happens async after)
   const catCache=localStorage.getItem('zc4_catalog');
-  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];S.vacations=p.vacations||{};S.adminHomework=p.adminHomework||{};}
+  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];S.vacations=p.vacations||{};S.adminHomework=p.adminHomework||{};S.makeup=p.makeup||{};}
   if(!S.catalog.length) seed();
   normalizeCatalog();
 }
@@ -1327,6 +1327,7 @@ function renderDashboard(){
               <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
               ${sessionBadge}
               ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
+            ${(()=>{const mu=getTodayMakeup(x.cat.id,x.enroll.groupId);return mu.length?`<span style="font-size:11px;font-weight:700;background:rgba(67,232,194,0.15);color:var(--accent3);padding:2px 10px;border-radius:20px;border:1px solid rgba(67,232,194,0.3);">🔁 보강수업${mu[0].reason?' · '+mu[0].reason:''}</span>`:'';})()}
             </div>
             <div class="class-meta">
               ${x.cat.teacher?`<span>👩‍🏫 ${x.cat.teacher}</span>`:''}
@@ -1653,6 +1654,13 @@ function renderMonthlyCal() {
       <div class="mcal-date ${isRedDay&&!isToday?'weekend':''}">${isOther?date.getDate():dayNum}</div>
       ${holidayName?`<div style="font-size:8px;color:#ef4444;font-weight:700;line-height:1.2;padding:0 1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${holidayName}</div>`:''}
       ${pillsHtml}
+      ${!isOther?myEnrollments().flatMap(e=>{
+        const cat=S.catalog.find(c=>c.id===e.catalogId);
+        if(!cat) return [];
+        return getMakeupForDate(cat.id,dateStr2).filter(m=>!m.groupId||m.groupId===e.groupId).map(()=>
+          `<div class="mcal-pill" style="background:rgba(67,232,194,0.15);color:var(--accent3);" title="보강: ${cat.name}">🔁 ${cat.name}</div>`
+        );
+      }).join(''):''}
       ${extra > 0 ? `<div class="mcal-more">+${extra}개 더</div>` : ''}
     </div>`;
   }
@@ -2358,9 +2366,56 @@ function addVacationFromModal(){
 }
 
 
+function removeVacation(catId,dateStr){
+  removeVacationDate(catId,dateStr);
+  renderAdminNotices();
+  showToast('✅ 휴강이 취소됐습니다');
+}
+
 // ═══════════════════════════════════════
-// CURRICULUM SYSTEM
+// MAKEUP (보강) SYSTEM
 // ═══════════════════════════════════════
+function getMakeupList(catId){ return S.makeup[catId]||[]; }
+
+function addMakeup(catId){
+  const dateEl=document.getElementById(`makeup-date-${catId}`);
+  const groupEl=document.getElementById(`makeup-group-${catId}`);
+  const reasonEl=document.getElementById(`makeup-reason-${catId}`);
+  if(!dateEl||!dateEl.value){showToast('⚠️ 보강 날짜를 선택해주세요');return;}
+  if(!S.makeup[catId]) S.makeup[catId]=[];
+  const groupId=groupEl?.value||'';
+  const existing=S.makeup[catId].find(m=>m.date===dateEl.value&&m.groupId===groupId);
+  if(existing){showToast('⚠️ 이미 등록된 보강입니다');return;}
+  S.makeup[catId].push({date:dateEl.value, groupId, reason:reasonEl?.value.trim()||''});
+  S.makeup[catId].sort((a,b)=>a.date.localeCompare(b.date));
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  dateEl.value=''; if(reasonEl) reasonEl.value='';
+  renderAdminNotices();
+  showToast('🔁 보강이 등록됐습니다');
+}
+
+function removeMakeup(catId, idx){
+  if(!S.makeup[catId]) return;
+  S.makeup[catId].splice(idx,1);
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  renderAdminNotices();
+  showToast('✅ 보강이 삭제됐습니다');
+}
+
+// 오늘 수업에 보강이 있는지 확인 (catId, groupId)
+function getTodayMakeup(catId, groupId){
+  const today=new Date().toISOString().slice(0,10);
+  return (S.makeup[catId]||[]).filter(m=>m.date===today&&(!m.groupId||m.groupId===groupId||!groupId));
+}
+
+// 특정 날짜에 보강이 있는지 확인
+function getMakeupForDate(catId, dateStr){
+  return (S.makeup[catId]||[]).filter(m=>m.date===dateStr);
+}
+
+
 let _modalCurriculum = []; // [{session, title, content}]
 
 function renderModalCurriculumList(){
@@ -3007,6 +3062,31 @@ function renderAdminNotices(){
         </div>`:`<div style="font-size:11px;color:var(--text-muted);">예정된 휴강 없음</div>`}
         ${past.length?`<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">지난 휴강</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${past.map(d=>`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,0.06);color:var(--text-muted);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid var(--border);">🚫 ${d}<button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button></span>`).join('')}</div></div>`:''}
       </div>
+
+      <!-- 보강 관리 -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:8px;">🔁 조별 보강 날짜 관리</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <select id="makeup-group-${cat.id}" class="form-input" style="flex:1;min-width:100px;font-size:12px;padding:5px 8px;">
+            <option value="">전체 조</option>
+            ${(cat.groups||[]).map(g=>`<option value="${g.id}">${g.label} ${formatAmPmRange(g.start,g.end)}</option>`).join('')}
+          </select>
+          <input type="date" id="makeup-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;">
+          <input type="text" id="makeup-reason-${cat.id}" class="form-input" style="flex:2;min-width:120px;font-size:12px;padding:6px 10px;" placeholder="사유 (예: 컴퓨터 오류)">
+          <button class="btn btn-admin btn-sm" onclick="addMakeup('${cat.id}')">+ 추가</button>
+        </div>
+        ${getMakeupList(cat.id).length?`<div style="display:flex;flex-direction:column;gap:5px;">
+          ${getMakeupList(cat.id).map((m,idx)=>{
+            const grp=(cat.groups||[]).find(g=>g.id===m.groupId);
+            const grpLabel=grp?`${grp.label} ${formatAmPmRange(grp.start,grp.end)}`:'전체 조';
+            const isPast=m.date<today;
+            return `<span style="display:inline-flex;align-items:center;gap:6px;background:${isPast?'rgba(0,0,0,0.04)':'rgba(67,232,194,0.1)'};color:${isPast?'var(--text-muted)':'var(--accent3)'};border-radius:8px;padding:5px 12px;font-size:12px;border:1px solid ${isPast?'var(--border)':'rgba(67,232,194,0.3)'};">
+              🔁 ${m.date} · <b>${grpLabel}</b>${m.reason?` · ${m.reason}`:''}
+              <button onclick="removeMakeup('${cat.id}',${idx})" style="background:none;border:none;cursor:pointer;color:inherit;font-size:13px;padding:0;margin-left:4px;line-height:1;">✕</button>
+            </span>`;
+          }).join('')}
+        </div>`:`<div style="font-size:11px;color:var(--text-muted);">등록된 보강 없음</div>`}
+      </div>
     </div>`;
   }).join('');
 }
@@ -3015,14 +3095,14 @@ function saveAdminHw(catId){
   const val=document.getElementById(`admin-hw-${catId}`)?.value?.trim();
   if(val) S.adminHomework[catId]=val;
   else delete S.adminHomework[catId];
-  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework}));
+  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
   showToast(val?'📝 숙제가 등록됐습니다':'🗑️ 숙제가 삭제됐습니다');
   renderAdminNotices();
 }
 function clearAdminHw(catId){
   delete S.adminHomework[catId];
-  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework}));
+  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
   showToast('🗑️ 숙제가 삭제됐습니다');
   renderAdminNotices();
@@ -3333,7 +3413,8 @@ function addGroupRow(grp){
       <button type="button" class="group-del-btn" onclick="removeGroupRow('${rowId}')">✕</button>`;
   } else {
     const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
-    const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin):buildTimePairs(_groupTabType);
+    const firstStartMin=getFirstGroupStartMin();
+    const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin,firstStartMin):buildTimePairs(_groupTabType);
     const curKey=grp?`${grp.start}_${grp.end}`:pairs[0]?.start+'_'+pairs[0]?.end;
     const pairOpts=pairs.map(p=>{
       const key=`${p.start}_${p.end}`;
@@ -3353,10 +3434,9 @@ function addNextGroupRow(){
     return;
   }
   const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
-  const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin):buildTimePairs(_groupTabType);
-  // 현재 등록된 조들의 시작시간 수집
+  const firstStartMin=getFirstGroupStartMin();
+  const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin,firstStartMin):buildTimePairs(_groupTabType);
   const usedKeys=new Set([...document.querySelectorAll('#cat-groups-list .group-select')].map(s=>s.value));
-  // 사용 안 된 다음 슬롯 찾기
   const nextPair=pairs.find(p=>!usedKeys.has(`${p.start}_${p.end}`));
   addGroupRow(nextPair?{start:nextPair.start,end:nextPair.end}:null);
 }
@@ -3385,13 +3465,14 @@ function relabelGroupRows(){
 function initAllGroupRows(){
   const list=document.getElementById('cat-groups-list');
   if(!list) return;
+  // 현재 첫 번째 조 시간을 기준으로 저장
+  const firstStartMin=getFirstGroupStartMin();
   list.innerHTML='';
   const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
-  const pairs=buildTimePairsWithBreak(_groupTabType, breakMin);
+  const pairs=buildTimePairsWithBreak(_groupTabType, breakMin, firstStartMin);
   pairs.forEach((p,i)=>{
     addGroupRow({label:(i+1)+'조', start:p.start, end:p.end});
   });
-  // 탭 버튼 스타일 동기화
   ['20min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
@@ -3401,12 +3482,11 @@ function initAllGroupRows(){
 }
 
 // 휴식 시간을 반영한 시간 페어 생성
-function buildTimePairsWithBreak(type, breakMin){
+function buildTimePairsWithBreak(type, breakMin, baseStartMin){
   if(!breakMin) return buildTimePairs(type);
-  // 수업 길이 계산
   const durationMap={'20min':20,'1hour':60,'90min':90};
   const duration=durationMap[type];
-  if(!duration) return buildTimePairs(type); // custom은 그대로
+  if(!duration) return buildTimePairs(type);
   const step=duration+breakMin;
   const toHHMM=totalMin=>{
     const h=Math.floor(totalMin/60);
@@ -3421,7 +3501,8 @@ function buildTimePairsWithBreak(type, breakMin){
     return m===0?`${ampm} ${h12}:00`:`${ampm} ${h12}:${String(m).padStart(2,'0')}`;
   };
   const pairs=[];
-  let startMin=9*60; // 9:00부터
+  // 기준 시작 시간: 인자로 받거나, 현재 첫 번째 조 시간, 없으면 9:00
+  let startMin=baseStartMin??9*60;
   while(startMin+duration<=23*60){
     const endMin=startMin+duration;
     pairs.push({
@@ -3432,6 +3513,24 @@ function buildTimePairsWithBreak(type, breakMin){
     startMin+=step;
   }
   return pairs;
+}
+
+// 현재 첫 번째 조의 시작 시간(분) 가져오기
+function getFirstGroupStartMin(){
+  const firstSelect=document.querySelector('#cat-groups-list .group-select');
+  if(firstSelect){
+    const [start]=firstSelect.value.split('_');
+    if(start){
+      const [h,m]=start.split(':');
+      return parseInt(h)*60+parseInt(m);
+    }
+  }
+  const firstCustom=document.querySelector('#cat-groups-list .group-custom-time');
+  if(firstCustom&&firstCustom.value){
+    const [h,m]=firstCustom.value.split(':');
+    return parseInt(h)*60+parseInt(m);
+  }
+  return null;
 }
 
 function getGroupsFromForm(){
@@ -3492,7 +3591,7 @@ async function pullCatalogFromSupa(){
     ]);
     if(rows&&rows.length){
       const teacherRow=rows.find(r=>r.id==='__teachers__');
-      if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; }
+      if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; S.makeup=teacherRow.data.makeup||{}; }
       S.catalog=rows.filter(r=>r.id!=='__teachers__').map(r=>r.data);
       normalizeCatalog();
     }
@@ -3501,7 +3600,7 @@ async function pullCatalogFromSupa(){
       noticeRows.forEach(r=>{S.notices[r.catalog_id]=r.content;});
     }
     // catalog만 저장 (personal 데이터인 profiles/enrollments 건드리지 않음)
-    localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework}));
+    localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
     return true;
   } catch(e){
     console.error('Supabase pull error:',e);
@@ -3518,7 +3617,7 @@ async function pushCatalogToSupa(){
     // Upsert catalog rows
     const rows=S.catalog.map(cat=>({id:cat.id, data:cat, updated_at:new Date().toISOString()}));
     // Save teachers in a special catalog entry
-    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers,vacations:S.vacations}, updated_at:new Date().toISOString()});
+    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers,vacations:S.vacations,makeup:S.makeup}, updated_at:new Date().toISOString()});
     await supaFetch('catalog', 'POST', rows);
     // Upsert notices
     const noticeRows=Object.entries(S.notices).map(([k,v])=>({catalog_id:k,content:v,updated_at:new Date().toISOString()}));
@@ -3866,12 +3965,6 @@ function addVacation(catId){
   renderAdminNotices();
   showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);
 }
-function removeVacation(catId,dateStr){
-  removeVacationDate(catId,dateStr);
-  renderAdminNotices();
-  showToast('✅ 휴강이 취소됐습니다');
-}
-
 // 휴강을 고려해 totalSessions 회차가 끝나는 날짜를 자동 계산해 dateEnd 업데이트
 function autoExtendEndDate(catId){
   const cat=S.catalog.find(c=>c.id===catId);

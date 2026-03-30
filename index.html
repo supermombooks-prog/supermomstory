@@ -1181,11 +1181,14 @@ function formatAmPm(t){
 }
 function formatAmPmRange(start,end){
   if(!start||!end) return `${start}~${end}`;
-  const [sh,sm]=start.split(':');
-  const [eh,em]=end.split(':');
-  const h=parseInt(sh);
-  const ampm=h<12?'AM':'PM';
-  return `${ampm} ${sh}:${sm}~${eh}:${em}`;
+  const fmt=t=>{
+    const [hh,mm]=t.split(':');
+    const h=parseInt(hh);
+    const ampm=h<12?'AM':'PM';
+    const h12=h===0?12:h>12?h-12:h;
+    return `${ampm} ${String(h12).padStart(2,'0')}:${mm}`;
+  };
+  return `${fmt(start)}~${fmt(end).replace(/^(AM|PM) /,'')}`;
 }
 
 function seed(){

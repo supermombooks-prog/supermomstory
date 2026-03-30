@@ -157,7 +157,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .catalog-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all 0.25s;position:relative;display:flex;flex-direction:column;gap:11px;}
 .catalog-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.35);border-color:rgba(255,255,255,0.12);}
 .catalog-card.enrolled{border-color:var(--accent3);background:rgba(67,232,194,0.04);}
-.catalog-card-top{display:flex;align-items:flex-start;gap:12px;}
+.catalog-card-top{display:flex;align-items:center;gap:12px;}
 .catalog-icon{width:66px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;}
 .catalog-icon img{width:100%;height:100%;object-fit:fill;border-radius:8px;}
 .catalog-name{font-size:15px;font-weight:700;letter-spacing:-0.3px;line-height:1.2;}
@@ -337,6 +337,9 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
   .btn-zoom:hover,.btn-edit:hover{transform:none !important;box-shadow:none !important;}
   .catalog-card,.stat-card,.class-card,.kid-card,.admin-cat-card{transition:none !important;}
   * {-webkit-tap-highlight-color:transparent;}
+  /* 오늘의 수업 카드 모바일 강제 표시 */
+  #todaySchedule{display:flex !important;flex-direction:column;gap:9px;min-height:0;}
+  #todaySchedule .class-card{display:flex !important;flex-direction:column;min-height:60px;}
 }
 
 ::-webkit-scrollbar{width:4px;}
@@ -1244,7 +1247,7 @@ function normalizeCatalog(){
   if(changed) save();
 }
 function uid(){return Math.random().toString(36).substr(2,9);}
-function toMin(t){const[h,m]=t.split(':');return+h*60+ +m;}
+function toMin(t){if(!t||!t.includes(':')) return 0; const[h,m]=t.split(':');return+h*60+ +m;}
 function formatKoreanTime(t){
   if(!t||!t.includes(':')) return t;
   const [hStr,mStr]=t.split(':');
@@ -1354,7 +1357,10 @@ function getEnrolledForDay(dow){
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat||!cat.days.includes(dow)) return null;
     const grp=getGroupForEnroll(e,cat);
-    const displayCat={...cat, start:grp?.start||'?', end:grp?.end||'?'};
+    // 조 시간이 없으면 수업의 첫번째 조 또는 기본값 사용
+    const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
+    const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
+    const displayCat={...cat, start:startTime, end:endTime};
     return {enroll:e, cat:displayCat, grp};
   }).filter(Boolean);
 }
@@ -1442,7 +1448,7 @@ function renderDashboard(){
         })()}
         ${getAdminHwForDashboard(x.cat.id)}
         ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
-      </div>`;
+      </div>`
     }).join('');
   }
 
@@ -1557,7 +1563,7 @@ function renderEnroll(){
     return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
-        <div style="flex:1;min-width:0;padding:14px 16px 14px 16px;">
+        <div style="flex:1;min-width:0;">
           <div class="catalog-name">${cat.name}</div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
@@ -1736,7 +1742,7 @@ function renderMonthlyCal() {
           <span style="width:5px;height:5px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span>
           <span style="font-size:8px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${shortName}</span>
         </span>
-      </div>`;
+      </div>`
     }).join('');
 
     const dateStr2=isOther?'':`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
@@ -1859,7 +1865,7 @@ function renderAddClassPanel(){
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
         onclick="_addClassFilter='${s}';renderAddClassPanel()">
         ${flag}${s} <span style="font-size:10px;opacity:0.7;margin-left:3px;">${cnt}</span>
-      </div>`;
+      </div>`
     }).join('');
   }
 
@@ -1881,7 +1887,7 @@ function renderAddClassPanel(){
     return `<div class="catalog-card ${isAnyEnrolled?'enrolled':''} animate-in" onclick="event.stopPropagation()" style="cursor:default;">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
-        <div style="flex:1;min-width:0;padding:12px 14px 12px 14px;">
+        <div style="flex:1;min-width:0;">
           <div class="catalog-name" style="font-size:14px;">${cat.name}</div>
           <div class="catalog-teacher" style="font-size:11px;">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
@@ -2122,7 +2128,7 @@ function renderAdminCatalog(){
         onclick="_adminCatalogFilter='${s}';renderAdminCatalog()">
         ${flag}${s}
         <span style="font-size:10px;opacity:0.7;margin-left:3px;">${s==='전체'?S.catalog.length:S.catalog.filter(c=>c.subject===s).length}</span>
-      </div>`;
+      </div>`
     }).join('');
   }
 
@@ -3131,7 +3137,7 @@ function renderAdminNotices(){
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
         onclick="_noticesFilter='${s}';renderAdminNotices()">
         ${flag}${s} <span style="font-size:10px;opacity:0.7;margin-left:3px;">${cnt}</span>
-      </div>`;
+      </div>`
     }).join('');
   }
 
@@ -4355,7 +4361,7 @@ function renderTeachers(){
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
         onclick="_teacherFilter='${s}';_selectedTeacherId=null;renderTeachers()">
         ${flag}${s} <span style="font-size:10px;opacity:0.7;margin-left:3px;">${cnt}</span>
-      </div>`;
+      </div>`
     }).join('');
   }
 

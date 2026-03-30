@@ -2006,6 +2006,7 @@ function renderAdminCatalog(){
       <div class="admin-cat-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
+        ${cat.totalSessions?`<span class="tag" style="color:var(--accent);border-color:rgba(108,138,255,0.3);">🔢 총 ${cat.totalSessions}회</span>`:''}
         ${cat.age?`<span class="tag">👶 ${cat.age}</span>`:''}
         ${formatDateRange(cat.dateStart,cat.dateEnd)?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${formatDateRange(cat.dateStart,cat.dateEnd)}</span>`:''}
         ${cat.capacity>0&&cnt>=cat.capacity?`<span class="tag" style="color:var(--danger);border-color:rgba(255,92,92,0.3);">정원마감</span>`:''}

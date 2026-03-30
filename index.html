@@ -91,7 +91,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 
 /* TODAY CARD */
 .schedule-list{display:flex;flex-direction:column;gap:9px;}
-.class-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 20px;display:flex;align-items:center;gap:16px;transition:all 0.2s;position:relative;overflow:hidden;}
+.class-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 20px;display:flex;flex-direction:column;gap:0;transition:all 0.2s;position:relative;overflow:hidden;}
 .class-card:hover{border-color:rgba(108,138,255,0.3);transform:translateX(2px);}
 .class-card.done{opacity:0.38;}
 .class-card.now{border-color:var(--accent3);background:rgba(67,232,194,0.05);}
@@ -1319,31 +1319,39 @@ function renderDashboard(){
       const isLastSession=totalSess>0 && sessionNum===totalSess && !isVacation;
       const isGraduation=isLastDay||isLastSession;
       return `<div class="class-card ${isDone?'done':''} ${isNow?'now':''} ${isVacation?'vacation':''} ${isGraduation?'graduation':''}">
-        <div><div class="class-time">${formatKoreanTime(x.cat.start)}</div><div class="class-time-end">~${formatKoreanTime(x.cat.end)}</div></div>
-        <div class="class-divider"></div>
-        <div class="class-info" style="flex:1;">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
-            ${sessionBadge}
-            ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
+        <div style="display:flex;align-items:center;gap:16px;width:100%;">
+          <div><div class="class-time">${formatKoreanTime(x.cat.start)}</div><div class="class-time-end">~${formatKoreanTime(x.cat.end)}</div></div>
+          <div class="class-divider"></div>
+          <div class="class-info" style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
+              ${sessionBadge}
+              ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
+            </div>
+            <div class="class-meta">
+              ${x.cat.teacher?`<span>👩‍🏫 ${x.cat.teacher}</span>`:''}
+              <span style="color:${x.cat.color};">● ${x.cat.subject}</span>
+            </div>
           </div>
-          <div class="class-meta">
-            ${x.cat.teacher?`<span>👩‍🏫 ${x.cat.teacher}</span>`:''}
-            <span style="color:${x.cat.color};">● ${x.cat.subject}</span>
-          </div>
+          ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
         </div>
-        ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
-      </div>
-      ${(()=>{
-        const curric=getTodayCurriculum(x.cat);
-        if(!curric||(!curric.topic&&!curric.progress)) return '';
-        return `<div style="margin-top:8px;padding:8px 12px;background:rgba(108,138,255,0.06);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;">
-          ${curric.topic?`<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">📖 ${curric.topic}</div>`:''}
-          ${curric.progress?`<div style="font-size:12px;color:var(--text-muted);">📄 ${curric.progress}</div>`:''}
-        </div>`;
-      })()}
-      ${getAdminHwForDashboard(x.cat.id)}
-      ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
+        ${(()=>{
+          const curric=getTodayCurriculum(x.cat);
+          if(!curric) return '';
+          const title=curric.title||curric.topic||'';
+          const content=curric.content||curric.progress||'';
+          if(!title&&!content) return '';
+          const uid2='curric_'+x.cat.id.slice(-6);
+          return `<div style="margin-top:10px;padding:10px 14px;background:rgba(108,138,255,0.06);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;" onclick="const c=document.getElementById('${uid2}');c.style.display=c.style.display==='none'?'block':'none';this.querySelector('.toggle-arrow').textContent=c.style.display==='none'?'▼':'▲'">
+              <div style="font-size:14px;font-weight:800;color:var(--text);">📖 ${title||'오늘의 수업 내용'}</div>
+              ${content?`<span class="toggle-arrow" style="font-size:11px;color:var(--text-muted);">▼</span>`:''}
+            </div>
+            ${content?`<div id="${uid2}" style="display:none;margin-top:8px;font-size:13px;color:var(--text-muted);line-height:1.8;white-space:pre-wrap;">${content}</div>`:''}
+          </div>`;
+        })()}
+        ${getAdminHwForDashboard(x.cat.id)}
+        ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
       </div>`;
     }).join('');
   }
@@ -1971,7 +1979,12 @@ function renderAdminCatalog(){
     grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📋</div><div class="empty-text">등록된 수업이 없습니다<br><button class="btn btn-admin" style="margin-top:12px;" onclick="openAddCatalog()">+ 첫 수업 등록하기</button></div></div>`;
     return;
   }
-  grid.innerHTML=cats.map(cat=>{
+  const today2=new Date(); today2.setHours(0,0,0,0);
+  const isAdminClosed=(cat)=>cat.closed||(cat.dateStart&&new Date(cat.dateStart)<=today2);
+  const openCats=cats.filter(c=>!isAdminClosed(c));
+  const closedCats=cats.filter(c=>isAdminClosed(c));
+
+  const renderAdminCard=(cat)=>{
     const cnt=S.enrollments.filter(e=>e.catalogId===cat.id).length;
     const pct=cat.capacity>0?Math.round(cnt/cat.capacity*100):null;
     const daysStr=cat.days.map(d=>DN[d]).join('·');
@@ -2007,16 +2020,43 @@ function renderAdminCatalog(){
           ${cat.zoom?`<a href="${cat.zoom}" target="_blank" style="color:var(--accent);text-decoration:none;">🔗 줌 링크 확인</a>`:'<span>줌 링크 없음</span>'}
         </div>
         <div class="admin-cat-actions">
-          <button class="btn btn-ghost btn-sm" onclick="toggleRecruitStatus('${cat.id}')" style="font-size:11px;color:${cat.closed?'var(--danger)':'var(--accent3)'};">
-            ${cat.closed?'🔒 모집완료':'🟢 모집중'}
-          </button>
           <button class="btn btn-ghost btn-sm" onclick="copyCatalog('${cat.id}')" title="수업 복사">📋 복사</button>
           <button class="btn btn-edit btn-sm" onclick="editCatalog('${cat.id}')">✏️ 수정</button>
           <button class="btn btn-danger btn-sm" onclick="deleteCatalog('${cat.id}')">🗑️ 삭제</button>
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html='';
+  if(openCats.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <span style="font-size:16px;font-weight:800;color:var(--accent3);">🟢 모집중</span>
+      <span style="font-size:12px;color:var(--text-muted);">${openCats.length}개 수업</span>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;margin-left:auto;" onclick="bulkCloseAll()">전체 마감 처리</button>
+    </div>`;
+    html+=openCats.map(renderAdminCard).join('');
+  }
+  if(closedCats.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${openCats.length?'20px':'4px'} 0 4px;">
+      <span style="font-size:16px;font-weight:800;color:var(--danger);">🔒 모집완료</span>
+      <span style="font-size:12px;color:var(--text-muted);">${closedCats.length}개 수업</span>
+    </div>`;
+    html+=closedCats.map(renderAdminCard).join('');
+  }
+  grid.innerHTML=html;
+}
+
+function bulkCloseAll(){
+  if(!confirm('모든 모집중 수업을 마감 처리하시겠습니까?')) return;
+  const today2=new Date(); today2.setHours(0,0,0,0);
+  S.catalog.forEach(cat=>{
+    if(!cat.closed&&!(cat.dateStart&&new Date(cat.dateStart)<=today2)) cat.closed=true;
+  });
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  showToast('🔒 전체 마감 처리됐습니다');
+  renderAdminCatalog();
 }
 function renderAdminEnrollments(){
   const tb=document.getElementById('adminEnrollBody');
@@ -2320,7 +2360,7 @@ function addVacationFromModal(){
 // ═══════════════════════════════════════
 // CURRICULUM SYSTEM
 // ═══════════════════════════════════════
-let _modalCurriculum = []; // [{session, topic, progress}]
+let _modalCurriculum = []; // [{session, title, content}]
 
 function renderModalCurriculumList(){
   const el=document.getElementById('cat-curriculum-list');
@@ -2330,13 +2370,16 @@ function renderModalCurriculumList(){
     return;
   }
   el.innerHTML=_modalCurriculum.map((c,i)=>`
-    <div style="display:flex;gap:6px;align-items:center;">
-      <span style="font-size:12px;font-weight:700;color:var(--accent);min-width:32px;text-align:center;background:var(--accent)18;padding:4px 6px;border-radius:6px;flex-shrink:0;">${c.session}회</span>
-      <input class="form-input" style="flex:2;font-size:12px;padding:6px 10px;" placeholder="수업 주제 (예: 알파벳 & 발음)" value="${c.topic||''}"
-        oninput="_modalCurriculum[${i}].topic=this.value">
-      <input class="form-input" style="flex:3;font-size:12px;padding:6px 10px;" placeholder="진도 (예: Unit 1 p.2~8)" value="${c.progress||''}"
-        oninput="_modalCurriculum[${i}].progress=this.value">
-      <button onclick="_modalCurriculum.splice(${i},1);renderModalCurriculumList()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;padding:0;flex-shrink:0;">🗑</button>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;position:relative;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--accent);min-width:36px;text-align:center;background:var(--accent)18;padding:4px 8px;border-radius:6px;flex-shrink:0;">${c.session}회</span>
+        <input class="form-input" style="flex:1;font-size:13px;font-weight:600;padding:6px 10px;" placeholder="제목 (예: WEEK 1: 스피치의 기초 🌱)" value="${(c.title||c.topic||'').replace(/"/g,'&quot;')}"
+          oninput="_modalCurriculum[${i}].title=this.value">
+        <button onclick="_modalCurriculum.splice(${i},1);renderModalCurriculumList()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;padding:0;flex-shrink:0;">🗑</button>
+      </div>
+      <textarea style="width:100%;min-height:80px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;line-height:1.6;resize:vertical;font-family:inherit;"
+        placeholder="내용을 자유롭게 입력하세요&#10;- 주제: My Dream&#10;- 기본 호흡법 &amp; 복식호흡&#10;- 나의 꿈을 당당하게 발표하기"
+        oninput="_modalCurriculum[${i}].content=this.value">${c.content||c.progress||''}</textarea>
     </div>`).join('');
 }
 
@@ -2344,11 +2387,10 @@ function addCurriculumRow(){
   const nextSession=_modalCurriculum.length>0
     ?Math.max(..._modalCurriculum.map(c=>c.session))+1
     :1;
-  _modalCurriculum.push({session:nextSession, topic:'', progress:''});
+  _modalCurriculum.push({session:nextSession, title:'', content:''});
   renderModalCurriculumList();
-  // 포커스를 새로 추가된 행의 주제 입력란으로
   setTimeout(()=>{
-    const inputs=document.querySelectorAll('#cat-curriculum-list input[placeholder*="수업 주제"]');
+    const inputs=document.querySelectorAll('#cat-curriculum-list input[placeholder*="제목"]');
     inputs[inputs.length-1]?.focus();
   },50);
 }
@@ -2774,11 +2816,11 @@ function downloadPDF(){
 <title>수업 시간표</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Apple SD Gothic Neo','Malgun Gothic','나눔고딕',sans-serif;background:#fff;color:#1e293b;padding:30px;}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic','나눔고딕',sans-serif;background:#fff;color:#1e293b;}
   h1{font-size:22px;font-weight:800;text-align:center;margin-bottom:4px;}
-  .sub{font-size:13px;color:#64748b;text-align:center;margin-bottom:24px;}
+  .sub{font-size:13px;color:#64748b;text-align:center;margin-bottom:20px;}
   h2{font-size:14px;font-weight:700;color:#334155;margin:0 0 8px;}
-  table{width:100%;border-collapse:collapse;margin-bottom:28px;}
+  table{width:100%;border-collapse:collapse;margin-bottom:0;}
   thead tr{background:#1e293b;color:#fff;}
   th{padding:8px 10px;font-size:12px;font-weight:600;}
   td{padding:6px 8px;border:1px solid #e2e8f0;font-size:11px;vertical-align:top;}
@@ -2789,49 +2831,71 @@ function downloadPDF(){
   .sep{border-top:1px solid #cbd5e1;margin:4px 0;}
   .weekend{color:#f87171;}
   .weekend-sat{color:#60a5fa;}
+  /* 섹션별 페이지 분리 */
+  .section{page-break-inside:avoid;break-inside:avoid;}
+  .page-break{page-break-before:always;break-before:always;}
+  .cover{padding:30px 30px 20px;}
+  .section-page{padding:20px 30px;}
   @media print{
-    body{padding:10px;}
-    @page{size:A4 landscape;margin:15mm;}
+    @page{size:A4 landscape;margin:12mm;}
+    .cover{padding:15px 15px 10px;}
+    .section-page{padding:10px 15px;}
   }
 </style>
 </head>
 <body>
-<h1>📚 ${targetName} 수업 시간표</h1>
-<div class="sub">${dateStr}</div>
 
-<h2>📆 ${calYear}년 ${MONTH_KR[calMonth]}</h2>
-<table style="table-layout:fixed;">
-  <thead><tr style="background:#1e293b;color:#fff;">
-    <th style="width:14.28%;color:#fca5a5;">일</th>
-    <th style="width:14.28%;">월</th><th style="width:14.28%;">화</th>
-    <th style="width:14.28%;">수</th><th style="width:14.28%;">목</th>
-    <th style="width:14.28%;">금</th>
-    <th style="width:14.28%;color:#93c5fd;">토</th>
-  </tr></thead>
-  <tbody>${calRows2.join('')}</tbody>
-</table>
+<!-- 1페이지: 표지 + 월간 캘린더 -->
+<div class="cover">
+  <h1>📚 ${targetName} 수업 시간표</h1>
+  <div class="sub">${dateStr}</div>
+  <div class="section">
+    <h2>📆 ${calYear}년 ${MONTH_KR[calMonth]}</h2>
+    <table style="table-layout:fixed;">
+      <thead><tr style="background:#1e293b;color:#fff;">
+        <th style="width:14.28%;color:#fca5a5;">일</th>
+        <th style="width:14.28%;">월</th><th style="width:14.28%;">화</th>
+        <th style="width:14.28%;">수</th><th style="width:14.28%;">목</th>
+        <th style="width:14.28%;">금</th>
+        <th style="width:14.28%;color:#93c5fd;">토</th>
+      </tr></thead>
+      <tbody>${calRows2.join('')}</tbody>
+    </table>
+  </div>
+</div>
 
-<h2>📅 요일별 시간표</h2>
-<table>
-  <thead><tr>
-    <th>시간</th>
-    <th class="weekend">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="weekend-sat">토</th>
-  </tr></thead>
-  <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
-</table>
+<!-- 2페이지: 요일별 시간표 -->
+<div class="section-page page-break">
+  <h2>📅 요일별 시간표</h2>
+  <div class="section">
+    <table>
+      <thead><tr>
+        <th>시간</th>
+        <th class="weekend">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="weekend-sat">토</th>
+      </tr></thead>
+      <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
+    </table>
+  </div>
+</div>
 
-<h2>📋 수업 목록</h2>
-<table>
-  <thead><tr>
-    <th style="text-align:left;">수업명</th>
-    <th style="text-align:left;">과목</th>
-    <th style="text-align:left;">요일</th>
-    <th style="text-align:left;">시간/조</th>
-    <th style="text-align:left;">선생님</th>
-    <th style="text-align:left;">기간</th>
-  </tr></thead>
-  <tbody>${listRows}</tbody>
-</table>
+<!-- 3페이지: 수업 목록 -->
+<div class="section-page page-break">
+  <h2>📋 수업 목록</h2>
+  <div class="section">
+    <table>
+      <thead><tr>
+        <th style="text-align:left;">수업명</th>
+        <th style="text-align:left;">과목</th>
+        <th style="text-align:left;">요일</th>
+        <th style="text-align:left;">시간/조</th>
+        <th style="text-align:left;">선생님</th>
+        <th style="text-align:left;">기간</th>
+      </tr></thead>
+      <tbody>${listRows}</tbody>
+    </table>
+  </div>
+</div>
+
 <script>window.onload=function(){window.print();}<\/script>
 </body>
 </html>`;

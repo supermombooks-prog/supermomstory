@@ -588,7 +588,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
       </div>
       <div class="section-body" style="padding:0;">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th>📚</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
       </div>
     </div>
@@ -963,6 +963,17 @@ create policy "public write notices" on notices for all using (true);</div>
 
 
 
+
+<!-- CURRICULUM MODAL -->
+<div class="modal-overlay" id="curriculumModal">
+  <div class="modal" style="width:520px;max-height:80vh;overflow-y:auto;">
+    <div class="modal-title" id="curriculumModalTitle">📚 커리큘럼</div>
+    <div id="curriculumModalBody" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;"></div>
+    <div class="form-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="closeModal('curriculumModal')">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- CHANGE GROUP MODAL -->
 <div class="modal-overlay" id="changeGroupModal">
@@ -1862,6 +1873,7 @@ function renderMyClasses(){
         ${getHomeworkCell(e.id, e.catalogId)}
       </td>
       <td id="zoom-cell-${e.id}">${zoomCell}</td>
+      <td>${(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="cancelById('${e.id}')">취소</button></td>
     </tr>`;
   }).join('');
@@ -3197,11 +3209,76 @@ function getNoticeForCat(catId){ return S.notices[catId]||''; }
 // ═══════════════════════════════════════
 // GROUP-BASED ENROLLMENT FUNCTIONS
 // ═══════════════════════════════════════
+function openCurriculumModal(catId, enrollId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  const curriculum=cat.curriculum||[];
+  const todaySession=calcSessionNumber(cat, new Date())||0;
+  const totalSess=cat.totalSessions||curriculum.length;
+
+  document.getElementById('curriculumModalTitle').textContent=`📚 ${cat.name} 커리큘럼`;
+
+  const body=document.getElementById('curriculumModalBody');
+
+  if(!curriculum.length){
+    body.innerHTML=`<div class="empty-state" style="padding:20px;"><div class="empty-icon">📭</div><div class="empty-text">등록된 커리큘럼이 없습니다</div></div>`;
+    openModal('curriculumModal');
+    return;
+  }
+
+  body.innerHTML=curriculum.map(c=>{
+    const isDone=todaySession>c.session;
+    const isToday=todaySession===c.session;
+    const isFuture=todaySession<c.session;
+    const title=c.title||c.topic||'';
+    const content=c.content||c.progress||'';
+    const contentId='curr-content-'+c.session+'-'+catId.slice(-4);
+
+    return `<div style="border-radius:var(--radius-sm);border:${isToday?'2px solid var(--accent)':'1px solid var(--border)'};background:${isToday?'rgba(108,138,255,0.05)':isDone?'var(--surface2)':'var(--surface)'};padding:12px 16px;position:relative;opacity:${isFuture?0.7:1};">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <!-- 회차 뱃지 -->
+        <div style="min-width:40px;text-align:center;flex-shrink:0;">
+          ${isDone
+            ?`<div style="width:36px;height:36px;border-radius:50%;background:rgba(67,232,194,0.15);border:2px solid var(--accent3);display:flex;align-items:center;justify-content:center;font-size:16px;">✅</div>`
+            :isToday
+              ?`<div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;">${c.session}</div>`
+              :`<div style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text-muted);">${c.session}</div>`
+          }
+          ${isToday?`<div style="font-size:9px;color:var(--accent);font-weight:700;margin-top:2px;text-align:center;">오늘</div>`:''}
+        </div>
+        <!-- 내용 -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:${isToday?800:700};color:${isDone?'var(--text-muted)':isToday?'var(--accent)':'var(--text)'};${isDone?'text-decoration:line-through;':''};margin-bottom:${content?'6px':'0'};">${title||c.session+'회차'}</div>
+          ${content?`<div>
+            <div id="${contentId}" style="display:${isToday?'block':'none'};font-size:12px;color:var(--text-muted);line-height:1.8;white-space:pre-wrap;">${content}</div>
+            <button onclick="const el=document.getElementById('${contentId}');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'▼ 내용 보기':'▲ 접기'"
+              style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;margin-top:4px;">
+              ${isToday?'▲ 접기':'▼ 내용 보기'}
+            </button>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 진행 상황 헤더
+  const progressHtml=totalSess>0?`<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;">
+    <div style="flex:1;">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">진행 현황</div>
+      <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+        <div style="width:${Math.min(100,Math.round((Math.max(0,todaySession-1))/totalSess*100))}%;height:100%;background:var(--accent3);border-radius:4px;transition:width 0.5s;"></div>
+      </div>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:var(--accent3);white-space:nowrap;">${Math.max(0,todaySession-1)} / ${totalSess}회</div>
+  </div>`:'' ;
+  body.innerHTML=progressHtml+body.innerHTML;
+
+  openModal('curriculumModal');
+}
+
+
 function openChangeGroupModal(enrollId, catId){
   const cat=S.catalog.find(c=>c.id===catId);
-  const enroll=S.enrollments.find(e=>e.id===enrollId);
-  if(!cat||!enroll) return;
-  document.getElementById('changeGroupTitle').textContent=`🔄 ${cat.name} — 조 변경`;
   document.getElementById('changeGroupList').innerHTML=(cat.groups||[]).map(g=>{
     const isCurrent=enroll.groupId===g.id;
     return `<button onclick="changeGroup('${enrollId}','${g.id}')"

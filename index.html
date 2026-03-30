@@ -1506,22 +1506,28 @@ function renderEnroll(){
   else if(S.filterSubject!=='전체') cats=cats.filter(c=>c.subject===S.filterSubject);
   if(q) cats=cats.filter(c=>c.name.toLowerCase().includes(q)||(c.teacher||'').toLowerCase().includes(q));
 
-  // 선생님 필터 탭
+  // 선생님 필터 탭 - 언어를 선택했을 때만 표시
   const teacherBar=document.getElementById('enrollTeacherFilterBar');
   if(teacherBar){
-    const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
-    if(teachers.length>1){
-      teacherBar.style.display='';
-      teacherBar.innerHTML=teachers.map(t=>{
-        const isActive=_enrollTeacherFilter===t;
-        return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'':'font-size:12px;'}"
-          onclick="_enrollTeacherFilter='${t}';renderEnroll()">
-          👩‍🏫 ${t}
-        </div>`;
-      }).join('');
-    } else {
+    if(S.filterSubject==='전체'){
       teacherBar.style.display='none';
       teacherBar.innerHTML='';
+      _enrollTeacherFilter='전체';
+    } else {
+      const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
+      if(teachers.length>1){
+        teacherBar.style.display='';
+        teacherBar.innerHTML=teachers.map(t=>{
+          const isActive=_enrollTeacherFilter===t;
+          return `<div class="filter-chip${isActive?' active':''}"
+            onclick="_enrollTeacherFilter='${t}';renderEnroll()">
+            👩‍🏫 ${t}
+          </div>`;
+        }).join('');
+      } else {
+        teacherBar.style.display='none';
+        teacherBar.innerHTML='';
+      }
     }
   }
 
@@ -2161,22 +2167,28 @@ function renderAdminCatalog(){
   // 언어 필터링
   let cats=_adminCatalogFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_adminCatalogFilter);
 
-  // 선생님 필터 탭
+  // 선생님 필터 탭 - 언어를 선택했을 때만 표시
   const teacherBar=document.getElementById('adminTeacherFilterBar');
   if(teacherBar){
-    const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
-    if(teachers.length>1){
-      teacherBar.style.display='';
-      teacherBar.innerHTML=teachers.map(t=>{
-        const isActive=_adminTeacherFilter===t;
-        return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'background:rgba(255,126,179,0.15);color:var(--admin);border-color:var(--admin);':''}"
-          onclick="_adminTeacherFilter='${t}';renderAdminCatalog()">
-          👩‍🏫 ${t}
-        </div>`;
-      }).join('');
-    } else {
+    if(_adminCatalogFilter==='전체'){
       teacherBar.style.display='none';
       teacherBar.innerHTML='';
+      _adminTeacherFilter='전체';
+    } else {
+      const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
+      if(teachers.length>1){
+        teacherBar.style.display='';
+        teacherBar.innerHTML=teachers.map(t=>{
+          const isActive=_adminTeacherFilter===t;
+          return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'background:rgba(255,126,179,0.15);color:var(--admin);border-color:var(--admin);':''}"
+            onclick="_adminTeacherFilter='${t}';renderAdminCatalog()">
+            👩‍🏫 ${t}
+          </div>`;
+        }).join('');
+      } else {
+        teacherBar.style.display='none';
+        teacherBar.innerHTML='';
+      }
     }
   }
 

@@ -926,13 +926,13 @@ create policy "public write notices" on notices for all using (true);</div>
     </div>
     <div class="form-row"><label class="form-label">아이콘</label>
       <div class="icon-picker" id="cat-icon-picker">
-        <div class="icon-opt selected" data-subject="영어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="영어"><img src="https://flagcdn.com/w80/us.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="영어"></div>
-        <div class="icon-opt" data-subject="일본어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="일본어"><img src="https://flagcdn.com/w80/jp.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="일본어"></div>
-        <div class="icon-opt" data-subject="중국어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="중국어"><img src="https://flagcdn.com/w80/cn.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="중국어"></div>
-        <div class="icon-opt" data-subject="스페인어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="스페인어"><img src="https://flagcdn.com/w80/es.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="스페인어"></div>
-        <div class="icon-opt" data-subject="프랑스어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="프랑스어"><img src="https://flagcdn.com/w80/fr.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="프랑스어"></div>
-        <div class="icon-opt" data-subject="독일어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="독일어"><img src="https://flagcdn.com/w80/de.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="독일어"></div>
-        <div class="icon-opt" data-subject="이탈리아어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="이탈리아어"><img src="https://flagcdn.com/w80/it.png" loading="lazy" style="width:100%;height:100%;object-fit:fill;" alt="이탈리아어"></div>
+        <div class="icon-opt selected" data-subject="영어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="영어"><img src="https://flagcdn.com/w80/us.png" style="width:100%;height:100%;object-fit:fill;" alt="영어"></div>
+        <div class="icon-opt" data-subject="일본어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="일본어"><img src="https://flagcdn.com/w80/jp.png" style="width:100%;height:100%;object-fit:fill;" alt="일본어"></div>
+        <div class="icon-opt" data-subject="중국어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="중국어"><img src="https://flagcdn.com/w80/cn.png" style="width:100%;height:100%;object-fit:fill;" alt="중국어"></div>
+        <div class="icon-opt" data-subject="스페인어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="스페인어"><img src="https://flagcdn.com/w80/es.png" style="width:100%;height:100%;object-fit:fill;" alt="스페인어"></div>
+        <div class="icon-opt" data-subject="프랑스어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="프랑스어"><img src="https://flagcdn.com/w80/fr.png" style="width:100%;height:100%;object-fit:fill;" alt="프랑스어"></div>
+        <div class="icon-opt" data-subject="독일어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="독일어"><img src="https://flagcdn.com/w80/de.png" style="width:100%;height:100%;object-fit:fill;" alt="독일어"></div>
+        <div class="icon-opt" data-subject="이탈리아어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="이탈리아어"><img src="https://flagcdn.com/w80/it.png" style="width:100%;height:100%;object-fit:fill;" alt="이탈리아어"></div>
         <div class="icon-opt" data-subject="러시아어" onclick="selectCatIcon(this)" style="width:66px;height:44px;padding:0;overflow:hidden;border-radius:8px;" title="러시아어"><img src="https://flagcdn.com/w80/ru.png" style="width:100%;height:100%;object-fit:contain;" alt="러시아어"></div>
         <div class="icon-opt" data-subject="기타" onclick="selectCatIcon(this)" style="width:66px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:8px;" title="기타">🌐</div>
       </div>
@@ -2269,13 +2269,13 @@ function flagImg(subject, size=44){
   const src=getFlagUrl(subject);
   if(!src) return `<span style="font-size:${Math.round(size*0.5)}px;">🌐</span>`;
   const w=Math.round(size*1.5);
-  return `<img src="${src}" alt="${subject}" loading="lazy" style="width:${w}px;height:${size}px;object-fit:fill;border-radius:inherit;display:block;">`;
+  return `<img src="${src}" alt="${subject}" style="width:${w}px;height:${size}px;object-fit:fill;border-radius:inherit;display:block;">`;
 }
 
 function flagInline(subject){
   const src=getFlagUrl(subject);
   if(!src) return '🌐';
-  return `<img src="${src}" alt="${subject}" loading="lazy" style="width:21px;height:14px;object-fit:fill;border-radius:2px;vertical-align:middle;display:inline-block;margin-right:2px;">`;
+  return `<img src="${src}" alt="${subject}" style="width:21px;height:14px;object-fit:fill;border-radius:2px;vertical-align:middle;display:inline-block;margin-right:2px;">`;
 }
 
 function formatDateRange(dateStart, dateEnd){
@@ -4507,7 +4507,7 @@ function showTeacherDetail(id){
           width="600" height="338"
           style="border:none;border-radius:var(--radius-sm);display:block;max-width:100%;"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen loading="lazy"></iframe>
+          allowfullscreen></iframe>
       </div>`:''}
       <!-- 수업 목록 -->
       <div style="padding:20px 28px;">

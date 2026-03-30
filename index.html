@@ -591,6 +591,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="filter-bar" id="enrollFilterBar">
       <input class="search-input" id="enrollSearch" placeholder="🔍 수업 검색..." oninput="renderEnroll()">
     </div>
+    <div class="filter-bar" id="enrollTeacherFilterBar" style="margin-top:-6px;padding-top:0;"></div>
     <div class="catalog-grid" id="enrollCatalogGrid"></div>
   </div>
 
@@ -697,7 +698,8 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       <div><div class="page-title" style="color:var(--admin);">수업 카탈로그 📋</div><div class="page-sub">학부모들이 신청할 수 있는 수업을 등록하고 수정하세요</div></div>
       <button class="btn btn-admin" onclick="openAddCatalog()">+ 수업 등록</button>
     </div>
-    <div id="adminCatalogFilterBar" class="filter-bar" style="margin-bottom:18px;"></div>
+    <div id="adminCatalogFilterBar" class="filter-bar" style="margin-bottom:6px;"></div>
+    <div id="adminTeacherFilterBar" class="filter-bar" style="margin-bottom:18px;"></div>
     <div id="adminCatalogGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
   </div>
 
@@ -1481,6 +1483,7 @@ function renderDashboard(){
 }
 
 // ═══ ENROLL ═══
+let _enrollTeacherFilter='전체';
 function renderEnroll(){
   const eb=document.getElementById('enrollProfileBanner');
   if(eb) eb.innerHTML=S.profiles.length?getProfileBanner():'';
@@ -1492,7 +1495,7 @@ function renderEnroll(){
     const c=document.createElement('div');
     c.className='filter-chip'+(S.filterSubject===s?' active':'');
     c.textContent=s;
-    c.onclick=()=>{S.filterSubject=s;renderEnroll();};
+    c.onclick=()=>{S.filterSubject=s;_enrollTeacherFilter='전체';renderEnroll();};
     bar.insertBefore(c,search);
   });
 
@@ -1502,6 +1505,28 @@ function renderEnroll(){
   if(S.filterSubject==='기타') cats=cats.filter(c=>!FIXED.includes(c.subject));
   else if(S.filterSubject!=='전체') cats=cats.filter(c=>c.subject===S.filterSubject);
   if(q) cats=cats.filter(c=>c.name.toLowerCase().includes(q)||(c.teacher||'').toLowerCase().includes(q));
+
+  // 선생님 필터 탭
+  const teacherBar=document.getElementById('enrollTeacherFilterBar');
+  if(teacherBar){
+    const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
+    if(teachers.length>1){
+      teacherBar.style.display='';
+      teacherBar.innerHTML=teachers.map(t=>{
+        const isActive=_enrollTeacherFilter===t;
+        return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'':'font-size:12px;'}"
+          onclick="_enrollTeacherFilter='${t}';renderEnroll()">
+          👩‍🏫 ${t}
+        </div>`;
+      }).join('');
+    } else {
+      teacherBar.style.display='none';
+      teacherBar.innerHTML='';
+    }
+  }
+
+  // 선생님 필터 적용
+  if(_enrollTeacherFilter!=='전체') cats=cats.filter(c=>c.teacher===_enrollTeacherFilter);
 
   const grid=document.getElementById('enrollCatalogGrid');
   if(!cats.length){
@@ -2111,6 +2136,7 @@ function renderAdminDashboard(){
   }).join('');
 }
 let _adminCatalogFilter='전체';
+let _adminTeacherFilter='전체';
 
 function renderAdminCatalog(){
   const bar=document.getElementById('adminCatalogFilterBar');
@@ -2125,15 +2151,37 @@ function renderAdminCatalog(){
       const flag=s!=='전체'?`<span style="display:inline-flex;align-items:center;margin-right:4px;">${flagInline(s)}</span>`:'';
       return `<div class="filter-chip ${isActive?'active':''}"
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
-        onclick="_adminCatalogFilter='${s}';renderAdminCatalog()">
+        onclick="_adminCatalogFilter='${s}';_adminTeacherFilter='전체';renderAdminCatalog()">
         ${flag}${s}
         <span style="font-size:10px;opacity:0.7;margin-left:3px;">${s==='전체'?S.catalog.length:S.catalog.filter(c=>c.subject===s).length}</span>
       </div>`
     }).join('');
   }
 
-  // 필터링
-  const cats=_adminCatalogFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_adminCatalogFilter);
+  // 언어 필터링
+  let cats=_adminCatalogFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_adminCatalogFilter);
+
+  // 선생님 필터 탭
+  const teacherBar=document.getElementById('adminTeacherFilterBar');
+  if(teacherBar){
+    const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
+    if(teachers.length>1){
+      teacherBar.style.display='';
+      teacherBar.innerHTML=teachers.map(t=>{
+        const isActive=_adminTeacherFilter===t;
+        return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'background:rgba(255,126,179,0.15);color:var(--admin);border-color:var(--admin);':''}"
+          onclick="_adminTeacherFilter='${t}';renderAdminCatalog()">
+          👩‍🏫 ${t}
+        </div>`;
+      }).join('');
+    } else {
+      teacherBar.style.display='none';
+      teacherBar.innerHTML='';
+    }
+  }
+
+  // 선생님 필터 적용
+  if(_adminTeacherFilter!=='전체') cats=cats.filter(c=>c.teacher===_adminTeacherFilter);
 
   if(!cats.length){
     grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📋</div><div class="empty-text">등록된 수업이 없습니다<br><button class="btn btn-admin" style="margin-top:12px;" onclick="openAddCatalog()">+ 첫 수업 등록하기</button></div></div>`;

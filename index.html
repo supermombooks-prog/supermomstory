@@ -826,7 +826,7 @@ create policy "public write notices" on notices for all using (true);</div>
         </div>
       </div>
       <div id="cat-groups-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addGroupRow()" style="width:100%;justify-content:center;">+ 조 추가</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addNextGroupRow()" style="width:100%;justify-content:center;">+ 조 추가</button>
     </div>
     <div class="form-grid">
       <div class="form-row">
@@ -3332,7 +3332,8 @@ function addGroupRow(grp){
       <input class="group-custom-time" type="time" value="${endVal}" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:4px 8px;outline:none;height:30px;">
       <button type="button" class="group-del-btn" onclick="removeGroupRow('${rowId}')">✕</button>`;
   } else {
-    const pairs=buildTimePairs(_groupTabType);
+    const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
+    const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin):buildTimePairs(_groupTabType);
     const curKey=grp?`${grp.start}_${grp.end}`:pairs[0]?.start+'_'+pairs[0]?.end;
     const pairOpts=pairs.map(p=>{
       const key=`${p.start}_${p.end}`;
@@ -3344,6 +3345,20 @@ function addGroupRow(grp){
       <button type="button" class="group-del-btn" onclick="removeGroupRow('${rowId}')">✕</button>`;
   }
   list.appendChild(div);
+}
+
+function addNextGroupRow(){
+  if(_groupTabType==='custom'){
+    addGroupRow();
+    return;
+  }
+  const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
+  const pairs=breakMin>0?buildTimePairsWithBreak(_groupTabType,breakMin):buildTimePairs(_groupTabType);
+  // 현재 등록된 조들의 시작시간 수집
+  const usedKeys=new Set([...document.querySelectorAll('#cat-groups-list .group-select')].map(s=>s.value));
+  // 사용 안 된 다음 슬롯 찾기
+  const nextPair=pairs.find(p=>!usedKeys.has(`${p.start}_${p.end}`));
+  addGroupRow(nextPair?{start:nextPair.start,end:nextPair.end}:null);
 }
 
 function removeGroupRow(rowId){

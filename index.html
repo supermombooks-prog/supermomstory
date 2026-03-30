@@ -142,7 +142,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 
 /* MONTHLY CALENDAR */
 .mcal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding:4px 0;letter-spacing:0.5px;}
-.mcal-cell{min-height:88px;border-radius:10px;padding:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:2px;position:relative;}
+.mcal-cell{min-height:100px;border-radius:10px;padding:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:3px;position:relative;}
 .mcal-cell:hover{border-color:var(--accent);background:rgba(108,138,255,0.06);}
 .mcal-cell.today{border-color:var(--accent);background:rgba(108,138,255,0.08);}
 .mcal-cell.selected{border-color:var(--accent3);background:rgba(67,232,194,0.07);box-shadow:0 0 0 2px rgba(67,232,194,0.2);}
@@ -151,8 +151,8 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .mcal-date{font-family:'Gmarket Sans',sans-serif;font-size:13px;font-weight:700;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;}
 .mcal-cell.today .mcal-date{background:var(--accent);color:#fff;}
 .mcal-date.weekend{color:var(--accent2);}
-.mcal-pill{border-radius:4px;padding:2px 5px;font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;cursor:pointer;}
-.mcal-more{font-size:9px;color:var(--text-muted);padding:1px 4px;font-weight:600;}
+.mcal-pill{border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;cursor:pointer;}
+.mcal-more{font-size:10px;color:var(--text-muted);padding:1px 4px;font-weight:600;}
 
 /* Day detail panel */
 .detail-class-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;display:flex;align-items:center;gap:10px;transition:all 0.2s;margin-bottom:8px;}
@@ -315,9 +315,9 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
   /* 캘린더 모바일 */
   .cal-layout{grid-template-columns:1fr!important;}
   #dayDetailPanel{position:static!important;}
-  .mcal-cell{min-height:52px!important;padding:3px!important;}
+  .mcal-cell{min-height:58px!important;padding:3px!important;}
   .mcal-date{font-size:11px!important;width:20px!important;height:20px!important;}
-  .mcal-pill{font-size:8px!important;padding:1px 3px!important;}
+  .mcal-pill{font-size:9px!important;padding:1px 3px!important;}
   .mcal-dow{font-size:10px!important;}
 }
 /* ── PRINT ── */
@@ -586,7 +586,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
       </div>
       <div class="section-body" style="padding:0;">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 숙제</th><th>줌 링크</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
       </div>
     </div>
@@ -984,7 +984,7 @@ create policy "public write notices" on notices for all using (true);</div>
 <!-- HOMEWORK MODAL -->
 <div class="modal-overlay" id="homeworkModal">
   <div class="modal" style="width:400px;">
-    <div class="modal-title" id="hwModalTitle">📝 숙제 기록</div>
+    <div class="modal-title" id="hwModalTitle">📝 학생 숙제 기록</div>
     <input type="hidden" id="hwEnrollId">
     <input type="hidden" id="hwCatId">
     <div class="form-row">
@@ -1383,12 +1383,25 @@ function renderEnroll(){
     return;
   }
 
-  grid.innerHTML=cats.map(cat=>{
+  // 모집중/모집완료 자동 분류: 수동 closed 플래그 OR 시작일이 오늘 이전
+  const today=new Date(); today.setHours(0,0,0,0);
+  const isClosed=(cat)=>{
+    if(cat.closed) return true; // 수동 모집완료
+    if(cat.dateStart){
+      const start=new Date(cat.dateStart);
+      start.setHours(0,0,0,0);
+      return start<=today; // 시작일이 오늘 이하면 모집완료
+    }
+    return false;
+  };
+  const open=cats.filter(c=>!isClosed(c));
+  const closed=cats.filter(c=>isClosed(c));
+
+  const renderCard=(cat)=>{
     const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id);
     const isEnrolled=enrollsForCat.length>0;
     const daysStr=cat.days.map(d=>DN[d]).join('·');
     const period=formatDateRange(cat.dateStart,cat.dateEnd);
-    const profId=S.currentProfileId||'default';
     const groups=cat.groups||[];
 
     const detailBtn=cat.detailUrl
@@ -1399,7 +1412,6 @@ function renderEnroll(){
       ?`<a href="${cat.enrollUrl}" target="_blank" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">📝 접수하기</a>`
       :`<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;opacity:0.35;cursor:default;">📝 접수하기</button>`;
 
-    // 체크박스 버튼 (카드 상단 우측)
     const checkBtn=`<button onclick="event.stopPropagation();toggleEnrollCard('${cat.id}')"
       title="${isEnrolled?'내 수업 목록에서 제거':'내 수업 목록에 추가'}"
       style="width:36px;height:36px;border-radius:50%;border:2px solid ${isEnrolled?'var(--accent3)':'var(--border)'};
@@ -1408,7 +1420,6 @@ function renderEnroll(){
       font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
       transition:all 0.2s;">${isEnrolled?'✅':'○'}</button>`;
 
-    // 수업목록 추가/삭제 버튼
     const myListBtn=isEnrolled
       ?`<button onclick="toggleEnrollCard('${cat.id}')"
           style="width:100%;padding:9px;border-radius:var(--radius-sm);border:1.5px solid var(--accent3);
@@ -1423,14 +1434,14 @@ function renderEnroll(){
           + 수업목록에 추가
         </button>`;
 
-    return `<div class="catalog-card ${isEnrolled?'enrolled':''} animate-in">
+    return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
         <div style="flex:1;min-width:0;padding:14px 16px 14px 16px;">
           <div class="catalog-name">${cat.name}</div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
-        ${checkBtn}
+        ${isClosed(cat)?`<span style="font-size:10px;font-weight:700;color:var(--danger);background:rgba(255,92,92,0.1);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">🔒 모집완료</span>`:checkBtn}
       </div>
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
@@ -1450,13 +1461,40 @@ function renderEnroll(){
           ${enrollBtn}
           ${detailBtn}
         </div>
-        ${myListBtn}
+        ${!isClosed(cat)?myListBtn:''}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  let html='';
+  if(open.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <span style="font-size:15px;font-weight:800;color:var(--accent3);">🟢 모집중</span>
+      <span style="font-size:12px;color:var(--text-muted);">${open.length}개 수업</span>
+    </div>`;
+    html+=open.map(renderCard).join('');
+  }
+  if(closed.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${open.length?'20px':'4px'} 0 4px;">
+      <span style="font-size:15px;font-weight:800;color:var(--danger);">🔒 모집완료</span>
+      <span style="font-size:12px;color:var(--text-muted);">${closed.length}개 수업</span>
+    </div>`;
+    html+=closed.map(renderCard).join('');
+  }
+  grid.innerHTML=html;
 }
 
-function quickEnrollWithTime(catId){ // deprecated - use quickEnrollGroup
+function toggleRecruitStatus(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  cat.closed=!cat.closed;
+  save();
+  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  showToast(cat.closed?'🔒 모집완료로 변경됐습니다':'🟢 모집중으로 변경됐습니다');
+  renderAdminCatalog();
+}
+
+function quickEnrollWithTime(catId){ // deprecated
   showToast('조를 선택해서 접수하세요');return;
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
@@ -1941,6 +1979,9 @@ function renderAdminCatalog(){
           ${cat.zoom?`<a href="${cat.zoom}" target="_blank" style="color:var(--accent);text-decoration:none;">🔗 줌 링크 확인</a>`:'<span>줌 링크 없음</span>'}
         </div>
         <div class="admin-cat-actions">
+          <button class="btn btn-ghost btn-sm" onclick="toggleRecruitStatus('${cat.id}')" style="font-size:11px;color:${cat.closed?'var(--danger)':'var(--accent3)'};">
+            ${cat.closed?'🔒 모집완료':'🟢 모집중'}
+          </button>
           <button class="btn btn-ghost btn-sm" onclick="copyCatalog('${cat.id}')" title="수업 복사">📋 복사</button>
           <button class="btn btn-edit btn-sm" onclick="editCatalog('${cat.id}')">✏️ 수정</button>
           <button class="btn btn-danger btn-sm" onclick="deleteCatalog('${cat.id}')">🗑️ 삭제</button>
@@ -2900,6 +2941,10 @@ function changeGroup(enrollId, newGroupId){
 
 function toggleEnrollCard(catId){
   const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  const profId=S.currentProfileId||'default';
+  const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
+  const groups=cat.groups||[];
 
   if(enrolled.length>0){
     // 이미 수강중 → 전체 취소 확인
@@ -3628,7 +3673,7 @@ function getHomeworkForEnroll(enrollId, catId){
   const isOld=daysDiff>=7;
   return `<div style="margin-top:6px;padding:6px 10px;border-radius:6px;background:${isDone?'rgba(67,232,194,0.08)':'rgba(255,181,71,0.1)'};border-left:3px solid ${isDone?'var(--accent3)':'var(--accent4)'};opacity:${isOld?0.45:1};">
     <div style="font-size:11px;font-weight:700;color:${isDone?'var(--accent3)':'var(--accent4)'};margin-bottom:2px;">
-      ${isDone?'✅ 숙제 완료':'📝 숙제'}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
+      ${isDone?'✅ 숙제 완료':'📝 학생 숙제 기록'}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
     </div>
     <div style="font-size:12px;color:var(--text);${isDone?'text-decoration:line-through;opacity:0.6;':''};white-space:pre-wrap;line-height:1.5;">${hw.text}</div>
   </div>`;
@@ -3652,14 +3697,14 @@ function getHomeworkCell(enrollId, catId){
       </div>
     </div>`;
   }
-  return `<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="openHomeworkModal('${enrollId}','${catId}')">+ 숙제 기록</button>`;
+  return `<button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="openHomeworkModal('${enrollId}','${catId}')">+ 학생 숙제 기록</button>`;
 }
 
 function openHomeworkModal(enrollId, catId){
   const key=hwKey(enrollId,catId);
   const hw=S.homework[key];
   const cat=S.catalog.find(c=>c.id===catId);
-  document.getElementById('hwModalTitle').textContent=`📝 ${cat?.name||'수업'} 숙제`;
+  document.getElementById('hwModalTitle').textContent=`📝 ${cat?.name||'수업'} 학생 숙제 기록`;
   document.getElementById('hwText').value=hw?.text||'';
   document.getElementById('hwEnrollId').value=enrollId;
   document.getElementById('hwCatId').value=catId;

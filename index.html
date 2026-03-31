@@ -2872,7 +2872,7 @@ function renderPrint(){
     for(let d=0;d<7;d++){
       const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
       if(clsInBand.length){
-        cells+=`<td style="border:1px solid #e2e8f0;padding:7px 8px;vertical-align:middle;height:60px;">${
+        cells+=`<td style="border:1px solid #e2e8f0;padding:7px 8px;vertical-align:middle;height:60px;min-height:60px;">${
           clsInBand.map(x=>{
             const bg=CPDF[x.cat.subject]||'#e0f2fe';
             const tc=CTXT[x.cat.subject]||'#1e293b';
@@ -2886,7 +2886,7 @@ function renderPrint(){
           }).join('<div style="height:3px;"></div>')
         }</td>`;
       } else {
-        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;height:60px;"></td>`;
+        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;height:60px;min-height:60px;"></td>`;
       }
     }
     return `<tr>${cells}</tr>`;
@@ -3018,7 +3018,7 @@ function renderPrint(){
 
   el.innerHTML=`
     <div id="pdfContent" style="background:#fff;color:#1e293b;font-family:sans-serif;padding:30px 36px;max-width:900px;margin:0 auto;border-radius:12px;border:1px solid var(--border);">
-      <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:2px solid #e2e8f0;">
+      <style>#pdfContent table tr{height:60px;}#pdfContent .time-col{height:60px;}</style>      <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:2px solid #e2e8f0;">
         <div style="font-size:24px;font-weight:800;color:#1e293b;margin-bottom:4px;">📚 ${targetName} 수업 시간표</div>
         <div style="font-size:13px;color:#64748b;">${dateStr}</div>
       </div>
@@ -3054,21 +3054,22 @@ function renderPrint(){
       <div class="print-mobile-only" style="margin-bottom:20px;">${mobileTimetableHtml}</div>
 
       <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 12px;">📋 수업 목록</div>
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-        <thead>
-          <tr style="background:#1e293b;color:#fff;">
-            <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
-            <th style="padding:12px 14px;font-size:12px;text-align:left;width:11%;">과목</th>
-            <th style="padding:12px 14px;font-size:12px;text-align:left;width:22%;">수업명</th>
-            <th style="padding:12px 14px;font-size:12px;text-align:left;width:12%;">강사</th>
-            <th style="padding:12px 14px;font-size:12px;text-align:left;width:24%;">시간/조</th>
-            <th style="padding:12px 14px;font-size:12px;text-align:left;width:25%;">기간</th>
-          </tr>
-        </thead>
-        <tbody>${listRows}</tbody>
-      </table>
-      <!-- 모바일: 카드 (언어별 → 요일별 정렬) -->
-      <div class="print-mobile-only" style="margin-top:12px;">${mobileListHtml}</div>
+      <div class="print-desktop-only">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <thead>
+            <tr style="background:#1e293b;color:#fff;">
+              <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:11%;">과목</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:22%;">수업명</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:12%;">강사</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:24%;">시간/조</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:25%;">기간</th>
+            </tr>
+          </thead>
+          <tbody>${listRows}</tbody>
+        </table>
+      </div>
+      <div class="print-mobile-only">${mobileListHtml}</div>
     </div>`;
 }
 

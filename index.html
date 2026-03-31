@@ -158,6 +158,12 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .catalog-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.35);border-color:rgba(255,255,255,0.12);}
 .catalog-card.enrolled{border-color:var(--accent3);background:rgba(67,232,194,0.04);}
 .catalog-card-top{display:flex;align-items:center;gap:14px;padding-bottom:2px;}
+.print-mobile-only{display:none;}
+.print-desktop-only{display:block;}
+@media(max-width:768px){
+  .print-mobile-only{display:block;}
+  .print-desktop-only{display:none;}
+}
 .catalog-icon{width:66px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden;}
 .catalog-icon img{width:100%;height:100%;object-fit:fill;border-radius:8px;}
 .catalog-name{font-size:15px;font-weight:700;letter-spacing:-0.3px;line-height:1.3;}
@@ -2867,6 +2873,49 @@ function renderPrint(){
       <td>${r.period}</td>
     </tr>`).join('');
 
+
+  // ── 모바일용 요일별 시간표 카드 ──
+  const DN7=['월','화','수','목','금','토','일'];
+  const mobileTimetableHtml=DN7.map((dayName,d)=>{
+    const classes=dayMap[d].sort((a,b)=>(a.grp?.start||'').localeCompare(b.grp?.start||''));
+    if(!classes.length) return '';
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:10px;">
+      <div style="background:#1e293b;color:#fff;padding:9px 14px;font-size:14px;font-weight:700;">${dayName}요일</div>
+      ${classes.map(x=>`<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f1f5f9;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${x.cat.color};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:#1e293b;">${x.cat.name}</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px;">${x.grp?.label?x.grp.label+' · ':''}${x.grp?formatAmPmRange(x.grp.start,x.grp.end):''}${x.cat.teacher?' · '+x.cat.teacher:''}</div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }).filter(Boolean).join('') || '<div style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</div>';
+
+  // ── 모바일용 수업 목록 (언어별 → 요일별 정렬) ──
+  const sortedRows=[...rows].sort((a,b)=>{
+    if(a.cat.subject!==b.cat.subject) return a.cat.subject.localeCompare(b.cat.subject,'ko');
+    return Math.min(...(a.cat.days||[99]))-Math.min(...(b.cat.days||[99]));
+  });
+  const subjectGroups={};
+  sortedRows.forEach(r=>{
+    const subj=r.cat.subject||'기타';
+    if(!subjectGroups[subj]) subjectGroups[subj]=[];
+    subjectGroups[subj].push(r);
+  });
+  const mobileListHtml=Object.entries(subjectGroups).map(([subj,list])=>
+    `<div style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">${subj}</div>
+      ${list.map(r=>`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${r.cat.color};">
+        <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;">${r.cat.name}</div>
+        <div style="display:grid;grid-template-columns:3em 1fr;gap:3px 8px;font-size:12px;">
+          <span style="color:#94a3b8;">요일</span><span style="color:#475569;">${r.daysStr}</span>
+          <span style="color:#94a3b8;">시간</span><span style="color:#475569;">${r.time}</span>
+          <span style="color:#94a3b8;">선생님</span><span style="color:#475569;">${r.cat.teacher||'—'}</span>
+          <span style="color:#94a3b8;">기간</span><span style="color:#475569;">${r.period}</span>
+        </div>
+      </div>`).join('')}
+    </div>`).join('');
+
   // ── 월간 캘린더 생성 ──
   const calYear=now.getFullYear();
   const calMonth=now.getMonth();
@@ -2935,29 +2984,40 @@ function renderPrint(){
       </table>
 
       <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 10px;">📅 요일별 시간표</div>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-        <thead><tr style="background:#1e293b;color:#fff;">
-          <th style="padding:9px 8px;font-size:12px;">시간</th>
-          <th style="padding:9px 8px;font-size:12px;color:#fca5a5;">일</th>
-          <th style="padding:9px 8px;font-size:12px;">월</th><th style="padding:9px 8px;font-size:12px;">화</th>
-          <th style="padding:9px 8px;font-size:12px;">수</th><th style="padding:9px 8px;font-size:12px;">목</th>
-          <th style="padding:9px 8px;font-size:12px;">금</th>
-          <th style="padding:9px 8px;font-size:12px;color:#93c5fd;">토</th>
-        </tr></thead>
-        <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
-      </table>
+      <!-- PC: 테이블 -->
+      <div class="print-desktop-only">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+          <thead><tr style="background:#1e293b;color:#fff;">
+            <th style="padding:9px 8px;font-size:12px;">시간</th>
+            <th style="padding:9px 8px;font-size:12px;color:#fca5a5;">일</th>
+            <th style="padding:9px 8px;font-size:12px;">월</th><th style="padding:9px 8px;font-size:12px;">화</th>
+            <th style="padding:9px 8px;font-size:12px;">수</th><th style="padding:9px 8px;font-size:12px;">목</th>
+            <th style="padding:9px 8px;font-size:12px;">금</th>
+            <th style="padding:9px 8px;font-size:12px;color:#93c5fd;">토</th>
+          </tr></thead>
+          <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
+        </table>
+      </div>
+      <!-- 모바일: 카드 -->
+      <div class="print-mobile-only" style="margin-bottom:20px;">${mobileTimetableHtml}</div>
+
       <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 10px;">📋 수업 목록</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
-        <thead><tr style="background:#1e293b;color:#fff;">
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">수업명</th>
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">과목</th>
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">요일</th>
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">시간/조</th>
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">선생님</th>
-          <th style="padding:9px 12px;font-size:12px;text-align:left;">기간</th>
-        </tr></thead>
-        <tbody>${listRows}</tbody>
-      </table>
+      <!-- PC: 테이블 -->
+      <div class="print-desktop-only">
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+          <thead><tr style="background:#1e293b;color:#fff;">
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">수업명</th>
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">과목</th>
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">요일</th>
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">시간/조</th>
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">선생님</th>
+            <th style="padding:9px 12px;font-size:12px;text-align:left;">기간</th>
+          </tr></thead>
+          <tbody>${listRows}</tbody>
+        </table>
+      </div>
+      <!-- 모바일: 카드 (언어별 → 요일별 정렬) -->
+      <div class="print-mobile-only">${mobileListHtml}</div>
     </div>`;
 }
 

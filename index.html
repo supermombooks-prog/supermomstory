@@ -4420,10 +4420,11 @@ function calcSessionNumber(cat, targetDate){
   const cur=new Date(start);
   cur.setHours(0,0,0,0);
   const vacList=S.vacations[cat.id]||[];
+  const toLocalDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   while(cur<=target){
     const dow=(cur.getDay()+6)%7;
     if(cat.days.includes(dow)){
-      const dateStr=cur.toISOString().slice(0,10);
+      const dateStr=toLocalDate(cur);
       if(!vacList.includes(dateStr)) count++;
     }
     cur.setDate(cur.getDate()+1);
@@ -4432,7 +4433,8 @@ function calcSessionNumber(cat, targetDate){
 }
 
 function isTodayVacation(catId){
-  const today=new Date().toISOString().slice(0,10);
+  const d=new Date();
+  const today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return (S.vacations[catId]||[]).includes(today);
 }
 

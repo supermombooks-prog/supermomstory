@@ -3195,6 +3195,7 @@ function downloadPDF(){
 // FEATURE 2: NOTICES (Admin)
 // ═══════════════════════════════════════
 let _noticesFilter='전체';
+let _noticesTeacherFilter='전체';
 function renderAdminNotices(){
   const bar=document.getElementById('adminNoticesFilterBar');
   const el=document.getElementById('adminNoticesGrid');
@@ -3204,23 +3205,57 @@ function renderAdminNotices(){
     return;
   }
 
-  // 필터 탭
+  // 언어 필터 탭
   const subjects=['전체',...new Set(S.catalog.map(c=>c.subject).filter(Boolean))];
   if(bar){
-    bar.innerHTML=subjects.map(s=>{
+    let html=subjects.map(s=>{
       const isActive=_noticesFilter===s;
       const color=SC[s];
       const flag=s!=='전체'?`<span style="display:inline-flex;align-items:center;margin-right:4px;">${flagInline(s)}</span>`:'';
       const cnt=s==='전체'?S.catalog.length:S.catalog.filter(c=>c.subject===s).length;
       return `<div class="filter-chip ${isActive?'active':''}"
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
-        onclick="_noticesFilter='${s}';renderAdminNotices()">
+        onclick="_noticesFilter='${s}';_noticesTeacherFilter='전체';renderAdminNotices()">
         ${flag}${s} <span style="font-size:10px;opacity:0.7;margin-left:3px;">${cnt}</span>
       </div>`
     }).join('');
+    bar.innerHTML=html;
   }
 
-  const cats=_noticesFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_noticesFilter);
+  let cats=_noticesFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_noticesFilter);
+
+  // 선생님 필터 탭 - 언어 선택 시만 표시
+  let teacherBarEl=document.getElementById('adminNoticesTeacherBar');
+  if(!teacherBarEl){
+    teacherBarEl=document.createElement('div');
+    teacherBarEl.id='adminNoticesTeacherBar';
+    teacherBarEl.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;';
+    bar.parentNode.insertBefore(teacherBarEl, el);
+  }
+  if(_noticesFilter==='전체'){
+    teacherBarEl.style.display='none';
+    teacherBarEl.innerHTML='';
+    _noticesTeacherFilter='전체';
+  } else {
+    const teachers=['전체',...new Set(cats.map(c=>c.teacher).filter(Boolean))];
+    if(teachers.length>1){
+      teacherBarEl.style.display='flex';
+      teacherBarEl.innerHTML=teachers.map(t=>{
+        const isActive=_noticesTeacherFilter===t;
+        return `<div class="filter-chip${isActive?' active':''}" style="${isActive?'background:rgba(255,126,179,0.15);color:var(--admin);border-color:var(--admin);':''}"
+          onclick="_noticesTeacherFilter='${t}';renderAdminNotices()">
+          👩‍🏫 ${t}
+        </div>`;
+      }).join('');
+    } else {
+      teacherBarEl.style.display='none';
+      teacherBarEl.innerHTML='';
+    }
+  }
+
+  // 선생님 필터 적용
+  if(_noticesTeacherFilter!=='전체') cats=cats.filter(c=>c.teacher===_noticesTeacherFilter);
+
   const today=new Date().toISOString().slice(0,10);
 
   el.innerHTML=cats.map(cat=>{

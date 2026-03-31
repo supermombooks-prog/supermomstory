@@ -2913,7 +2913,7 @@ function renderPrint(){
         const grp=r.grp;
         const timeStr=grp?`${grp.label} ${fmtAmPm(grp.start)}~${fmtAmPm(grp.end)}`:r.time;
         html+=`<tr>
-          ${i===0?`<td rowspan="${list.length}" style="background:#eff6ff;border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:14px;color:#1d4ed8;vertical-align:middle;text-align:center;">${DN_ORDER[d]}</td>`:''}
+          ${i===0?`<td rowspan="${list.length}" style="background:#1e293b;border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:14px;color:#fff;vertical-align:middle;text-align:center;">${DN_ORDER[d]}</td>`:''}
           <td style="background:${bg};border:1px solid #e2e8f0;padding:12px 14px;font-weight:700;color:${tc};font-size:12px;">${r.cat.subject}</td>
           <td style="border:1px solid #e2e8f0;padding:12px 14px;font-weight:700;font-size:13px;color:#1e293b;">${r.cat.name}</td>
           <td style="border:1px solid #e2e8f0;padding:12px 14px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>

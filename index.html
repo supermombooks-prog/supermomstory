@@ -1182,6 +1182,7 @@ create policy "public write notices" on notices for all using (true);</div>
 
 <script>
 // ── 디바운스: 저장공간 부족 모바일 성능 최적화 ──
+const _isMobile=()=>window.innerWidth<=768;
 const _renderTimers={};
 function debounceRender(key, fn, delay=80){
   clearTimeout(_renderTimers[key]);
@@ -1246,11 +1247,11 @@ function normalizeCatalog(){
       changed=true;
     }
   });
-  // 고아 enrollment 정리: 알려진 프로필에 속하지 않는 것 삭제
-  if(S.profiles && S.profiles.length){
-    const knownIds=new Set(S.profiles.map(p=>p.id));
+  // 고아 enrollment 정리: catalogId가 없는 것만 삭제 (profileId 기준 삭제 제거 - 데이터 유실 방지)
+  if(S.catalog && S.catalog.length){
+    const knownCatIds=new Set(S.catalog.map(c=>c.id));
     const before=S.enrollments.length;
-    S.enrollments=S.enrollments.filter(e=>knownIds.has(e.profileId));
+    S.enrollments=S.enrollments.filter(e=>knownCatIds.has(e.catalogId));
     if(S.enrollments.length!==before) changed=true;
   }
   if(changed) save();
@@ -1307,7 +1308,7 @@ function navigateTo(page){
   const heavyPages=['enroll','schedule','myclasses','admin-catalog','admin-notices','admin-teachers','teachers','print'];
   if(S.currentPage && S.currentPage!==page && heavyPages.includes(S.currentPage)){
     const prev=document.getElementById('page-'+S.currentPage);
-    if(prev) prev.querySelectorAll('.catalog-grid,.catalog-card,.admin-cat-card,.notice-card,.schedule-list,.mcal-grid').forEach(el=>{if(el.children.length>10) el.innerHTML='';});
+    if(prev) prev.querySelectorAll('.catalog-grid,.catalog-card,.admin-cat-card,.notice-card,.mcal-grid').forEach(el=>{if(el.children.length>10) el.innerHTML='';});
   }
   S.currentPage=page;
   document.querySelectorAll('.page-view').forEach(v=>v.classList.remove('active'));
@@ -1485,14 +1486,14 @@ function renderDashboard(){
 
   const dc=[0,1,2,3,4,5,6].map(d=>({day:DN[d],count:getEnrolledForDay(d).length}));
   const mx=Math.max(...dc.map(d=>d.count),1);
-  document.getElementById('dayDist').innerHTML=`<div style="display:flex;gap:8px;align-items:flex-end;height:68px;">`+
-    dc.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="flex:1;width:100%;display:flex;align-items:flex-end;">
-        <div style="width:100%;height:${Math.max(d.count/mx*100,4)}%;background:var(--accent);border-radius:3px 3px 0 0;opacity:${d.count?0.85:0.15};transition:height 0.5s;"></div>
+  document.getElementById('dayDist').innerHTML=dc.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:3px 0;">
+      <span style="font-size:13px;font-weight:${d.count?700:400};color:${d.count?'var(--text)':'var(--text-muted)'};min-width:22px;">${d.day}</span>
+      <div style="flex:1;height:10px;background:var(--border);border-radius:20px;overflow:hidden;">
+        <div style="width:${d.count?Math.max(d.count/mx*100,6):0}%;height:100%;background:var(--accent);border-radius:20px;transition:width 0.5s;"></div>
       </div>
-      <div style="font-size:10px;color:var(--text-muted);">${d.day}</div>
-      <div style="font-size:10px;font-weight:700;">${d.count||''}</div>
-    </div>`).join('')+`</div>`;
+      <span style="font-size:12px;font-weight:${d.count?600:400};color:${d.count?'var(--text)':'var(--text-muted)'};min-width:52px;text-align:right;">${d.count?d.count+'과목':'—'}</span>
+    </div>`).join('');
 }
 
 // ═══ ENROLL ═══
@@ -4129,11 +4130,11 @@ function myEnrollments(){
   const knownIds = new Set(S.profiles.map(p=>p.id));
   if(!S.currentProfileId){
     if(!S.profiles || !S.profiles.length){
-      // 프로필 없을 때 — profileId 없는 것만
-      return S.enrollments.filter(e=>!e.profileId||e.profileId==='default');
+      // 프로필 없을 때 — 전체 수강목록
+      return S.enrollments;
     }
-    // 전체 보기: 알려진 프로필에 속한 것만 합산
-    return S.enrollments.filter(e=>knownIds.has(e.profileId));
+    // 전체 보기: 알려진 프로필 + profileId 없는 항목 모두 포함
+    return S.enrollments.filter(e=>!e.profileId||e.profileId==='default'||knownIds.has(e.profileId));
   }
   return S.enrollments.filter(e=>e.profileId===S.currentProfileId);
 }
@@ -4903,7 +4904,6 @@ function updateThemeBtn(theme){
 
 renderProfileBar();
 renderDashboard();
-const _isMobile=()=>window.innerWidth<=768;
 setInterval(()=>{
   if(S.currentPage!=='dashboard') return;
   if(_isMobile()) return; // 모바일은 별도 타이머 처리

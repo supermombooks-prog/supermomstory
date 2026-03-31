@@ -665,6 +665,10 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="section" id="myClassesSection">
       <div class="section-header">
         <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
+        <div style="display:flex;gap:6px;" id="myClassesSortTabs">
+          <button class="filter-chip active" id="sortTab-day" onclick="_myClassesSort='day';renderMyClasses()">📅 요일순</button>
+          <button class="filter-chip" id="sortTab-lang" onclick="_myClassesSort='lang';renderMyClasses()">🌐 언어순</button>
+        </div>
       </div>
       <div class="section-body" style="padding:0;">
         <div class="my-classes-table-wrap">
@@ -1433,7 +1437,26 @@ function renderDashboard(){
       const todayStr=now.toISOString().slice(0,10);
       const isLastDay=x.cat.dateEnd && x.cat.dateEnd===todayStr && !isVacation;
       // 마지막 회차 체크: totalSessions와 sessionNum이 같을 때도 종강
-      const isLastSession=totalSess>0 && sessionNum===totalSess && !isVacation;
+      const isLastSession=(()=>{
+        if(!totalSess||!sessionNum||sessionNum!==totalSess||isVacation) return false;
+        if(!x.cat.dateEnd) return true;
+        const end=new Date(x.cat.dateEnd);
+        end.setHours(23,59,59,0);
+        const tomorrow=new Date(now);
+        tomorrow.setHours(0,0,0,0);
+        tomorrow.setDate(tomorrow.getDate()+1);
+        const vacList=S.vacations[x.cat.id]||[];
+        const cur=new Date(tomorrow);
+        while(cur<=end){
+          const dow=(cur.getDay()+6)%7;
+          if(x.cat.days.includes(dow)){
+            const ds=cur.toISOString().slice(0,10);
+            if(!vacList.includes(ds)) return false;
+          }
+          cur.setDate(cur.getDate()+1);
+        }
+        return true;
+      })();
       const isGraduation=isLastDay||isLastSession;
       return `<div class="class-card ${isDone?'done':''} ${isNow?'now':''} ${isVacation?'vacation':''} ${isGraduation?'graduation':''}">
         <div style="display:flex;align-items:center;gap:16px;width:100%;">
@@ -1451,7 +1474,7 @@ function renderDashboard(){
               <span style="color:${x.cat.color};">● ${x.cat.subject}</span>
             </div>
           </div>
-          ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
+          ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${zoomLink}','_blank')||(window.location.href='${zoomLink}')" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
         </div>
         ${(()=>{
           const curric=getTodayCurriculum(x.cat);
@@ -1961,15 +1984,47 @@ function renderAddClassPanel(){
   }).join('');
 }
 
+let _myClassesSort='day';
 function renderMyClasses(){
   const mb=document.getElementById('myclassesProfileBanner');
   if(mb) mb.innerHTML=S.profiles.length?getProfileBanner():'';
-  // Refresh picker panel if open
   if(document.getElementById('addClassPanel').style.display!=='none') renderAddClassPanel();
 
+  // 탭 활성화
+  ['day','lang'].forEach(t=>{
+    const el=document.getElementById(`sortTab-${t}`);
+    if(el) el.className='filter-chip'+(_myClassesSort===t?' active':'');
+  });
+
   const tbody=document.getElementById('myClassesBody');
-  const count=myEnrollments().filter(e=>S.catalog.find(c=>c.id===e.catalogId)).length;
+  const rawEnrollments=myEnrollments().filter(e=>S.catalog.find(c=>c.id===e.catalogId));
+  const count=rawEnrollments.length;
   document.getElementById('myClassCount').textContent=count?`${count}개`:'';
+
+  // 정렬 함수
+  const sortEnrollments=(list)=>{
+    if(_myClassesSort==='lang'){
+      return [...list].sort((a,b)=>{
+        const ca=S.catalog.find(c=>c.id===a.catalogId);
+        const cb=S.catalog.find(c=>c.id===b.catalogId);
+        if(!ca||!cb) return 0;
+        if(ca.subject!==cb.subject) return ca.subject.localeCompare(cb.subject,'ko');
+        return Math.min(...(ca.days||[99]))-Math.min(...(cb.days||[99]));
+      });
+    }
+    // 요일순 (기본)
+    return [...list].sort((a,b)=>{
+      const ca=S.catalog.find(c=>c.id===a.catalogId);
+      const cb=S.catalog.find(c=>c.id===b.catalogId);
+      if(!ca||!cb) return 0;
+      const da=Math.min(...(ca.days||[99]));
+      const db=Math.min(...(cb.days||[99]));
+      if(da!==db) return da-db;
+      const ga=getGroupForEnroll(a,ca);
+      const gb=getGroupForEnroll(b,cb);
+      return (ga?.start||'').localeCompare(gb?.start||'');
+    });
+  };
 
   if(!count){
     tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
@@ -1978,7 +2033,7 @@ function renderMyClasses(){
     </td></tr>`;
     return;
   }
-  tbody.innerHTML=myEnrollments().map(e=>{
+  tbody.innerHTML=sortEnrollments(myEnrollments()).map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return '';
     const grp=getGroupForEnroll(e,cat);
@@ -2033,7 +2088,7 @@ function renderMyClasses(){
     if(!count){
       cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">수강 중인 수업이 없습니다.<br><button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="toggleAddClassPanel()">+ 수업 추가하기</button></div>`;
     } else {
-      cardsEl.innerHTML=myEnrollments().map(e=>{
+      cardsEl.innerHTML=sortEnrollments(myEnrollments()).map(e=>{
         const cat=S.catalog.find(c=>c.id===e.catalogId);
         if(!cat) return '';
         const grp=getGroupForEnroll(e,cat);
@@ -2059,7 +2114,7 @@ function renderMyClasses(){
           ${notice?`<div style="font-size:13px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;white-space:pre-wrap;">${notice}</div>`:''}
           ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${adminHw}</div>`:''}
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-            ${myZoom?`<a href="${myZoom}" target="_blank" class="btn btn-zoom btn-sm">🎥 줌 입장</a>`:`<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 줌 링크</button>`}
+            ${myZoom?`<a href="${myZoom}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${myZoom}','_blank') || (window.location.href='${myZoom}')" class="btn btn-zoom btn-sm">🎥 줌 입장</a>`:`<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 줌 링크</button>`}
             ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
             ${(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:''}
             <button class="btn btn-ghost btn-sm" onclick="openHomeworkModal('${e.id}','${cat.id}')">✏️ 숙제</button>

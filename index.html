@@ -3038,14 +3038,16 @@ function renderPrint(){
       <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 10px;">📅 요일별 시간표</div>
       <!-- PC: 테이블 -->
       <div class="print-desktop-only">
-        <table style="width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:28px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;table-layout:fixed;">
           <thead><tr style="background:#1e293b;color:#fff;">
-            <th style="padding:9px 8px;font-size:12px;">시간</th>
-            <th style="padding:9px 8px;font-size:12px;color:#fca5a5;">일</th>
-            <th style="padding:9px 8px;font-size:12px;">월</th><th style="padding:9px 8px;font-size:12px;">화</th>
-            <th style="padding:9px 8px;font-size:12px;">수</th><th style="padding:9px 8px;font-size:12px;">목</th>
-            <th style="padding:9px 8px;font-size:12px;">금</th>
-            <th style="padding:9px 8px;font-size:12px;color:#93c5fd;">토</th>
+            <th style="padding:9px 8px;font-size:12px;width:10%;">시간</th>
+            <th style="padding:9px 8px;font-size:12px;width:11.25%;">월</th>
+            <th style="padding:9px 8px;font-size:12px;width:11.25%;">화</th>
+            <th style="padding:9px 8px;font-size:12px;width:11.25%;">수</th>
+            <th style="padding:9px 8px;font-size:12px;width:11.25%;">목</th>
+            <th style="padding:9px 8px;font-size:12px;width:11.25%;">금</th>
+            <th style="padding:9px 8px;font-size:12px;color:#93c5fd;width:11.25%;">토</th>
+            <th style="padding:9px 8px;font-size:12px;color:#fca5a5;width:11.25%;">일</th>
           </tr></thead>
           <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
         </table>

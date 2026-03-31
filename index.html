@@ -2872,8 +2872,7 @@ function renderPrint(){
     for(let d=0;d<7;d++){
       const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
       if(clsInBand.length){
-        cells+=`<td style="border:1px solid #e2e8f0;padding:0;vertical-align:top;">
-          <div style="min-height:70px;padding:7px 8px;display:flex;flex-direction:column;gap:3px;justify-content:center;">${
+        cells+=`<td style="border:1px solid #e2e8f0;padding:6px 7px;vertical-align:middle;">${
           clsInBand.map(x=>{
             const bg=CPDF[x.cat.subject]||'#e0f2fe';
             const tc=CTXT[x.cat.subject]||'#1e293b';
@@ -2884,13 +2883,13 @@ function renderPrint(){
               ${x.grp?.label||x.cat.teacher?`<div style="font-size:10px;color:#475569;margin-top:1px;">${[x.grp?.label,x.cat.teacher].filter(Boolean).join(' · ')}</div>`:''}
               <div style="font-size:10px;color:${tmc};font-weight:600;margin-top:2px;">${timeRange}</div>
             </div>`;
-          }).join('')
-        }</div></td>`;
+          }).join('<div style="height:3px;"></div>')
+        }</td>`;
       } else {
-        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;padding:0;"><div style="min-height:70px;"></div></td>`;
+        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;"></td>`;
       }
     }
-    return `<tr>${cells}</tr>`;
+    return `<tr style="height:80px;">${cells}</tr>`;
   }).join('');
 
   // ── 수업 목록: 요일별→과목별 정렬, 요일 rowspan ──

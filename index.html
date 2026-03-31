@@ -2872,7 +2872,8 @@ function renderPrint(){
     for(let d=0;d<7;d++){
       const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
       if(clsInBand.length){
-        cells+=`<td style="border:1px solid #e2e8f0;padding:7px 8px;vertical-align:middle;height:60px;min-height:60px;">${
+        cells+=`<td style="border:1px solid #e2e8f0;padding:0;vertical-align:top;">
+          <div style="min-height:70px;padding:7px 8px;display:flex;flex-direction:column;gap:3px;justify-content:center;">${
           clsInBand.map(x=>{
             const bg=CPDF[x.cat.subject]||'#e0f2fe';
             const tc=CTXT[x.cat.subject]||'#1e293b';
@@ -2883,10 +2884,10 @@ function renderPrint(){
               ${x.grp?.label||x.cat.teacher?`<div style="font-size:10px;color:#475569;margin-top:1px;">${[x.grp?.label,x.cat.teacher].filter(Boolean).join(' · ')}</div>`:''}
               <div style="font-size:10px;color:${tmc};font-weight:600;margin-top:2px;">${timeRange}</div>
             </div>`;
-          }).join('<div style="height:3px;"></div>')
-        }</td>`;
+          }).join('')
+        }</div></td>`;
       } else {
-        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;height:60px;min-height:60px;"></td>`;
+        cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;padding:0;"><div style="min-height:70px;"></div></td>`;
       }
     }
     return `<tr>${cells}</tr>`;
@@ -3018,7 +3019,7 @@ function renderPrint(){
 
   el.innerHTML=`
     <div id="pdfContent" style="background:#fff;color:#1e293b;font-family:sans-serif;padding:30px 36px;max-width:900px;margin:0 auto;border-radius:12px;border:1px solid var(--border);">
-      <style>#pdfContent table tr{height:60px;}#pdfContent .time-col{height:60px;}</style>      <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:2px solid #e2e8f0;">
+      <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:2px solid #e2e8f0;">
         <div style="font-size:24px;font-weight:800;color:#1e293b;margin-bottom:4px;">📚 ${targetName} 수업 시간표</div>
         <div style="font-size:13px;color:#64748b;">${dateStr}</div>
       </div>

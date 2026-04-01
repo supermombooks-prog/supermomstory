@@ -1646,6 +1646,7 @@ function renderEnroll(){
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
+        ${cat.totalSessions?`<span class="tag" style="color:var(--accent);border-color:rgba(108,138,255,0.3);">🔢 총 ${cat.totalSessions}회</span>`:''}
         ${period?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${period}</span>`:''}
       </div>
       ${isEnrolled?`<div style="display:flex;flex-wrap:wrap;gap:5px;">
@@ -2908,7 +2909,7 @@ function renderPrint(){
     const h2=parseInt(t.split(':')[0]);
     const ampm=h2<12?'AM':'PM';
     const h12=h2===0?12:h2>12?h2-12:h2;
-    const band=`${ampm} ${h12}시대`;
+    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
     if(!bandMap[band]) bandMap[band]=[];
     bandMap[band].push(t);
   });
@@ -2922,23 +2923,84 @@ function renderPrint(){
     return `${ampm} ${h12}:${mm}`;
   };
 
-  const timetableRows=Object.entries(bandMap).map(([band,times])=>{
+  // 밴드 목록 (순서 유지)
+  const bandKeys=Object.keys(bandMap);
+
+  // 밴드 인덱스 계산 함수 (시작시간 → 밴드 인덱스)
+  const getBandIndex=t=>{
+    if(!t||!t.includes(':')) return -1;
+    const h2=parseInt(t.split(':')[0]);
+    const ampm=h2<12?'AM':'PM';
+    const h12=h2===0?12:h2>12?h2-12:h2;
+    return bandKeys.indexOf(`${ampm} ${h12}시대`);
+  };
+
+  // 수업의 종료 시간이 속하는 밴드 인덱스
+  const getEndBandIndex=t=>{
+    if(!t||!t.includes(':')) return -1;
+    const [hh,mm]=t.split(':');
+    const h2=parseInt(hh), m2=parseInt(mm);
+    // 종료 시간이 정각이면 그 시간대에 포함되지 않으므로 -1
+    const effH=m2===0?h2-1:h2;
+    const ampm=effH<12?'AM':'PM';
+    const h12=effH===0?12:effH>12?effH-12:effH;
+    return bandKeys.indexOf(`${ampm} ${h12}시대`);
+  };
+
+  // rowspan 계산: 시작밴드~종료밴드 개수
+  const getRowSpan=(startTime, endTime)=>{
+    const si=getBandIndex(startTime);
+    const ei=getEndBandIndex(endTime);
+    if(si<0||ei<0||ei<si) return 1;
+    return ei-si+1;
+  };
+
+  // 이미 rowspan으로 차지된 셀 추적: skip[bandIdx][dayIdx] = true
+  const skip={};
+  bandKeys.forEach((_,bi)=>{ skip[bi]={}; });
+
+  const timetableRows=bandKeys.map((band,bi)=>{
+    const times=bandMap[band];
     let cells=`<td style="background:#f1f5f9;font-weight:700;padding:8px 10px;font-size:11px;color:#475569;white-space:nowrap;border:1px solid #e2e8f0;vertical-align:middle;">${band}</td>`;
     for(let d=0;d<7;d++){
+      // 이미 위 행에서 rowspan으로 차지된 셀은 건너뜀
+      if(skip[bi][d]){ continue; }
+
       const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
       if(clsInBand.length){
-        cells+=`<td style="border:1px solid #e2e8f0;padding:6px 7px;vertical-align:middle;">${
+        // rowspan 계산 (여러 수업 중 가장 큰 span 사용)
+        const maxSpan=Math.max(...clsInBand.map(x=>getRowSpan(x.grp?.start,x.grp?.end)));
+        // 이후 밴드 행의 같은 열 skip 처리
+        for(let s=1;s<maxSpan;s++){
+          if(skip[bi+s]) skip[bi+s][d]=true;
+        }
+        cells+=`<td rowspan="${maxSpan}" style="border:1px solid #e2e8f0;padding:8px 10px;vertical-align:middle;background:${clsInBand.length?CPDF[clsInBand[0].cat.subject]||'#e0f2fe':''};">${
           clsInBand.map(x=>{
-            const bg=CPDF[x.cat.subject]||'#e0f2fe';
             const tc=CTXT[x.cat.subject]||'#1e293b';
             const tmc=CTME[x.cat.subject]||'#3b82f6';
-            const timeRange=x.grp?`${fmtAmPm(x.grp.start)}~${fmtAmPm(x.grp.end)}`:'';
-            return `<div style="background:${bg};border-radius:6px;padding:5px 7px;">
+            const kor=(t)=>{
+              if(!t||!t.includes(':')) return t;
+              const [hh,mm]=t.split(':');
+              const h2=parseInt(hh);
+              const ampm=h2<12?'오전':'오후';
+              const h12=h2===0?12:h2>12?h2-12:h2;
+              return mm==='00'?`${ampm}${h12}시`:`${ampm}${h12}:${mm}`;
+            };
+            const timeRange=x.grp?`${kor(x.grp.start)}~${kor(x.grp.end).replace(/오전|오후/,'')}`.trim():'';
+            const fmtKorDate=d=>{
+              if(!d) return '';
+              const [,m,day]=d.split('-');
+              return `${parseInt(m)}월${parseInt(day)}일`;
+            };
+            const period=(x.cat.dateStart||x.cat.dateEnd)
+              ?`(${fmtKorDate(x.cat.dateStart)}~${fmtKorDate(x.cat.dateEnd)})`:'';
+            return `<div>
               <div style="font-weight:700;color:${tc};font-size:11px;">${x.cat.name}</div>
               ${x.grp?.label||x.cat.teacher?`<div style="font-size:10px;color:#475569;margin-top:1px;">${[x.grp?.label,x.cat.teacher].filter(Boolean).join(' · ')}</div>`:''}
               <div style="font-size:10px;color:${tmc};font-weight:600;margin-top:2px;">${timeRange}</div>
+              ${period?`<div style="font-size:9px;color:#94a3b8;margin-top:2px;">${period}</div>`:''}
             </div>`;
-          }).join('<div style="height:3px;"></div>')
+          }).join('<div style="height:4px;border-top:1px solid rgba(0,0,0,0.08);margin:4px 0;"></div>')
         }</td>`;
       } else {
         cells+=`<td style="border:1px solid #e2e8f0;background:#fafafa;"></td>`;

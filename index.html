@@ -674,7 +674,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       </div>
       <div class="section-body" style="padding:0;">
         <div class="my-classes-table-wrap">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지/숙제</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
         <div class="my-classes-cards" id="myClassesCards"></div>
@@ -2097,7 +2097,7 @@ function renderMyClasses(){
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
           ${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${getNoticeForCat(cat.id)}</div>`:''}
-          ${S.adminHomework?.[cat.id]?`<div style="font-size:11px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${S.adminHomework[cat.id]}</div>`:''}
+          ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw};if(!hw.text)return'';return`<div style="font-size:11px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${hw.text}</div>`;})()}
           ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:11px;">—</span>`:''}
         </div>
       </td>
@@ -2105,6 +2105,7 @@ function renderMyClasses(){
         ${getHomeworkCell(e.id, e.catalogId)}
       </td>
       <td id="zoom-cell-${e.id}">${zoomCell}</td>
+      <td id="hw-cell-${e.id}" style="display:none;"></td>
       <td>${cat.curriculumUrl?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;">📚 커리큘럼</a>`:(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="cancelById('${e.id}')">취소</button></td>
     </tr>`;
@@ -2204,16 +2205,24 @@ function editZoom(eid){
   const e=S.enrollments.find(x=>x.id===eid);
   if(!e) return;
   const cell=document.getElementById(`zoom-cell-${eid}`);
-  // 모바일: zoom-cell이 없으면 prompt로 입력
+  // 모바일: zoom-cell이 없으면 카드 안에 인라인 입력창 표시
   if(!cell){
-    const url=prompt('줌 링크를 입력하세요:', e.myZoom||'');
-    if(url===null) return; // 취소
-    const idx=S.enrollments.findIndex(x=>x.id===eid);
-    if(idx===-1) return;
-    S.enrollments[idx].myZoom=url.trim();
-    save();
-    showToast(url.trim()?'✅ 줌 링크가 저장되었습니다':'🗑️ 줌 링크가 삭제되었습니다');
-    renderMyClasses();
+    // 기존 줌 입력창이 열려있으면 닫기
+    const existing=document.getElementById(`zoom-inline-${eid}`);
+    if(existing){ existing.remove(); return; }
+    // 버튼 바로 뒤에 입력창 삽입
+    const btn=document.querySelector(`[onclick="editZoom('${eid}')"]`);
+    if(!btn) return;
+    const wrap=document.createElement('div');
+    wrap.id=`zoom-inline-${eid}`;
+    wrap.style.cssText='display:flex;align-items:center;gap:6px;margin-top:8px;width:100%;';
+    wrap.innerHTML=`
+      <input id="zoom-mobile-input-${eid}" class="form-input" style="flex:1;padding:8px 12px;font-size:14px;height:40px;"
+        placeholder="https://zoom.us/j/..." value="${e.myZoom||''}">
+      <button class="btn btn-primary btn-sm" style="flex-shrink:0;padding:8px 14px;" onclick="saveZoomMobile('${eid}')">저장</button>
+      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;padding:8px;" onclick="document.getElementById('zoom-inline-${eid}').remove()">✕</button>`;
+    btn.closest('div[style*="flex-wrap"]')?.parentNode?.appendChild(wrap) || btn.parentNode.appendChild(wrap);
+    setTimeout(()=>document.getElementById(`zoom-mobile-input-${eid}`)?.focus(),80);
     return;
   }
   cell.innerHTML=`
@@ -2226,6 +2235,18 @@ function editZoom(eid){
       <button class="btn btn-ghost btn-sm" style="padding:5px 8px;flex-shrink:0;" onclick="renderMyClasses()">✕</button>
     </div>`;
   setTimeout(()=>document.getElementById(`zoom-input-${eid}`)?.focus(),50);
+}
+
+function saveZoomMobile(eid){
+  const input=document.getElementById(`zoom-mobile-input-${eid}`);
+  if(!input) return;
+  const url=input.value.trim();
+  const idx=S.enrollments.findIndex(x=>x.id===eid);
+  if(idx===-1) return;
+  S.enrollments[idx].myZoom=url;
+  save();
+  showToast(url?'✅ 줌 링크가 저장되었습니다':'🗑️ 줌 링크가 삭제되었습니다');
+  renderMyClasses();
 }
 
 function saveZoom(eid){

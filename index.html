@@ -1504,6 +1504,15 @@ function renderDashboard(){
           ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${zoomLink}','_blank')||(window.location.href='${zoomLink}')" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
         </div>
         ${(()=>{
+          // curriculumUrl이 있으면 링크 버튼
+          if(x.cat.curriculumUrl){
+            return `<div style="margin-top:10px;padding:10px 14px;background:rgba(108,138,255,0.06);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div style="font-size:14px;font-weight:700;color:var(--text);">📚 커리큘럼</div>
+              <a href="${x.cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${x.cat.curriculumUrl}','_blank')||(window.location.href='${x.cat.curriculumUrl}')"
+                class="btn btn-ghost btn-sm" style="font-size:12px;flex-shrink:0;">🔗 열기</a>
+            </div>`;
+          }
+          // 회차별 커리큘럼
           const curric=getTodayCurriculum(x.cat);
           if(!curric) return '';
           const title=curric.title||curric.topic||'';

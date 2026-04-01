@@ -674,7 +674,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       </div>
       <div class="section-body" style="padding:0;">
         <div class="my-classes-table-wrap">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지/숙제</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
         <div class="my-classes-cards" id="myClassesCards"></div>
@@ -1110,6 +1110,10 @@ create policy "public write notices" on notices for all using (true);</div>
         style="min-height:120px;"
         onkeydown="if(event.key==='Enter'&&event.ctrlKey)saveHomework()"></textarea>
       <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Ctrl+Enter로 빠르게 저장</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">📅 마감일 <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(다음 수업일이 지나면 자동 삭제)</span></label>
+      <input type="date" class="form-input" id="hwDueDate" style="width:100%;">
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('homeworkModal')">취소</button>
@@ -2140,7 +2144,7 @@ function renderMyClasses(){
           <div style="font-size:16px;font-weight:700;color:var(--accent4);margin-bottom:5px;">${formatAmPmRange(dispStart,dispEnd)}</div>
           <div style="font-size:14px;color:var(--text-muted);margin-bottom:${notice||adminHw?'10px':'14px'};">🗓 ${period}</div>
           ${notice?`<div style="font-size:13px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;white-space:pre-wrap;">${notice}</div>`:''}
-          ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${adminHw}</div>`:''}
+          ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${typeof adminHw==='object'?adminHw.text:adminHw}</div>`:''}
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${myZoom?`<a href="${myZoom}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${myZoom}','_blank') || (window.location.href='${myZoom}')" class="btn btn-zoom btn-sm">🎥 줌 입장</a>`:`<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 줌 링크</button>`}
             ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
@@ -3532,14 +3536,32 @@ function renderAdminNotices(){
 
   const today=new Date().toISOString().slice(0,10);
 
+  // 다음 수업일 계산 헬퍼
+  const getNextClassDate=(cat)=>{
+    if(!cat.days||!cat.days.length) return '';
+    const cur=new Date(); cur.setDate(cur.getDate()+1); // 내일부터 탐색
+    for(let i=0;i<60;i++){
+      const dow=(cur.getDay()+6)%7;
+      if(cat.days.includes(dow)){
+        const d=cur;
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+    return '';
+  };
+
   el.innerHTML=cats.map(cat=>{
-    const notice=S.notices[cat.id]||'';
-    const adminHw=S.adminHomework[cat.id]||'';
+    const rawNotice=S.notices[cat.id]||'';
+    const rawAdminHw=S.adminHomework[cat.id]||'';
+    const notice=typeof rawNotice==='object'?rawNotice:{text:rawNotice,expiresAt:''};
+    const adminHw=typeof rawAdminHw==='object'?rawAdminHw:{text:rawAdminHw,expiresAt:''};
     const vacList=(S.vacations[cat.id]||[]).sort();
     const upcoming=vacList.filter(d=>d>=today);
     const past=vacList.filter(d=>d<today);
-    const hasNotice=!!notice;
-    const hasHw=!!adminHw;
+    const nextClassDate=getNextClassDate(cat);
+    const hasNotice=!!(notice.text);
+    const hasHw=!!(adminHw.text);
     const hasVac=upcoming.length>0;
 
     return `<div class="admin-cat-card animate-in" style="--card-color:${cat.color};">
@@ -3562,20 +3584,28 @@ function renderAdminNotices(){
       <!-- 공지사항 입력 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--admin);margin-bottom:6px;">📢 공지사항</div>
-        <textarea class="notice-textarea" id="notice-${cat.id}" placeholder="수업 공지사항을 입력하세요...">${notice}</textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
-          ${hasNotice?`<button class="btn btn-danger btn-sm" onclick="clearNotice('${cat.id}')">🗑️ 삭제</button>`:''}
-          <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 저장</button>
+        <textarea class="notice-textarea" id="notice-${cat.id}" placeholder="수업 공지사항을 입력하세요...">${typeof notice==='object'?notice.text||'':notice}</textarea>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <label style="font-size:11px;color:var(--text-muted);white-space:nowrap;">⏰ 만료일(다음수업일):</label>
+          <input type="date" id="notice-exp-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:5px 8px;" value="${typeof notice==='object'&&notice.expiresAt?notice.expiresAt:nextClassDate}">
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            ${hasNotice?`<button class="btn btn-danger btn-sm" onclick="clearNotice('${cat.id}')">🗑️</button>`:''}
+            <button class="btn btn-admin btn-sm" onclick="saveNotice('${cat.id}')">💾 저장</button>
+          </div>
         </div>
       </div>
 
       <!-- 숙제 입력 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:6px;">📝 숙제 공지 <span style="font-size:10px;font-weight:400;color:var(--text-muted);">(수강생 대시보드에 표시됩니다)</span></div>
-        <textarea class="notice-textarea" id="admin-hw-${cat.id}" placeholder="예: p.23 연습문제 1~5번 풀기&#10;단어 20개 외우기" style="border-color:rgba(255,181,71,0.3);">${adminHw}</textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
-          ${hasHw?`<button class="btn btn-danger btn-sm" onclick="clearAdminHw('${cat.id}')">🗑️ 삭제</button>`:''}
-          <button class="btn btn-sm" style="background:rgba(255,181,71,0.15);color:var(--accent4);border:1px solid rgba(255,181,71,0.4);" onclick="saveAdminHw('${cat.id}')">💾 저장</button>
+        <textarea class="notice-textarea" id="admin-hw-${cat.id}" placeholder="예: p.23 연습문제 1~5번 풀기&#10;단어 20개 외우기" style="border-color:rgba(255,181,71,0.3);">${typeof adminHw==='object'?adminHw.text||'':adminHw}</textarea>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+          <label style="font-size:11px;color:var(--text-muted);white-space:nowrap;">⏰ 만료일(다음수업일):</label>
+          <input type="date" id="hw-exp-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:5px 8px;" value="${typeof adminHw==='object'&&adminHw.expiresAt?adminHw.expiresAt:nextClassDate}">
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            ${hasHw?`<button class="btn btn-danger btn-sm" onclick="clearAdminHw('${cat.id}')">🗑️</button>`:''}
+            <button class="btn btn-sm" style="background:rgba(255,181,71,0.15);color:var(--accent4);border:1px solid rgba(255,181,71,0.4);" onclick="saveAdminHw('${cat.id}')">💾 저장</button>
+          </div>
         </div>
       </div>
 
@@ -3627,11 +3657,12 @@ function renderAdminNotices(){
 
 function saveAdminHw(catId){
   const val=document.getElementById(`admin-hw-${catId}`)?.value?.trim();
-  if(val) S.adminHomework[catId]=val;
+  const exp=document.getElementById(`hw-exp-${catId}`)?.value||'';
+  if(val) S.adminHomework[catId]={text:val,expiresAt:exp};
   else delete S.adminHomework[catId];
   localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
-  showToast(val?'📝 숙제가 등록됐습니다':'🗑️ 숙제가 삭제됐습니다');
+  showToast(val?`📝 숙제가 등록됐습니다${exp?' ('+exp+' 만료)':''}`:'🗑️ 숙제가 삭제됐습니다');
   renderAdminNotices();
 }
 function clearAdminHw(catId){
@@ -3645,11 +3676,12 @@ function clearAdminHw(catId){
 
 function saveNotice(catId){
   const val=document.getElementById(`notice-${catId}`)?.value?.trim();
-  if(val) S.notices[catId]=val;
+  const exp=document.getElementById(`notice-exp-${catId}`)?.value||'';
+  if(val) S.notices[catId]={text:val,expiresAt:exp};
   else delete S.notices[catId];
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
-  showToast(val?'📢 공지사항이 저장되었습니다':'🗑️ 공지사항이 삭제되었습니다');
+  showToast(val?`📢 공지사항이 저장되었습니다${exp?' ('+exp+' 만료)':''}`:'🗑️ 공지사항이 삭제되었습니다');
   renderAdminNotices();
 }
 
@@ -3722,7 +3754,19 @@ function deleteRosterEntry(catId,idx){
 }
 
 // ═══ NOTICES: show in my classes ═══
-function getNoticeForCat(catId){ return S.notices[catId]||''; }
+function getNoticeForCat(catId){
+  const raw=S.notices[catId];
+  if(!raw) return '';
+  const n=typeof raw==='object'?raw:{text:raw,expiresAt:''};
+  if(!n.text) return '';
+  if(n.expiresAt){
+    const today=new Date();
+    const d=new Date(n.expiresAt);
+    d.setHours(23,59,59,0);
+    if(today>d) return ''; // 만료됨
+  }
+  return n.text;
+}
 
 
 // ═══════════════════════════════════════
@@ -4629,11 +4673,19 @@ function autoExtendEndDate(catId){
 function hwKey(enrollId, catId){ return `${enrollId}_${catId}`; }
 
 function getAdminHwForDashboard(catId){
-  const hw=S.adminHomework?.[catId];
-  if(!hw) return '';
+  const raw=S.adminHomework?.[catId];
+  if(!raw) return '';
+  const hw=typeof raw==='object'?raw:{text:raw,expiresAt:''};
+  if(!hw.text) return '';
+  if(hw.expiresAt){
+    const today=new Date();
+    const d=new Date(hw.expiresAt);
+    d.setHours(23,59,59,0);
+    if(today>d) return ''; // 만료됨
+  }
   return `<div style="margin-top:6px;padding:7px 10px;border-radius:6px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);">
-    <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제</div>
-    <div style="font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.5;">${hw}</div>
+    <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제${hw.expiresAt?` <span style="font-weight:400;font-size:10px;opacity:0.7;">(${hw.expiresAt} 만료)</span>`:''}</div>
+    <div style="font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.5;">${hw.text}</div>
   </div>`;
 }
 
@@ -4642,14 +4694,20 @@ function getHomeworkForEnroll(enrollId, catId){
   const key=hwKey(enrollId, catId);
   const hw=S.homework[key];
   if(!hw||!hw.text) return '';
+  // 마감일이 지났으면 자동 숨김
+  if(hw.dueDate){
+    const due=new Date(hw.dueDate); due.setHours(23,59,59,0);
+    if(new Date()>due) return '';
+  }
   const now=new Date();
   const updated=new Date(hw.updatedAt||0);
   const daysDiff=Math.floor((now-updated)/(1000*60*60*24));
   const isDone=hw.done;
   const isOld=daysDiff>=7;
+  const dueDateStr=hw.dueDate?` · 마감 ${hw.dueDate.slice(5).replace('-','월')+'일'}`:'';
   return `<div style="margin-top:6px;padding:6px 10px;border-radius:6px;background:${isDone?'rgba(67,232,194,0.08)':'rgba(255,181,71,0.1)'};border-left:3px solid ${isDone?'var(--accent3)':'var(--accent4)'};opacity:${isOld?0.45:1};">
     <div style="font-size:11px;font-weight:700;color:${isDone?'var(--accent3)':'var(--accent4)'};margin-bottom:2px;">
-      ${isDone?'✅ 숙제 완료':'📝 학생 숙제 기록'}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
+      ${isDone?'✅ 숙제 완료':'📝 학생 숙제 기록'}${dueDateStr}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
     </div>
     <div style="font-size:12px;color:var(--text);${isDone?'text-decoration:line-through;opacity:0.6;':''};white-space:pre-wrap;line-height:1.5;">${hw.text}</div>
   </div>`;
@@ -4658,14 +4716,23 @@ function getHomeworkForEnroll(enrollId, catId){
 function getHomeworkCell(enrollId, catId){
   const key=hwKey(enrollId, catId);
   const hw=S.homework[key];
+  // 마감일이 지났으면 자동 숨김
+  if(hw?.dueDate){
+    const due=new Date(hw.dueDate); due.setHours(23,59,59,0);
+    if(new Date()>due && !hw.done){
+      delete S.homework[key]; save();
+    }
+  }
   const hasHw=hw&&hw.text;
   if(hasHw){
     const isDone=hw.done;
     const now=new Date();
     const daysDiff=Math.floor((now-new Date(hw.updatedAt||0))/(1000*60*60*24));
     const isOld=daysDiff>=7;
+    const dueDateStr=hw.dueDate?`<span style="font-size:10px;color:var(--accent4);"> · 마감 ${hw.dueDate.slice(5).replace('-','월')+'일'}</span>`:'';
     return `<div style="display:flex;flex-direction:column;gap:4px;">
       <div style="font-size:11px;color:${isDone?'var(--accent3)':'var(--accent4)'};font-weight:600;${isDone?'text-decoration:line-through;':''};opacity:${isOld?0.45:1};max-width:160px;white-space:pre-wrap;line-height:1.4;">${hw.text.slice(0,50)}${hw.text.length>50?'…':''}</div>
+      ${dueDateStr}
       <div style="display:flex;gap:4px;">
         <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px;" onclick="toggleHomeworkDone('${enrollId}','${catId}')">${isDone?'↩️ 미완':'✅ 완료'}</button>
         <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px;" onclick="openHomeworkModal('${enrollId}','${catId}')">✏️</button>
@@ -4684,6 +4751,20 @@ function openHomeworkModal(enrollId, catId){
   document.getElementById('hwText').value=hw?.text||'';
   document.getElementById('hwEnrollId').value=enrollId;
   document.getElementById('hwCatId').value=catId;
+  // 마감일: 기존값 or 다음 수업일 자동 계산
+  const dueDateEl=document.getElementById('hwDueDate');
+  if(hw?.dueDate){ dueDateEl.value=hw.dueDate; }
+  else if(cat?.days?.length){
+    const cur=new Date(); cur.setDate(cur.getDate()+1);
+    for(let i=0;i<60;i++){
+      const dow=(cur.getDay()+6)%7;
+      if(cat.days.includes(dow)){
+        dueDateEl.value=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+        break;
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+  } else { dueDateEl.value=''; }
   openModal('homeworkModal');
   setTimeout(()=>document.getElementById('hwText').focus(),80);
 }
@@ -4692,9 +4773,10 @@ function saveHomework(){
   const enrollId=document.getElementById('hwEnrollId').value;
   const catId=document.getElementById('hwCatId').value;
   const text=document.getElementById('hwText').value.trim();
+  const dueDate=document.getElementById('hwDueDate').value||'';
   const key=hwKey(enrollId,catId);
   if(!text){ delete S.homework[key]; }
-  else { S.homework[key]={text, done:false, updatedAt:new Date().toISOString()}; }
+  else { S.homework[key]={text, done:false, updatedAt:new Date().toISOString(), dueDate}; }
   save();
   closeModal('homeworkModal');
   showToast(text?'📝 숙제가 저장됐습니다':'🗑️ 숙제가 삭제됐습니다');

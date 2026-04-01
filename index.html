@@ -1484,10 +1484,10 @@ function renderDashboard(){
       })();
       const isGraduation=isLastDay||isLastSession;
       return `<div class="class-card ${isDone?'done':''} ${isNow?'now':''} ${isVacation?'vacation':''} ${isGraduation?'graduation':''}">
-        <div style="display:flex;align-items:flex-start;gap:16px;width:100%;flex-wrap:wrap;">
+        <div style="display:flex;align-items:flex-start;gap:16px;width:100%;">
           <div style="flex-shrink:0;"><div class="class-time">${formatKoreanTime(x.cat.start)}</div><div class="class-time-end">~${formatKoreanTime(x.cat.end)}</div></div>
           <div class="class-divider" style="align-self:stretch;"></div>
-          <div class="class-info" style="flex:1;min-width:140px;">
+          <div class="class-info" style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
               ${sessionBadge}
@@ -1499,13 +1499,20 @@ function renderDashboard(){
               <span style="color:${x.cat.color};">● ${x.cat.subject}</span>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;margin-left:auto;">
+          <!-- PC전용: 뱃지+버튼 오른쪽 -->
+          <div class="pill-desktop" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
             ${isNow?`<span style="font-size:10px;font-weight:900;color:var(--accent3);background:rgba(67,232,194,0.12);padding:3px 9px;border-radius:20px;letter-spacing:1px;">LIVE</span>`:isGraduation?`<span style="font-size:10px;font-weight:900;color:var(--accent4);background:rgba(255,181,71,0.15);padding:3px 9px;border-radius:20px;">🎓 종강일</span>`:''}
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            <div style="display:flex;gap:6px;align-items:center;">
               ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${zoomLink}','_blank')||(window.location.href='${zoomLink}')" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
               ${x.cat.curriculumUrl?`<a href="${x.cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${x.cat.curriculumUrl}','_blank')||(window.location.href='${x.cat.curriculumUrl}')" class="btn btn-ghost btn-sm" style="font-size:12px;">📚 커리큘럼</a>`:''}
             </div>
           </div>
+        </div>
+        <!-- 모바일전용: 뱃지+버튼 아래 -->
+        <div class="pill-mobile" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap;align-items:center;">
+          ${isNow?`<span style="font-size:10px;font-weight:900;color:var(--accent3);background:rgba(67,232,194,0.12);padding:3px 9px;border-radius:20px;letter-spacing:1px;">LIVE</span>`:isGraduation?`<span style="font-size:10px;font-weight:900;color:var(--accent4);background:rgba(255,181,71,0.15);padding:3px 9px;border-radius:20px;">🎓 종강일</span>`:''}
+          ${!isVacation&&zoomLink?`<a href="${zoomLink}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${zoomLink}','_blank')||(window.location.href='${zoomLink}')" class="btn btn-zoom btn-sm">줌 입장</a>`:''}
+          ${x.cat.curriculumUrl?`<a href="${x.cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${x.cat.curriculumUrl}','_blank')||(window.location.href='${x.cat.curriculumUrl}')" class="btn btn-ghost btn-sm" style="font-size:12px;">📚 커리큘럼</a>`:''}
         </div>
         ${(()=>{
           if(x.cat.curriculumUrl) return '';

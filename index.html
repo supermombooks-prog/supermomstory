@@ -157,7 +157,8 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .catalog-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all 0.25s;position:relative;display:flex;flex-direction:column;gap:11px;}
 .catalog-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.35);border-color:rgba(255,255,255,0.12);}
 .catalog-card.enrolled{border-color:var(--accent3);background:rgba(67,232,194,0.04);}
-.catalog-card-top{display:flex;align-items:center;gap:14px;padding-bottom:2px;}
+.my-classes-cards{display:none;}
+.my-classes-table-wrap{display:block;}
 .print-mobile-only{display:none;}
 .print-desktop-only{display:block;}
 @media(max-width:768px){
@@ -675,7 +676,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지</th><th>📝 학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
-        <div class="my-classes-cards" id="myClassesCards" style="display:none;"></div>
+        <div class="my-classes-cards" id="myClassesCards"></div>
       </div>
     </div>
   </div>
@@ -980,9 +981,9 @@ create policy "public write notices" on notices for all using (true);</div>
 
     <!-- 커리큘럼 -->
     <div class="form-row">
-      <label class="form-label">📚 회차별 커리큘럼 <span style="font-size:11px;color:var(--text-muted);">대시보드 오늘의 수업에 자동 표시</span></label>
-      <div id="cat-curriculum-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addCurriculumRow()" style="width:100%;justify-content:center;">+ 회차 추가</button>
+      <label class="form-label">📚 커리큘럼 링크 <span style="font-size:11px;color:var(--text-muted);">구글 드라이브 PDF 링크</span></label>
+      <input class="form-input" id="cat-curriculum-url" placeholder="https://drive.google.com/..." style="margin-bottom:6px;">
+      <div style="font-size:11px;color:var(--text-muted);">📌 링크 입력 시 수강생 커리큘럼 버튼에서 바로 열 수 있습니다</div>
     </div>
     <div class="form-row">
       <label class="form-label">🚫 휴강 날짜 <span style="font-size:11px;color:var(--text-muted);">과거/미래 모두 등록 가능</span></label>
@@ -2099,20 +2100,18 @@ function renderMyClasses(){
         ${getHomeworkCell(e.id, e.catalogId)}
       </td>
       <td id="zoom-cell-${e.id}">${zoomCell}</td>
-      <td>${(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
+      <td>${cat.curriculumUrl?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;">📚 커리큘럼</a>`:(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="cancelById('${e.id}')">취소</button></td>
     </tr>`;
   }).join('');
 
-  // 모바일 카드 렌더
+  // 모바일 카드 렌더 (display는 CSS 미디어쿼리로만 제어)
   const cardsEl=document.getElementById('myClassesCards');
   const tableWrap=document.querySelector('.my-classes-table-wrap');
-  const isMob=_isMobile();
-  if(tableWrap) tableWrap.style.display=isMob?'none':'';
+  // inline style 제거 - CSS !important가 제대로 작동하도록
+  if(tableWrap) tableWrap.removeAttribute('style');
   if(cardsEl){
-    cardsEl.style.display=isMob?'flex':'none';
-    cardsEl.style.flexDirection='column';
-    cardsEl.style.gap='10px';
+    cardsEl.removeAttribute('style');
     if(!count){
       cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">수강 중인 수업이 없습니다.<br><button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="toggleAddClassPanel()">+ 수업 추가하기</button></div>`;
     } else {
@@ -2144,7 +2143,7 @@ function renderMyClasses(){
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${myZoom?`<a href="${myZoom}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${myZoom}','_blank') || (window.location.href='${myZoom}')" class="btn btn-zoom btn-sm">🎥 줌 입장</a>`:`<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 줌 링크</button>`}
             ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
-            ${(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:''}
+            ${cat.curriculumUrl?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="btn btn-ghost btn-sm">📚 커리큘럼</a>`:(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:''}
             <button class="btn btn-ghost btn-sm" onclick="openHomeworkModal('${e.id}','${cat.id}')">✏️ 숙제</button>
             <button class="btn btn-danger btn-sm" onclick="cancelById('${e.id}')">취소</button>
           </div>
@@ -2197,9 +2196,21 @@ function saveTime(eid){
 }
 
 function editZoom(eid){
-  const cell=document.getElementById(`zoom-cell-${eid}`);
   const e=S.enrollments.find(x=>x.id===eid);
-  if(!cell||!e) return;
+  if(!e) return;
+  const cell=document.getElementById(`zoom-cell-${eid}`);
+  // 모바일: zoom-cell이 없으면 prompt로 입력
+  if(!cell){
+    const url=prompt('줌 링크를 입력하세요:', e.myZoom||'');
+    if(url===null) return; // 취소
+    const idx=S.enrollments.findIndex(x=>x.id===eid);
+    if(idx===-1) return;
+    S.enrollments[idx].myZoom=url.trim();
+    save();
+    showToast(url.trim()?'✅ 줌 링크가 저장되었습니다':'🗑️ 줌 링크가 삭제되었습니다');
+    renderMyClasses();
+    return;
+  }
   cell.innerHTML=`
     <div style="display:flex;align-items:center;gap:6px;">
       <input id="zoom-input-${eid}" class="form-input" style="padding:6px 10px;font-size:12px;height:32px;"
@@ -2546,9 +2557,10 @@ function autoCalcSessions(force){
   preview.style.display='block';
   preview.innerHTML=`📅 ${startFmt} ~ ${endFmt} · ${days.length}요일 기준 → 전체 <b>${total}회</b>${vacCount>0?` − 휴강 <b style="color:var(--danger);">${vacCount}회</b> = 실수업 <b style="color:var(--accent3);">${count}회</b>`:`= <b style="color:var(--accent3);">${count}회</b>`}`;
 
-  // 자동으로 값 채우기 (force=true이거나 현재 값이 0일 때)
+  // 자동으로 값 채우기 (force=true이거나 현재 값이 0일 때만)
   const cur2=parseInt(document.getElementById('cat-total-sessions').value)||0;
-  if(force||cur2===0){
+  const isEditMode=!!document.getElementById('catalogModal')?.dataset.editId;
+  if(cur2===0||(force&&!isEditMode)){
     document.getElementById('cat-total-sessions').value=count;
     badge.style.display='inline';
   }
@@ -2574,15 +2586,14 @@ function autoSelectIconBySubject(){
 }
 
 // ═══ CATALOG MODAL ═══
-function openAddCatalog(){
+function openAddCatalog(){document.getElementById('catalogModal').dataset.editId='';
   S.editingCatalogId=null; S.catColor='#6c8aff';
   document.getElementById('catalogModalTitle').textContent='📋 수업 등록';
   ['cat-name','cat-teacher','cat-zoom','cat-enroll-url','cat-detail-url','cat-desc','cat-age','cat-date-start','cat-date-end'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cat-total-sessions').value='0';
   _modalVacDates=[];
   renderModalVacList();
-  _modalCurriculum=[];
-  renderModalCurriculumList();
+  document.getElementById('cat-curriculum-url').value='';
   document.getElementById('cat-subject').value='영어';
   document.getElementById('cat-capacity').value='0';
   populateTeacherSelect('','영어');
@@ -2610,8 +2621,7 @@ function editCatalog(id){
   document.getElementById('cat-total-sessions').value=cat.totalSessions||0;
   _modalVacDates=[...(S.vacations[cat.id]||[])];
   renderModalVacList();
-  _modalCurriculum=JSON.parse(JSON.stringify(cat.curriculum||[]));
-  renderModalCurriculumList();
+  document.getElementById('cat-curriculum-url').value=cat.curriculumUrl||'';
   populateTeacherSelect(cat.teacher||'', cat.subject||'영어');
   document.querySelectorAll('#cat-days .day-toggle').forEach(d=>d.classList.toggle('selected',cat.days.includes(+d.dataset.day)));
   // 색상은 언어별 자동 설정 — autoSelectIconBySubject에서 처리
@@ -2644,6 +2654,7 @@ function editCatalog(id){
     el.classList.toggle('btn-ghost',_groupTabType!==t);
   });
   autoSelectIconBySubject();
+  document.getElementById('catalogModal').dataset.editId=cat.id;
   openModal('catalogModal');
 }
 
@@ -2665,8 +2676,8 @@ function renderModalVacList(){
       </span>`;
     }).join('');
   }
-  // 휴강 변경 시 회차 자동 재계산
-  autoCalcSessions(true);
+  // 휴강 변경 시 회차 미리보기만 업데이트 (기존값 덮어쓰지 않음 - 수정모드에서 의도치않은 변경 방지)
+  autoCalcSessions(false);
 }
 
 function addVacationFromModal(){
@@ -2797,7 +2808,7 @@ function saveCatalog(){
     subject,
     capacity:parseInt(document.getElementById('cat-capacity').value)||0,
     start,end,days,groups,icon,color:S.catColor,
-    curriculum:JSON.parse(JSON.stringify(_modalCurriculum))
+    curriculumUrl:document.getElementById('cat-curriculum-url').value.trim()
   };
   if(S.editingCatalogId){
     const i=S.catalog.findIndex(c=>c.id===S.editingCatalogId);
@@ -3787,6 +3798,8 @@ function openCurriculumModal(catId, enrollId){
 
 function openChangeGroupModal(enrollId, catId){
   const cat=S.catalog.find(c=>c.id===catId);
+  const enroll=S.enrollments.find(e=>e.id===enrollId);
+  if(!cat||!enroll) return;
   document.getElementById('changeGroupList').innerHTML=(cat.groups||[]).map(g=>{
     const isCurrent=enroll.groupId===g.id;
     return `<button onclick="changeGroup('${enrollId}','${g.id}')"

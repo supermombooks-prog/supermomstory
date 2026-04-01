@@ -849,6 +849,14 @@ create policy "public write notices" on notices for all using (true);</div>
     <div id="teacherDetailPanel" style="display:none;margin-top:24px;"></div>
   </div>
 
+  <!-- 플로팅 맨 위로 버튼 (모바일 강사소개용) -->
+  <button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})"
+    style="display:none;position:fixed;bottom:24px;right:20px;z-index:500;
+    padding:10px 16px;border-radius:24px;border:none;cursor:pointer;
+    background:var(--accent);color:#fff;font-size:13px;font-weight:700;
+    box-shadow:0 4px 16px rgba(108,138,255,0.4);
+    align-items:center;justify-content:center;gap:4px;white-space:nowrap;">강사목록으로 ↑</button>
+
   <!-- ADMIN TEACHERS -->
   <div class="page-view" id="page-admin-teachers">
     <div class="admin-bar">🔑 관리자 모드</div><div style="height:22px;"></div>
@@ -1191,6 +1199,18 @@ create policy "public write notices" on notices for all using (true);</div>
 <div class="toast" id="toast"></div>
 
 <script>
+// ── 플로팅 맨 위로 버튼 (모바일 강사소개) ──
+window.addEventListener('scroll', ()=>{
+  const btn=document.getElementById('scrollTopBtn');
+  if(!btn) return;
+  const isTeacherPage=document.getElementById('page-teachers')?.classList.contains('active');
+  if(isTeacherPage && window.innerWidth<=768 && window.scrollY>300){
+    btn.style.display='flex';
+  } else {
+    btn.style.display='none';
+  }
+}, {passive:true});
+
 // ── 디바운스: 저장공간 부족 모바일 성능 최적화 ──
 const _isMobile=()=>window.innerWidth<=768;
 const _renderTimers={};
@@ -4304,10 +4324,16 @@ function renderProfileBar(){
   const chips = S.profiles.map(p => {
     const isActive = p.id === S.currentProfileId;
     const cnt = S.enrollments.filter(e=>e.profileId===p.id).length;
-    return `<div class="profile-chip ${isActive?'active':''}" onclick="switchProfile('${p.id}')" style="${isActive?'border-color:'+p.color+';background:'+p.color+'22;color:'+p.color+';':''}">
-      <span class="profile-emoji">${p.emoji}</span>
-      <span>${p.name}</span>
-      ${cnt>0?`<span style="font-size:10px;opacity:0.7;">${cnt}</span>`:''}
+    return `<div style="display:inline-flex;align-items:center;gap:2px;">
+      <div class="profile-chip ${isActive?'active':''}" onclick="switchProfile('${p.id}')" style="${isActive?'border-color:'+p.color+';background:'+p.color+'22;color:'+p.color+';':''}">
+        <span class="profile-emoji">${p.emoji}</span>
+        <span>${p.name}</span>
+        ${cnt>0?`<span style="font-size:10px;opacity:0.7;">${cnt}</span>`:''}
+      </div>
+      <button onclick="editProfile('${p.id}')" title="수정"
+        style="background:none;border:1px solid var(--border);border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:11px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;margin-left:1px;">✏️</button>
+      <button onclick="deleteProfile('${p.id}')" title="삭제"
+        style="background:none;border:1px solid var(--border);border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:11px;color:var(--danger);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;margin-right:4px;">✕</button>
     </div>`;
   }).join('');
 

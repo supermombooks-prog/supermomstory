@@ -4709,10 +4709,19 @@ function getAdminHwForDashboard(catId){
   const hw=typeof raw==='object'?raw:{text:raw,expiresAt:''};
   if(!hw.text) return '';
   if(hw.expiresAt){
-    const today=new Date();
-    const d=new Date(hw.expiresAt);
-    d.setHours(23,59,59,0);
-    if(today>d) return ''; // 만료됨
+    const now=new Date();
+    const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    if(hw.expiresAt<today) return ''; // 만료일 지남
+    if(hw.expiresAt===today){
+      // 만료일 당일: 수업이 끝난 후에는 숨김
+      const cat=S.catalog.find(c=>c.id===catId);
+      if(cat){
+        const nowMin=now.getHours()*60+now.getMinutes();
+        const grpEndTimes=(cat.groups||[]).map(g=>toMin(g.end||'23:59'));
+        const latestEnd=grpEndTimes.length?Math.max(...grpEndTimes):toMin(cat.end||'23:59');
+        if(nowMin>latestEnd) return ''; // 수업 끝난 후 숨김
+      }
+    }
   }
   return `<div style="margin-top:6px;padding:7px 10px;border-radius:6px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);">
     <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제${hw.expiresAt?` <span style="font-weight:400;font-size:10px;opacity:0.7;">(${hw.expiresAt} 만료)</span>`:''}</div>

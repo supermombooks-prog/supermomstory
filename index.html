@@ -259,7 +259,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .admin-cat-teacher{font-size:12px;color:var(--text-muted);margin-top:3px;}
 .admin-cat-tags{display:flex;flex-wrap:wrap;gap:5px;}
 .admin-cat-body{font-size:12px;color:var(--text-muted);line-height:1.6;}
-.admin-cat-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);}
+.admin-cat-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;flex-wrap:nowrap;}
 .admin-cat-stat{display:flex;align-items:center;gap:6px;}
 .admin-cat-count{font-family:'Gmarket Sans',sans-serif;font-size:20px;font-weight:700;color:var(--admin);}
 .admin-cat-actions{display:flex;gap:8px;}
@@ -2108,7 +2108,7 @@ function renderMyClasses(){
       <td>${cat.teacher||'—'}</td>
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
-          ${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${getNoticeForCat(cat.id)}</div>`:''}
+          ${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${linkify(getNoticeForCat(cat.id))}</div>`:''}
           ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw};if(!hw.text)return'';return`<div style="font-size:11px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${hw.text}</div>`;})()}
           ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:11px;">—</span>`:''}
         </div>
@@ -2156,8 +2156,8 @@ function renderMyClasses(){
           <div style="font-size:15px;color:var(--text-muted);margin-bottom:5px;">📅 ${daysStr}요일 · ${cat.teacher||'선생님 미정'}</div>
           <div style="font-size:16px;font-weight:700;color:var(--accent4);margin-bottom:5px;">${formatAmPmRange(dispStart,dispEnd)}</div>
           <div style="font-size:14px;color:var(--text-muted);margin-bottom:${notice||adminHw?'10px':'14px'};">🗓 ${period}</div>
-          ${notice?`<div style="font-size:13px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;white-space:pre-wrap;">${notice}</div>`:''}
-          ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${typeof adminHw==='object'?adminHw.text:adminHw}</div>`:''}
+          ${notice?`<div style="font-size:13px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;white-space:pre-wrap;">${linkify(notice)}</div>`:''}
+          ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${linkify(typeof adminHw==='object'?adminHw.text:adminHw)}</div>`:''}
           <div id="zoom-btn-area-${e.id}" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${myZoom?`<a href="${myZoom}" target="_blank" rel="noopener noreferrer" onclick="event.preventDefault();window.open('${myZoom}','_blank') || (window.location.href='${myZoom}')" class="btn btn-zoom btn-sm">🎥 줌 입장</a>`:`<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 줌 링크</button>`}
             ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
@@ -2355,9 +2355,12 @@ function renderAdminCatalog(){
     return;
   }
   const today2=new Date(); today2.setHours(0,0,0,0);
-  const isAdminClosed=(cat)=>cat.closed||(cat.dateStart&&new Date(cat.dateStart)<=today2);
-  const openCats=cats.filter(c=>!isAdminClosed(c));
-  const closedCats=cats.filter(c=>isAdminClosed(c));
+  const todayStr=`${today2.getFullYear()}-${String(today2.getMonth()+1).padStart(2,'0')}-${String(today2.getDate()).padStart(2,'0')}`;
+  const isEnded=(cat)=>cat.dateEnd&&cat.dateEnd<todayStr;
+  const isAdminClosed=(cat)=>cat.closed||(cat.dateStart&&new Date(cat.dateStart+'T00:00:00')<=today2);
+  const openCats=cats.filter(c=>!isAdminClosed(c)&&!isEnded(c));
+  const closedCats=cats.filter(c=>isAdminClosed(c)&&!isEnded(c));
+  const endedCats=cats.filter(c=>isEnded(c));
 
   const renderAdminCard=(cat)=>{
     const cnt=S.enrollments.filter(e=>e.catalogId===cat.id).length;
@@ -2392,13 +2395,13 @@ function renderAdminCatalog(){
         <div class="progress-bar-wrap"><div class="progress-bar" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--danger)':pct>=70?'var(--accent4)':'var(--accent3)'};"></div></div>
       </div>`:''}
       <div class="admin-cat-footer">
-        <div style="font-size:12px;color:var(--text-muted);">
+        <div style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;">
           ${cat.zoom?`<a href="${cat.zoom}" target="_blank" style="color:var(--accent);text-decoration:none;">🔗 줌 링크 확인</a>`:'<span>줌 링크 없음</span>'}
         </div>
-        <div class="admin-cat-actions">
-          <button class="btn btn-ghost btn-sm" onclick="copyCatalog('${cat.id}')" title="수업 복사">📋 복사</button>
-          <button class="btn btn-edit btn-sm" onclick="editCatalog('${cat.id}')">✏️ 수정</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteCatalog('${cat.id}')">🗑️ 삭제</button>
+        <div class="admin-cat-actions" style="flex-shrink:0;">
+          <button class="btn btn-ghost btn-sm" onclick="copyCatalog('${cat.id}')" title="수업 복사">📋</button>
+          <button class="btn btn-edit btn-sm" onclick="editCatalog('${cat.id}')" title="수정">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCatalog('${cat.id}')" title="삭제">🗑️</button>
         </div>
       </div>
     </div>`;
@@ -2415,10 +2418,20 @@ function renderAdminCatalog(){
   }
   if(closedCats.length){
     html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${openCats.length?'20px':'4px'} 0 4px;">
-      <span style="font-size:16px;font-weight:800;color:var(--danger);">🔒 모집완료</span>
+      <span style="font-size:16px;font-weight:800;color:var(--danger);">🔒 모집마감</span>
       <span style="font-size:12px;color:var(--text-muted);">${closedCats.length}개 수업</span>
     </div>`;
     html+=closedCats.map(renderAdminCard).join('');
+  }
+  if(endedCats.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${openCats.length||closedCats.length?'20px':'4px'} 0 4px;">
+      <span style="font-size:16px;font-weight:800;color:var(--text-muted);">⏹ 종료된 수업</span>
+      <span style="font-size:12px;color:var(--text-muted);">${endedCats.length}개 수업</span>
+    </div>`;
+    html+=endedCats.map(cat=>{
+      const card=renderAdminCard(cat);
+      return card.replace('class="admin-cat-card animate-in"','class="admin-cat-card animate-in" style="--card-color:#888;opacity:0.6;"');
+    }).join('');
   }
   grid.innerHTML=html;
 }
@@ -3785,6 +3798,13 @@ function deleteRosterEntry(catId,idx){
 }
 
 // ═══ NOTICES: show in my classes ═══
+// URL을 클릭 가능한 링크로 변환
+function linkify(text){
+  if(!text) return '';
+  const urlReg=/(https?:\/\/[^\s<>"']+)/g;
+  return text.replace(urlReg, url=>`<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${url}','_blank')||(window.location.href='${url}')" style="color:var(--accent);word-break:break-all;text-decoration:underline;">${url}</a>`);
+}
+
 function getNoticeForCat(catId){
   const raw=S.notices[catId];
   if(!raw) return '';
@@ -4725,7 +4745,7 @@ function getAdminHwForDashboard(catId){
   }
   return `<div style="margin-top:6px;padding:7px 10px;border-radius:6px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);">
     <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제${hw.expiresAt?` <span style="font-weight:400;font-size:10px;opacity:0.7;">(${hw.expiresAt} 만료)</span>`:''}</div>
-    <div style="font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.5;">${hw.text}</div>
+    <div style="font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.5;">${linkify(hw.text)}</div>
   </div>`;
 }
 
@@ -4749,7 +4769,7 @@ function getHomeworkForEnroll(enrollId, catId){
     <div style="font-size:11px;font-weight:700;color:${isDone?'var(--accent3)':'var(--accent4)'};margin-bottom:2px;">
       ${isDone?'✅ 숙제 완료':'📝 학생 숙제 기록'}${dueDateStr}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
     </div>
-    <div style="font-size:12px;color:var(--text);${isDone?'text-decoration:line-through;opacity:0.6;':''};white-space:pre-wrap;line-height:1.5;">${hw.text}</div>
+    <div style="font-size:12px;color:var(--text);${isDone?'text-decoration:line-through;opacity:0.6;':''};white-space:pre-wrap;line-height:1.5;">${linkify(hw.text)}</div>
   </div>`;
 }
 

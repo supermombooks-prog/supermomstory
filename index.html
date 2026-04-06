@@ -1624,7 +1624,10 @@ function renderEnroll(){
 
   // 모집중/모집완료 자동 분류: 수동 closed 플래그 OR 시작일이 오늘 이전
   const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const isEnded=(cat)=>cat.dateEnd&&cat.dateEnd<todayStr;
   const isClosed=(cat)=>{
+    if(isEnded(cat)) return false; // 종료된 수업은 별도 처리
     if(cat.closed) return true; // 수동 모집완료
     if(cat.dateStart){
       const start=new Date(cat.dateStart);
@@ -1633,8 +1636,9 @@ function renderEnroll(){
     }
     return false;
   };
-  const open=cats.filter(c=>!isClosed(c));
-  const closed=cats.filter(c=>isClosed(c));
+  const open=cats.filter(c=>!isClosed(c)&&!isEnded(c));
+  const closed=cats.filter(c=>isClosed(c)&&!isEnded(c));
+  const ended=cats.filter(c=>isEnded(c));
 
   const renderCard=(cat)=>{
     const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id);
@@ -1673,14 +1677,18 @@ function renderEnroll(){
           + 수업목록에 추가
         </button>`;
 
-    return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in">
+    return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in" style="${isEnded(cat)?'filter:grayscale(1);opacity:0.65;':''}"">
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
         <div style="flex:1;min-width:0;">
           <div class="catalog-name">${cat.name}</div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
-        ${isClosed(cat)?`<span style="font-size:10px;font-weight:700;color:var(--danger);background:rgba(255,92,92,0.1);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">🔒 모집완료</span>`:checkBtn}
+        ${isEnded(cat)
+          ?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`
+          :isClosed(cat)
+            ?`<span style="font-size:10px;font-weight:700;color:var(--danger);background:rgba(255,92,92,0.1);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">🔒 모집완료</span>`
+            :checkBtn}
       </div>
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
@@ -1720,6 +1728,13 @@ function renderEnroll(){
       <span style="font-size:12px;color:var(--text-muted);">${closed.length}개 수업</span>
     </div>`;
     html+=closed.map(renderCard).join('');
+  }
+  if(ended.length){
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${open.length||closed.length?'20px':'4px'} 0 4px;">
+      <span style="font-size:15px;font-weight:800;color:var(--text-muted);">⏹ 종료된 수업</span>
+      <span style="font-size:12px;color:var(--text-muted);">${ended.length}개 수업</span>
+    </div>`;
+    html+=ended.map(renderCard).join('');
   }
   // 저장공간 부족 기기 최적화: 유휴 시간에 렌더
   if(window.requestIdleCallback){

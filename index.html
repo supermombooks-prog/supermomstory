@@ -3165,7 +3165,7 @@ function renderPrint(){
         const grp=r.grp;
         const timeStr=grp?`${grp.label} ${fmtAmPm(grp.start)}~${fmtAmPm(grp.end)}`:r.time;
         html+=`<tr>
-          ${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:13px;color:${tc};vertical-align:middle;text-align:center;">${subj}</td>`:''}
+          ${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:13px;color:${tc};vertical-align:middle;text-align:center;white-space:nowrap;">${subj}</td>`:''}
           <td style="border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:12px;color:#1e293b;text-align:center;">${r.cat.days.map(d=>DN_ORDER[d]).join('·')}</td>
           <td style="border:1px solid #e2e8f0;padding:12px 14px;font-weight:700;font-size:13px;color:#1e293b;">${r.cat.name}</td>
           <td style="border:1px solid #e2e8f0;padding:12px 14px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>
@@ -3339,7 +3339,7 @@ function renderPrint(){
         <table id="listTableSubject" style="width:100%;border-collapse:collapse;table-layout:fixed;display:none;">
           <thead>
             <tr style="background:#1e293b;color:#fff;">
-              <th style="padding:12px 10px;font-size:12px;text-align:center;width:8%;">과목</th>
+              <th style="padding:12px 10px;font-size:12px;text-align:center;width:11%;">과목</th>
               <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
               <th style="padding:12px 14px;font-size:12px;text-align:left;width:22%;">수업명</th>
               <th style="padding:12px 14px;font-size:12px;text-align:left;width:12%;">강사</th>
@@ -3461,7 +3461,7 @@ function downloadPDF(){
       const bg=pdfCPDF[subj]||'#f0f9ff';const tc=pdfCTXT[subj]||'#1e293b';
       list.forEach((r,i)=>{
         const g=r.grp;const ts=g?`${g.label} ${pdfFmt(g.start)}~${pdfFmt(g.end)}`:r.time;
-        h2+=`<tr>${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:12px;color:${tc};vertical-align:middle;text-align:center;">${subj}</td>`:''}
+        h2+=`<tr>${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:12px;color:${tc};vertical-align:middle;text-align:center;white-space:nowrap;">${subj}</td>`:''}
           <td style="border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:12px;color:#1e293b;text-align:center;">${r.cat.days.map(d=>pdfDN_ORDER[d]).join('·')}</td>
           <td style="border:1px solid #e2e8f0;padding:10px 12px;font-weight:700;font-size:12px;color:#1e293b;">${r.cat.name}</td>
           <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>
@@ -3627,7 +3627,7 @@ function downloadPDF(){
     <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
       <thead><tr>
         ${_printListSort==='subject'
-          ?`<th style="width:8%;text-align:center;">과목</th><th style="width:6%;text-align:center;">요일</th>`
+          ?`<th style="width:11%;text-align:center;">과목</th><th style="width:6%;text-align:center;">요일</th>`
           :`<th style="width:6%;text-align:center;">요일</th><th style="width:10%;text-align:left;">과목</th>`}
         <th style="width:22%;text-align:left;">수업명</th>
         <th style="width:12%;text-align:left;">강사</th>

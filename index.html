@@ -4018,16 +4018,16 @@ function renderAdminNotices(){
         </div>
         <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;">
           <div style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
-            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택</label>
+            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택 (복수 가능)</label>
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="radio" name="vac-grp-mode-${cat.id}" value="all" checked onchange="toggleVacGroupMode('${cat.id}','all')" style="accent-color:var(--danger);">
+              <input type="checkbox" id="vac-all-${cat.id}" onchange="toggleVacAllGroup('${cat.id}',this.checked)" style="accent-color:var(--danger);">
               <span style="font-weight:600;">전체 조</span>
             </label>
-            ${(cat.groups||[]).length>1?(cat.groups||[]).map(g=>`
+            ${(cat.groups||[]).map(g=>`
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="radio" name="vac-grp-mode-${cat.id}" value="${g.id}" onchange="toggleVacGroupMode('${cat.id}','${g.id}')" style="accent-color:var(--danger);">
+              <input type="checkbox" class="vac-grp-cb-${cat.id}" value="${g.id}" onchange="onVacGrpCbChange('${cat.id}')" style="accent-color:var(--danger);">
               <span>${g.label} ${formatAmPmRange(g.start,g.end)}</span>
-            </label>`).join(''):''}
+            </label>`).join('')}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;">
             <label style="font-size:11px;color:var(--text-muted);">휴강 날짜</label>
@@ -5146,18 +5146,29 @@ function removeVacationDate(catId, dateStr, groupId=null){
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
 }
-// 공지사항 메뉴에서 선택된 조 모드 저장
-const _vacGrpMode={};
-function toggleVacGroupMode(catId, value){
-  _vacGrpMode[catId]=value;
+// 공지사항 메뉴 휴강 조 체크박스 핸들러
+function toggleVacAllGroup(catId, checked){
+  // 전체 조 체크 시 개별 조 체크 해제
+  document.querySelectorAll(`.vac-grp-cb-${catId}`).forEach(cb=>{ cb.checked=false; cb.disabled=checked; });
+}
+function onVacGrpCbChange(catId){
+  // 개별 조 체크 시 전체 조 자동 해제
+  const allCb=document.getElementById(`vac-all-${catId}`);
+  if(allCb) allCb.checked=false;
+  document.querySelectorAll(`.vac-grp-cb-${catId}`).forEach(cb=>{ cb.disabled=false; });
 }
 function addVacation(catId){
   const input=document.getElementById(`vac-date-${catId}`);
   if(!input||!input.value){showToast('⚠️ 날짜를 선택해주세요');return;}
   const dateStr=input.value;
-  const mode=_vacGrpMode[catId]||'all';
-  const groupId=mode==='all'?null:mode;
-  addVacationDate(catId,dateStr,groupId);
+  const allCb=document.getElementById(`vac-all-${catId}`);
+  const grpCbs=[...document.querySelectorAll(`.vac-grp-cb-${catId}:checked`)];
+  if(!allCb?.checked && !grpCbs.length){showToast('⚠️ 전체 조 또는 특정 조를 선택해주세요');return;}
+  if(allCb?.checked){
+    addVacationDate(catId,dateStr,null);
+  } else {
+    grpCbs.forEach(cb=>addVacationDate(catId,dateStr,cb.value));
+  }
   input.value='';
   renderAdminNotices();
   showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);
@@ -5518,7 +5529,7 @@ function showTeacherDetail(id){
         <button onclick="_selectedTeacherId=null;renderTeachers()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;padding:4px;align-self:flex-start;">✕</button>
       </div>
       <!-- 소개 -->
-      ${(t.career||t.specialty||t.style)?`<div style="padding:4px 28px 8px;border-bottom:1px solid var(--border);">
+      ${(t.career||t.specialty||t.style)?`<div style="padding:4px 20px 8px;border-bottom:1px solid var(--border);">
         ${t.career?`<div style="padding:16px 0;${t.specialty||t.style?'border-bottom:1px solid var(--border);':''}">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
             <span style="font-size:16px;">📌</span>
@@ -5542,7 +5553,7 @@ function showTeacherDetail(id){
         </div>`:''}
       </div>`:''}
       <!-- 유튜브 영상 -->
-      ${t.youtube?`<div style="padding:14px 28px;border-bottom:1px solid var(--border);">
+      ${t.youtube?`<div style="padding:14px 20px;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
           <span style="font-size:14px;">🎬</span>
           <span style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">소개 영상</span>
@@ -5554,17 +5565,17 @@ function showTeacherDetail(id){
           allowfullscreen></iframe>
       </div>`:''}
       <!-- 수업 목록 -->
-      <div style="padding:20px 28px;">
+      <div style="padding:20px;">
         <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;">진행 중인 수업 <span style="color:${color};">${myCats.length}</span></div>
         <div style="display:flex;flex-direction:column;gap:8px;">${classCards}</div>
       </div>
       ${t.suggestion?`
       <!-- 익명 건의하기 -->
-      <div style="padding:20px 28px 24px;border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(108,138,255,0.06),rgba(255,126,179,0.04));">
+      <div style="padding:20px 20px 24px;border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(108,138,255,0.06),rgba(255,126,179,0.04));">
         <div style="font-size:15px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">💌 ${t.name} 선생님께 하고 싶은 말이 있나요?</div>
         <a href="${t.suggestion}" target="_blank" rel="noopener"
           onclick="event.preventDefault();window.open('${t.suggestion}','_blank')||(window.location.href='${t.suggestion}')"
-          style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:12px;background:${color};color:#fff;font-size:15px;font-weight:700;text-decoration:none;">
+          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:12px;background:${color};color:#fff;font-size:15px;font-weight:700;text-decoration:none;width:100%;box-sizing:border-box;">
           📝 익명으로 건의하기
         </a>
         <div style="font-size:14px;color:var(--text-muted);margin-top:8px;">누가 작성했는지 선생님이 알 수 없어요 🔒</div>

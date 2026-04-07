@@ -2841,8 +2841,8 @@ function addVacationFromModal(){
 }
 
 
-function removeVacation(catId,dateStr){
-  removeVacationDate(catId,dateStr);
+function removeVacation(catId,dateStr,groupId){
+  removeVacationDate(catId,dateStr,groupId||null);
   renderAdminNotices();
   showToast('✅ 휴강이 취소됐습니다');
 }
@@ -3957,9 +3957,9 @@ function renderAdminNotices(){
     const rawAdminHw=S.adminHomework[cat.id]||'';
     const notice=typeof rawNotice==='object'?rawNotice:{text:rawNotice,expiresAt:''};
     const adminHw=typeof rawAdminHw==='object'?rawAdminHw:{text:rawAdminHw,expiresAt:''};
-    const vacList=(S.vacations[cat.id]||[]).sort();
-    const upcoming=vacList.filter(d=>d>=today);
-    const past=vacList.filter(d=>d<today);
+    const vacList=(S.vacations[cat.id]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v).sort((a,b)=>a.date.localeCompare(b.date));
+    const upcoming=vacList.filter(v=>v.date>=today);
+    const past=vacList.filter(v=>v.date<today);
     const nextClassDate=getNextClassDate(cat);
     const hasNotice=!!(notice.text);
     const hasHw=!!(adminHw.text);
@@ -4016,16 +4016,41 @@ function renderAdminNotices(){
           <div style="font-size:11px;font-weight:700;color:var(--danger);">🚫 휴강 날짜 관리</div>
           ${cat.totalSessions?`<button class="btn btn-ghost btn-sm" onclick="autoExtendEndDate('${cat.id}')" style="font-size:11px;color:var(--accent4);border-color:rgba(255,181,71,0.4);" title="휴강 일수만큼 종료일 자동 연장">📅 종료일 자동 재계산</button>`:''}
         </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;">
-          <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
+            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="vac-grp-mode-${cat.id}" value="all" checked onchange="toggleVacGroupMode('${cat.id}','all')" style="accent-color:var(--danger);">
+              <span style="font-weight:600;">전체 조</span>
+            </label>
+            ${(cat.groups||[]).length>1?(cat.groups||[]).map(g=>`
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="vac-grp-mode-${cat.id}" value="${g.id}" onchange="toggleVacGroupMode('${cat.id}','${g.id}')" style="accent-color:var(--danger);">
+              <span>${g.label} ${formatAmPmRange(g.start,g.end)}</span>
+            </label>`).join(''):''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;">
+            <label style="font-size:11px;color:var(--text-muted);">휴강 날짜</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;font-size:12px;padding:6px 10px;">
+              <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
+            </div>
+          </div>
         </div>
         ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">
-          ${upcoming.map(d=>`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,92,92,0.1);color:var(--danger);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid rgba(255,92,92,0.25);">
-            🚫 ${d} <button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
-          </span>`).join('')}
+          ${upcoming.map((v,i)=>{
+            const grp=v.groupId?(cat.groups||[]).find(g=>g.id===v.groupId):null;
+            const tag=grp?`<span style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:10px;padding:1px 6px;margin-left:3px;">${grp.label}만</span>`:`<span style="font-size:10px;background:rgba(255,92,92,0.15);color:var(--danger);border-radius:10px;padding:1px 6px;margin-left:3px;">전체</span>`;
+            return `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,92,92,0.1);color:var(--danger);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid rgba(255,92,92,0.25);">
+              🚫 ${v.date}${tag}<button onclick="removeVacationByIndex('${cat.id}','${v.date}','${v.groupId||''}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
+            </span>`;
+          }).join('')}
         </div>`:`<div style="font-size:11px;color:var(--text-muted);">예정된 휴강 없음</div>`}
-        ${past.length?`<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">지난 휴강</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${past.map(d=>`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,0.06);color:var(--text-muted);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid var(--border);">🚫 ${d}<button onclick="removeVacation('${cat.id}','${d}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button></span>`).join('')}</div></div>`:''}
+        ${past.length?`<div style="margin-top:6px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">지난 휴강</div><div style="display:flex;flex-wrap:wrap;gap:5px;">${past.map(v=>{
+          const grp=v.groupId?(cat.groups||[]).find(g=>g.id===v.groupId):null;
+          const tag=grp?`<span style="font-size:10px;background:#e0e7ff;color:#3730a3;border-radius:10px;padding:1px 6px;margin-left:3px;">${grp.label}만</span>`:'';
+          return `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,0.06);color:var(--text-muted);border-radius:20px;padding:2px 9px;font-size:11px;border:1px solid var(--border);">🚫 ${v.date}${tag}<button onclick="removeVacationByIndex('${cat.id}','${v.date}','${v.groupId||''}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button></span>`;
+        }).join('')}</div></div>`:''}
       </div>
 
       <!-- 보강 관리 -->
@@ -5102,29 +5127,45 @@ function isTodayVacation(catId){
   return (S.vacations[catId]||[]).includes(today);
 }
 
-function addVacationDate(catId, dateStr){
+function addVacationDate(catId, dateStr, groupId=null){
   if(!S.vacations[catId]) S.vacations[catId]=[];
-  if(!S.vacations[catId].includes(dateStr)){
-    S.vacations[catId].push(dateStr);
-    S.vacations[catId].sort();
+  // 마이그레이션: 기존 문자열 배열 변환
+  S.vacations[catId]=S.vacations[catId].map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+  const exists=S.vacations[catId].find(v=>v.date===dateStr&&(v.groupId||null)===(groupId||null));
+  if(!exists){
+    S.vacations[catId].push({date:dateStr,groupId:groupId||null});
+    S.vacations[catId].sort((a,b)=>a.date.localeCompare(b.date));
   }
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
 }
-function removeVacationDate(catId, dateStr){
+function removeVacationDate(catId, dateStr, groupId=null){
   if(!S.vacations[catId]) return;
-  S.vacations[catId]=S.vacations[catId].filter(d=>d!==dateStr);
+  S.vacations[catId]=S.vacations[catId].map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+  S.vacations[catId]=S.vacations[catId].filter(v=>!(v.date===dateStr&&(v.groupId||null)===(groupId||null)));
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+}
+// 공지사항 메뉴에서 선택된 조 모드 저장
+const _vacGrpMode={};
+function toggleVacGroupMode(catId, value){
+  _vacGrpMode[catId]=value;
 }
 function addVacation(catId){
   const input=document.getElementById(`vac-date-${catId}`);
   if(!input||!input.value){showToast('⚠️ 날짜를 선택해주세요');return;}
   const dateStr=input.value;
-  addVacationDate(catId,dateStr);
+  const mode=_vacGrpMode[catId]||'all';
+  const groupId=mode==='all'?null:mode;
+  addVacationDate(catId,dateStr,groupId);
   input.value='';
   renderAdminNotices();
   showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);
+}
+function removeVacationByIndex(catId, dateStr, groupId){
+  removeVacationDate(catId, dateStr, groupId||null);
+  renderAdminNotices();
+  showToast('✅ 휴강이 취소됐습니다');
 }
 // 휴강을 고려해 totalSessions 회차가 끝나는 날짜를 자동 계산해 dateEnd 업데이트
 function autoExtendEndDate(catId){

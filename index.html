@@ -2401,7 +2401,10 @@ function renderAdminCatalog(){
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${cat.totalSessions?`<span class="tag" style="color:var(--accent);border-color:rgba(108,138,255,0.3);">🔢 총 ${cat.totalSessions}회</span>`:''}
-        ${cat.age?`<span class="tag">👶 ${cat.age}</span>`:''}
+        ${cat.curriculumUrl
+          ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')"
+              class="tag" style="color:#16a34a;border-color:rgba(22,163,74,0.3);cursor:pointer;text-decoration:none;">📚 커리큘럼 ✓</a>`
+          :`<span class="tag" style="color:var(--text-muted);border-color:var(--border);opacity:0.5;">📚 미등록</span>`}
         ${formatDateRange(cat.dateStart,cat.dateEnd)?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${formatDateRange(cat.dateStart,cat.dateEnd)}</span>`:''}
         ${cat.capacity>0&&cnt>=cat.capacity?`<span class="tag" style="color:var(--danger);border-color:rgba(255,92,92,0.3);">정원마감</span>`:''}
       </div>
@@ -5402,7 +5405,7 @@ function openAddTeacher(){
   ['t-name','t-tagline','t-career','t-specialty','t-style','t-link','t-youtube'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  setSelectedSubjects(['영어']);
+  setSelectedSubjects([]);
   document.getElementById('t-photo').value='';
   document.getElementById('t-photo-file').value='';
   document.getElementById('t-photo-editor').style.display='none';

@@ -2766,6 +2766,21 @@ function removeVacation(catId,dateStr){
 // MAKEUP (보강) SYSTEM
 // ═══════════════════════════════════════
 function getMakeupList(catId){ return S.makeup[catId]||[]; }
+// 조별 보강일 포함 종료일 계산
+function getPeriodWithMakeup(cat, grp){
+  const base=formatDateRange(cat.dateStart,cat.dateEnd);
+  if(!cat||!grp) return base||'—';
+  const makeups=(S.makeup[cat.id]||[]).filter(m=>!m.groupId||m.groupId===grp.id);
+  if(!makeups.length) return base||'—';
+  const latestMakeup=makeups.map(m=>m.date).sort().pop();
+  if(!latestMakeup) return base||'—';
+  const effectiveEnd=cat.dateEnd&&cat.dateEnd>=latestMakeup?cat.dateEnd:latestMakeup;
+  if(effectiveEnd===cat.dateEnd) return base||'—';
+  // 보강으로 연장된 경우: 원래 종료일 + 보강일 표시
+  const orig=formatDateRange(cat.dateStart,cat.dateEnd);
+  const ext=formatDateRange(cat.dateStart,effectiveEnd);
+  return `${ext} <span style="font-size:10px;color:#f97316;">(보강포함)</span>`;
+}
 
 function addMakeup(catId){
   const dateEl=document.getElementById(`makeup-date-${catId}`);
@@ -2983,7 +2998,7 @@ function renderPrint(){
     const grp=getGroupForEnroll(e,cat);
     const daysStr=cat.days.map(d=>DN[d]).join('·')+'요일';
     const time=grp?`${grp.label} ${formatKoreanRange(grp.start,grp.end)}`:'—';
-    const period=formatDateRange(cat.dateStart,cat.dateEnd)||'—';
+    const period=getPeriodWithMakeup(cat,grp);
     return {cat,grp,daysStr,time,period};
   }).filter(Boolean);
 
@@ -3399,7 +3414,7 @@ function downloadPDF(){
     return {cat,grp,
       daysStr:cat.days.map(d=>DN[d]).join('·')+'요일',
       time:grp?`${grp.label} ${formatKoreanRange(grp.start,grp.end)}`:'—',
-      period:formatDateRange(cat.dateStart,cat.dateEnd)||'—'
+      period:getPeriodWithMakeup(cat,grp)
     };
   }).filter(Boolean);
 
@@ -3639,7 +3654,7 @@ function downloadPDF(){
   </div>
 </div>
 
-<scr'+'ipt>window.onload=function(){window.print();}<\/script>
+<scr'+'ipt>window.onload=function(){window.print();}<'+'/script>
 </body>
 </html>`;
 

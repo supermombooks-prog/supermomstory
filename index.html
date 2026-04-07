@@ -1191,6 +1191,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <input type="hidden" id="t-photo">
     </div>
     <div class="form-row"><label class="form-label">SNS / 링크 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label><input class="form-input" id="t-link" placeholder="https://..."></div>
+    <div class="form-row"><label class="form-label">📝 익명 건의 링크 <span style="font-size:11px;color:var(--text-muted);">(선택 · 강사 상세보기에 표시)</span></label><input class="form-input" id="t-suggestion" placeholder="https://forms.gle/... 또는 네이버폼 링크"></div>
     <div class="form-row"><label class="form-label">🎬 유튜브 소개 영상 <span style="font-size:11px;color:var(--text-muted);">(선택)</span></label><input class="form-input" id="t-youtube" placeholder="https://youtu.be/... 또는 https://youtube.com/watch?v=..."></div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('teacherModal')">취소</button>
@@ -3079,7 +3080,7 @@ function renderPrint(){
   const getBandIndex=t=>{
     if(!t||!t.includes(':')) return -1;
     const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
+    const ampm=h2<12?'오전':'오후';
     const h12=h2===0?12:h2>12?h2-12:h2;
     return bandKeys.indexOf(`${ampm} ${h12}시대`);
   };
@@ -5336,6 +5337,17 @@ function showTeacherDetail(id){
         <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;">진행 중인 수업 <span style="color:${color};">${myCats.length}</span></div>
         <div style="display:flex;flex-direction:column;gap:8px;">${classCards}</div>
       </div>
+      ${t.suggestion?`
+      <!-- 익명 건의하기 -->
+      <div style="padding:14px 28px 20px;border-top:1px solid var(--border);background:var(--surface2);">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">건의사항이 있으신가요?</div>
+        <a href="${t.suggestion}" target="_blank" rel="noopener"
+          onclick="event.preventDefault();window.open('${t.suggestion}','_blank')||(window.location.href='${t.suggestion}')"
+          style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;">
+          📝 ${t.name} 선생님께 익명 건의하기
+        </a>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:7px;">익명으로 전달되며 누가 작성했는지 알 수 없어요</div>
+      </div>`:''}
     </div>`;
 }
 
@@ -5510,7 +5522,7 @@ function switchBioTab(tab){
 function openAddTeacher(){
   _editingTeacherId=null;
   document.getElementById('teacherModalTitle').textContent='👩‍🏫 강사 등록';
-  ['t-name','t-tagline','t-career','t-specialty','t-style','t-link','t-youtube'].forEach(id=>{
+  ['t-name','t-tagline','t-career','t-specialty','t-style','t-link','t-suggestion','t-youtube'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   setSelectedSubjects([]);
@@ -5539,6 +5551,7 @@ function openEditTeacher(id){
   switchBioTab('career');
   document.getElementById('t-photo').value=t.photo||'';
   document.getElementById('t-link').value=t.link||'';
+  document.getElementById('t-suggestion').value=t.suggestion||'';
   document.getElementById('t-youtube').value=t.youtube||'';
   // 사진 미리보기 (기존 저장된 사진)
   document.getElementById('t-photo-editor').style.display='none';
@@ -5572,6 +5585,7 @@ function saveTeacher(){
     style:document.getElementById('t-style')?.value.trim()||'',
     photo:document.getElementById('t-photo').value.trim(),
     link:document.getElementById('t-link').value.trim(),
+    suggestion:document.getElementById('t-suggestion').value.trim(),
     youtube:document.getElementById('t-youtube').value.trim(),
   };
   if(_editingTeacherId){

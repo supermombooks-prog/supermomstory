@@ -3503,9 +3503,9 @@ function renderPrint(){
       <!-- 정렬 탭 -->
       <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;">
         <button id="sortTabDay" onclick="switchListSort('day')"
-          style="padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📅 요일순</button>
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid ${_printListSort==='day'?'#1e293b':'#e2e8f0'};background:${_printListSort==='day'?'#1e293b':'#fff'};color:${_printListSort==='day'?'#fff':'#475569'};font-size:12px;font-weight:${_printListSort==='day'?'700':'600'};cursor:pointer;">📅 요일별</button>
         <button id="sortTabSubject" onclick="switchListSort('subject')"
-          style="padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">📚 수업순</button>
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid ${_printListSort==='subject'?'#1e293b':'#e2e8f0'};background:${_printListSort==='subject'?'#1e293b':'#fff'};color:${_printListSort==='subject'?'#fff':'#475569'};font-size:12px;font-weight:${_printListSort==='subject'?'700':'600'};cursor:pointer;">📚 언어별</button>
       </div>
       <div class="print-desktop-only">
         <!-- 요일순 테이블 -->
@@ -3543,21 +3543,7 @@ function renderPrint(){
 
 function switchListSort(type){
   _printListSort=type;
-  const dayTab=document.getElementById('sortTabDay');
-  const subTab=document.getElementById('sortTabSubject');
-  const dayTbl=document.getElementById('listTableDay');
-  const subTbl=document.getElementById('listTableSubject');
-  if(!dayTab||!subTab||!dayTbl||!subTbl) return;
-  if(type==='day'){
-    dayTbl.style.display=''; subTbl.style.display='none';
-    dayTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
-    subTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;';
-  } else {
-    dayTbl.style.display='none'; subTbl.style.display='';
-    subTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
-    dayTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;';
-  }
-  // 모바일 목록도 재렌더
+  // 모바일 포함 전체 재렌더 (탭 스타일도 renderPrint 안에서 _printListSort 기준으로 반영됨)
   renderPrint();
 }
 
@@ -3866,7 +3852,7 @@ function downloadPDF(){
 
 <!-- 3페이지: 수업 목록 -->
 <div class="section-page page-break">
-  <h2>📋 수업 목록 (${_printListSort==='subject'?'수업순':'요일순'})</h2>
+  <h2>📋 수업 목록 (${_printListSort==='subject'?'언어별':'요일별'})</h2>
   <div class="section">
     <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
       <thead><tr>

@@ -1072,6 +1072,19 @@ create policy "public write notices" on notices for all using (true);</div>
 </div>
 
 <!-- CHANGE GROUP MODAL -->
+<!-- 아이 선택 모달 (전체 모드에서 수업 추가 시) -->
+<div class="modal-overlay" id="profileSelectModal">
+  <div class="modal" style="width:360px;">
+    <div class="modal-title">👦🏻 어떤 아이에게 추가할까요?</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">중복 선택 가능해요</div>
+    <div id="profileSelectList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('profileSelectModal')">취소</button>
+      <button class="btn btn-primary" onclick="confirmProfileEnroll()">✅ 선택한 아이에게 추가</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="changeGroupModal">
   <div class="modal" style="width:360px;">
     <div class="modal-title" id="changeGroupTitle">🔄 조 변경</div>
@@ -3026,41 +3039,36 @@ function renderPrint(){
   const CTXT={영어:'#1e40af',일본어:'#9d174d',중국어:'#991b1b',프랑스어:'#065f46',독일어:'#854d0e',스페인어:'#9a3412',이탈리아어:'#14532d',러시아어:'#4c1d95'};
   const CTME={영어:'#3b82f6',일본어:'#ec4899',중국어:'#ef4444',프랑스어:'#10b981',독일어:'#eab308',스페인어:'#f97316',이탈리아어:'#22c55e',러시아어:'#8b5cf6'};
 
-  // 시간대별 그룹 (1시간 단위 band) - 시작/종료 시간 모두 포함해야 rowspan 정확
+  // 시간대별 그룹 - 시작시간 기준으로 밴드 생성
+  // 각 시작시간이 하나의 밴드(행)가 됨
   const bandMap={};
-  const addBand=(t)=>{
-    if(!t||!t.includes(':')) return;
-    const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
-    const h12=h2===0?12:h2>12?h2-12:h2;
-    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
-    if(!bandMap[band]) bandMap[band]=[];
-  };
-  // 시작 시간 밴드
+  // 시작 시간 → 그 시간이 속한 시간대 밴드에 추가
   slots.forEach(t=>{
     if(!t||!t.includes(':')) return;
     const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
+    const ampm=h2<12?'오전':'오후';
     const h12=h2===0?12:h2>12?h2-12:h2;
-    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
+    const band=`${ampm} ${h12}시대`;
     if(!bandMap[band]) bandMap[band]=[];
-    bandMap[band].push(t);
+    if(!bandMap[band].includes(t)) bandMap[band].push(t);
   });
-  // 종료 시간 밴드도 추가 (90분·60분 수업이 다음 시간대까지 걸칠 수 있음)
+  // 종료 시간 시간대도 추가 (시간대를 넘어가는 수업 rowspan 처리)
   targetEnrollments.forEach(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     const grp=getGroupForEnroll(e,cat);
     if(!grp?.end) return;
     const [hh,mm]=grp.end.split(':');
     const h2=parseInt(hh), m2=parseInt(mm);
-    // 정각이면 그 전 시간대, 아니면 현재 시간대
     const effH=m2===0?h2-1:h2;
     if(effH<0) return;
-    addBand(`${String(effH).padStart(2,'0')}:00`);
+    const ampm=effH<12?'오전':'오후';
+    const h12=effH===0?12:effH>12?effH-12:effH;
+    const band=`${ampm} ${h12}시대`;
+    if(!bandMap[band]) bandMap[band]=[];
   });
   // 밴드 키 시간순 정렬
   const sortBand=(a,b)=>{
-    const toMin=s=>{const m=s.match(/(\d+)시대/);const h=parseInt(m?.[1]||0);const ap=s.startsWith('오후');return (ap?h<12?h+12:h:h===12?0:h)*60;};
+    const toMin=s=>{const m=s.match(/(\d+)시대/);const h=parseInt(m?.[1]||0);const ap=s.startsWith('오후');return(ap?h<12?h+12:h:h===12?0:h)*60;};
     return toMin(a)-toMin(b);
   };
 
@@ -3076,7 +3084,7 @@ function renderPrint(){
   // 밴드 목록 (시간순 정렬)
   const bandKeys=Object.keys(bandMap).sort(sortBand);
 
-  // 밴드 인덱스 계산 함수 (시작시간 → 밴드 인덱스)
+  // 밴드 인덱스 계산 함수 (시작시간 → 해당 시간이 포함된 밴드 인덱스)
   const getBandIndex=t=>{
     if(!t||!t.includes(':')) return -1;
     const h2=parseInt(t.split(':')[0]);
@@ -3116,15 +3124,15 @@ function renderPrint(){
       // 이미 위 행에서 rowspan으로 차지된 셀은 건너뜀
       if(skip[bi][d]){ continue; }
 
-      const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
+      // 이 밴드(행)에서 시작하는 수업만 찾기 - times에 포함된 시작시간과 정확히 일치
+      const clsInBand=dayMap[d].filter(x=>times.includes(x.grp?.start));
       if(clsInBand.length){
-        // rowspan 계산 (여러 수업 중 가장 큰 span 사용)
+        // 수업별로 각각 rowspan 계산, 같은 셀 내 수업이 여러개면 각자 표시
         const maxSpan=Math.max(...clsInBand.map(x=>getRowSpan(x.grp?.start,x.grp?.end)));
-        // 이후 밴드 행의 같은 열 skip 처리
         for(let s=1;s<maxSpan;s++){
           if(skip[bi+s]) skip[bi+s][d]=true;
         }
-        cells+=`<td rowspan="${maxSpan}" style="border:1px solid #e2e8f0;padding:8px 10px;vertical-align:middle;background:${clsInBand.length?CPDF[clsInBand[0].cat.subject]||'#e0f2fe':''};">${
+        cells+=`<td rowspan="${maxSpan}" style="border:1px solid #e2e8f0;padding:8px 10px;vertical-align:middle;background:${CPDF[clsInBand[0].cat.subject]||'#e0f2fe'};">${
           clsInBand.map(x=>{
             const tc=CTXT[x.cat.subject]||'#1e293b';
             const tmc=CTME[x.cat.subject]||'#3b82f6';
@@ -3470,23 +3478,17 @@ function downloadPDF(){
 
   // PDF 시간대 밴드 생성 (시작+종료 시간 모두 포함해야 rowspan 정확)
   const pdfBandMap={};
-  const pdfAddBand=t=>{
-    if(!t||!t.includes(':')) return;
-    const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
-    const h12=h2===0?12:h2>12?h2-12:h2;
-    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
-    if(!pdfBandMap[band]) pdfBandMap[band]=[];
-  };
+  // 시작 시간 밴드
   slots.forEach(t=>{
     if(!t||!t.includes(':')) return;
     const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
+    const ampm=h2<12?'오전':'오후';
     const h12=h2===0?12:h2>12?h2-12:h2;
-    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
+    const band=`${ampm} ${h12}시대`;
     if(!pdfBandMap[band]) pdfBandMap[band]=[];
-    pdfBandMap[band].push(t);
+    if(!pdfBandMap[band].includes(t)) pdfBandMap[band].push(t);
   });
+  // 종료 시간 시간대도 추가
   targetEnrollments.forEach(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     const grp=getGroupForEnroll(e,cat);
@@ -3495,7 +3497,10 @@ function downloadPDF(){
     const h2=parseInt(hh),m2=parseInt(mm);
     const effH=m2===0?h2-1:h2;
     if(effH<0) return;
-    pdfAddBand(`${String(effH).padStart(2,'0')}:00`);
+    const ampm=effH<12?'오전':'오후';
+    const h12=effH===0?12:effH>12?effH-12:effH;
+    const band=`${ampm} ${h12}시대`;
+    if(!pdfBandMap[band]) pdfBandMap[band]=[];
   });
   const pdfSortBand=(a,b)=>{
     const toMin=s=>{const m=s.match(/(\d+)시대/);const h=parseInt(m?.[1]||0);const ap=s.startsWith('오후');return(ap?h<12?h+12:h:h===12?0:h)*60;};
@@ -3506,18 +3511,18 @@ function downloadPDF(){
   const pdfGetBandIdx=t=>{
     if(!t||!t.includes(':')) return -1;
     const h2=parseInt(t.split(':')[0]);
-    const ampm=h2<12?'AM':'PM';
+    const ampm=h2<12?'오전':'오후';
     const h12=h2===0?12:h2>12?h2-12:h2;
-    return pdfBandKeys.indexOf(`${ampm==='AM'?'오전':'오후'} ${h12}시대`);
+    return pdfBandKeys.indexOf(`${ampm} ${h12}시대`);
   };
   const pdfGetEndBandIdx=t=>{
     if(!t||!t.includes(':')) return -1;
     const [hh,mm]=t.split(':');
     const h2=parseInt(hh),m2=parseInt(mm);
     const effH=m2===0?h2-1:h2;
-    const ampm=effH<12?'AM':'PM';
+    const ampm=effH<12?'오전':'오후';
     const h12=effH===0?12:effH>12?effH-12:effH;
-    return pdfBandKeys.indexOf(`${ampm==='AM'?'오전':'오후'} ${h12}시대`);
+    return pdfBandKeys.indexOf(`${ampm} ${h12}시대`);
   };
   const pdfSkip={};
   pdfBandKeys.forEach((_,bi)=>{pdfSkip[bi]={};});
@@ -3530,14 +3535,16 @@ function downloadPDF(){
     let cells=`<td class="time-col">${band}</td>`;
     for(let d=0;d<7;d++){
       if(pdfSkip[bi][d]){ continue; }
-      const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
+      const clsInBand=dayMap[d].filter(x=>times.includes(x.grp?.start));
       if(clsInBand.length){
-        const si=pdfGetBandIdx(clsInBand[0].grp?.start);
-        const ei=pdfGetEndBandIdx(clsInBand[0].grp?.end);
-        const span=(si>=0&&ei>=si)?ei-si+1:1;
-        for(let s=1;s<span;s++){if(pdfSkip[bi+s])pdfSkip[bi+s][d]=true;}
+        const maxSpan=Math.max(...clsInBand.map(x=>{
+          const si=pdfGetBandIdx(x.grp?.start);
+          const ei=pdfGetEndBandIdx(x.grp?.end);
+          return(si>=0&&ei>=si)?ei-si+1:1;
+        }));
+        for(let s=1;s<maxSpan;s++){if(pdfSkip[bi+s])pdfSkip[bi+s][d]=true;}
         const bg=CPDF[clsInBand[0].cat.subject]||'#e0f2fe';
-        cells+=`<td rowspan="${span}" style="background:${bg};padding:6px 8px;vertical-align:middle;border:1px solid #e2e8f0;">${clsInBand.map(x=>{
+        cells+=`<td rowspan="${maxSpan}" style="background:${bg};padding:6px 8px;vertical-align:middle;border:1px solid #e2e8f0;">${clsInBand.map(x=>{
           const tc=CTXT2[x.cat.subject]||'#1e293b';
           const tmc=CTME2[x.cat.subject]||'#3b82f6';
           const kor=t=>{
@@ -4254,9 +4261,75 @@ function pickGroup(catId, groupId){
   renderEnroll();
 }
 
+// ── 전체 모드에서 수업 추가 시 아이 선택 모달 ──
+let _pendingEnrollCatId=null, _pendingEnrollGroupId=null;
+
+function openProfileSelectModal(catId, groupId){
+  _pendingEnrollCatId=catId;
+  _pendingEnrollGroupId=groupId;
+  const cat=S.catalog.find(c=>c.id===catId);
+  const grp=(cat?.groups||[]).find(g=>g.id===groupId);
+  const list=document.getElementById('profileSelectList');
+  list.innerHTML=S.profiles.map(p=>{
+    const alreadyEnrolled=S.enrollments.find(e=>e.catalogId===catId&&e.groupId===groupId&&e.profileId===p.id);
+    return `<label style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:var(--surface2);">
+      <input type="checkbox" id="psel-${p.id}" value="${p.id}" ${alreadyEnrolled?'checked':''} style="width:16px;height:16px;accent-color:var(--accent);">
+      <span style="font-size:18px;">${p.emoji}</span>
+      <span style="font-size:14px;font-weight:700;">${p.name}</span>
+      ${alreadyEnrolled?`<span style="font-size:11px;color:var(--accent3);margin-left:auto;">✓ 등록중</span>`:`<span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${grp?formatKoreanRange(grp.start,grp.end):''}</span>`}
+    </label>`;
+  }).join('');
+  openModal('profileSelectModal');
+}
+
+function confirmProfileEnroll(){
+  const cat=S.catalog.find(c=>c.id===_pendingEnrollCatId);
+  const grp=(cat?.groups||[]).find(g=>g.id===_pendingEnrollGroupId);
+  if(!cat||!grp){closeModal('profileSelectModal');return;}
+
+  const checkboxes=[...document.querySelectorAll('#profileSelectList input[type=checkbox]')];
+  const toAdd=[], toRemove=[];
+
+  checkboxes.forEach(cb=>{
+    const profId=cb.value;
+    const isChecked=cb.checked;
+    const wasEnrolled=!!S.enrollments.find(e=>e.catalogId===_pendingEnrollCatId&&e.groupId===_pendingEnrollGroupId&&e.profileId===profId);
+    if(isChecked && !wasEnrolled) toAdd.push(profId);
+    if(!isChecked && wasEnrolled) toRemove.push(profId);
+  });
+
+  if(!toAdd.length&&!toRemove.length){closeModal('profileSelectModal');return;}
+
+  // 추가
+  toAdd.forEach(profId=>{
+    S.enrollments.push({id:uid(),catalogId:_pendingEnrollCatId,groupId:_pendingEnrollGroupId,profileId:profId,enrolledAt:new Date().toISOString()});
+  });
+  // 취소
+  S.enrollments=S.enrollments.filter(e=>!(e.catalogId===_pendingEnrollCatId&&e.groupId===_pendingEnrollGroupId&&toRemove.includes(e.profileId)));
+
+  save();
+  closeModal('profileSelectModal');
+
+  const addNames=toAdd.map(id=>S.profiles.find(p=>p.id===id)?.name).filter(Boolean).join(', ');
+  const removeNames=toRemove.map(id=>S.profiles.find(p=>p.id===id)?.name).filter(Boolean).join(', ');
+  const msgs=[];
+  if(addNames) msgs.push(`✅ ${addNames} 추가`);
+  if(removeNames) msgs.push(`🗑️ ${removeNames} 취소`);
+  showToast(`"${cat.name}" ${grp.label} — ${msgs.join(' / ')}`);
+
+  if(S.currentPage==='enroll') renderEnroll();
+  else if(S.currentPage==='myclasses') renderMyClasses();
+  renderSidebarKids();
+}
+
 function quickEnrollGroup(catId, groupId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
+  // 전체 모드 + 프로필 2개 이상 → 아이 선택 모달
+  if(!S.currentProfileId && S.profiles.length>1){
+    openProfileSelectModal(catId, groupId);
+    return;
+  }
   const profId=S.currentProfileId||'default';
   if(S.enrollments.find(e=>e.catalogId===catId&&e.groupId===groupId&&(e.profileId||'default')===profId)){
     showToast('이미 내 목록에 추가된 조입니다');return;
@@ -5299,25 +5372,25 @@ function showTeacherDetail(id){
       <!-- 소개 -->
       ${(t.career||t.specialty||t.style)?`<div style="padding:4px 28px 8px;border-bottom:1px solid var(--border);">
         ${t.career?`<div style="padding:16px 0;${t.specialty||t.style?'border-bottom:1px solid var(--border);':''}">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
             <span style="font-size:16px;">📌</span>
-            <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">학력 및 경력</span>
+            <span style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">학력 및 경력</span>
           </div>
-          <div style="font-size:13px;line-height:1.9;color:var(--text);white-space:pre-wrap;">${t.career}</div>
+          <div style="font-size:15px;line-height:2;color:var(--text);white-space:pre-wrap;">${t.career}</div>
         </div>`:''}
         ${t.specialty?`<div style="padding:16px 0;${t.style?'border-bottom:1px solid var(--border);':''}">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
             <span style="font-size:16px;">🎯</span>
-            <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">전문분야</span>
+            <span style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">전문분야</span>
           </div>
-          <div style="font-size:13px;line-height:1.9;color:var(--text);white-space:pre-wrap;">${t.specialty}</div>
+          <div style="font-size:15px;line-height:2;color:var(--text);white-space:pre-wrap;">${t.specialty}</div>
         </div>`:''}
         ${t.style?`<div style="padding:16px 0;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
             <span style="font-size:16px;">💬</span>
-            <span style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">수업 스타일</span>
+            <span style="font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">수업 스타일</span>
           </div>
-          <div style="font-size:13px;line-height:1.9;color:var(--text);white-space:pre-wrap;">${t.style}</div>
+          <div style="font-size:15px;line-height:2;color:var(--text);white-space:pre-wrap;">${t.style}</div>
         </div>`:''}
       </div>`:''}
       <!-- 유튜브 영상 -->
@@ -5339,14 +5412,14 @@ function showTeacherDetail(id){
       </div>
       ${t.suggestion?`
       <!-- 익명 건의하기 -->
-      <div style="padding:14px 28px 20px;border-top:1px solid var(--border);background:var(--surface2);">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">건의사항이 있으신가요?</div>
+      <div style="padding:20px 28px 24px;border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(108,138,255,0.06),rgba(255,126,179,0.04));">
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">💌 ${t.name} 선생님께 하고 싶은 말이 있나요?</div>
         <a href="${t.suggestion}" target="_blank" rel="noopener"
           onclick="event.preventDefault();window.open('${t.suggestion}','_blank')||(window.location.href='${t.suggestion}')"
-          style="display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;text-decoration:none;">
-          📝 ${t.name} 선생님께 익명 건의하기
+          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;text-decoration:none;width:100%;box-sizing:border-box;">
+          📝 익명으로 건의하기
         </a>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:7px;">익명으로 전달되며 누가 작성했는지 알 수 없어요</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px;text-align:center;">누가 작성했는지 선생님이 알 수 없어요 🔒</div>
       </div>`:''}
     </div>`;
 }

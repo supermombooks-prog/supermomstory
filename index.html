@@ -5377,13 +5377,13 @@ function showTeacherDetail(id){
       ${t.suggestion?`
       <!-- 익명 건의하기 -->
       <div style="padding:20px 28px 24px;border-top:1px solid var(--border);background:linear-gradient(135deg,rgba(108,138,255,0.06),rgba(255,126,179,0.04));">
-        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">💌 ${t.name} 선생님께 하고 싶은 말이 있나요?</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">💌 ${t.name} 선생님께 하고 싶은 말이 있나요?</div>
         <a href="${t.suggestion}" target="_blank" rel="noopener"
           onclick="event.preventDefault();window.open('${t.suggestion}','_blank')||(window.location.href='${t.suggestion}')"
           style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border-radius:12px;background:${color};color:#fff;font-size:15px;font-weight:700;text-decoration:none;">
           📝 익명으로 건의하기
         </a>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:8px;text-align:center;">누가 작성했는지 선생님이 알 수 없어요 🔒</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-top:8px;">누가 작성했는지 선생님이 알 수 없어요 🔒</div>
       </div>`:''}
     </div>`;
 }

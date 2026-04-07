@@ -4017,26 +4017,24 @@ function renderAdminNotices(){
           <div style="font-size:11px;font-weight:700;color:var(--danger);">🚫 휴강 날짜 관리</div>
           ${cat.totalSessions?`<button class="btn btn-ghost btn-sm" onclick="autoExtendEndDate('${cat.id}')" style="font-size:11px;color:var(--accent4);border-color:rgba(255,181,71,0.4);" title="휴강 일수만큼 종료일 자동 연장">📅 종료일 자동 재계산</button>`:''}
         </div>
-        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
-            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택 (복수 가능)</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" id="vac-all-${cat.id}" onchange="toggleVacAllGroup('${cat.id}',this.checked)" style="accent-color:var(--danger);">
-              <span style="font-weight:600;">전체 조</span>
-            </label>
-            ${(cat.groups||[]).map(g=>`
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" class="vac-grp-cb-${cat.id}" value="${g.id}" onchange="onVacGrpCbChange('${cat.id}')" style="accent-color:var(--danger);">
-              <span>${g.label} ${formatAmPmRange(g.start,g.end)}</span>
-            </label>`).join('')}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;">
-            <label style="font-size:11px;color:var(--text-muted);">휴강 날짜</label>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <input type="date" id="vac-date-${cat.id}" class="form-input" style="flex:1;font-size:12px;padding:6px 10px;">
-              <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="position:relative;">
+            <button type="button" id="vac-dd-btn-${cat.id}" onclick="toggleGrpDropdown('vac-dd-${cat.id}','vac-dd-btn-${cat.id}')"
+              style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;min-width:130px;justify-content:space-between;">
+              <span id="vac-dd-label-${cat.id}">조 선택</span><span>▾</span>
+            </button>
+            <div id="vac-dd-${cat.id}" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+              <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;">
+                <input type="checkbox" id="vac-all-${cat.id}" onchange="toggleVacAllGroup('${cat.id}',this.checked)" style="accent-color:var(--danger);width:14px;height:14px;">전체 조
+              </label>
+              ${(cat.groups||[]).map(g=>`
+              <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" class="vac-grp-cb-${cat.id}" value="${g.id}" onchange="onVacGrpCbChange('${cat.id}')" style="accent-color:var(--danger);width:14px;height:14px;">${g.label} ${formatAmPmRange(g.start,g.end)}
+              </label>`).join('')}
             </div>
           </div>
+          <input type="date" id="vac-date-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;flex:1;min-width:130px;">
+          <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
         </div>
         ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">
           ${upcoming.map((v,i)=>{
@@ -4057,30 +4055,25 @@ function renderAdminNotices(){
       <!-- 보강 관리 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:8px;">🔁 조별 보강 날짜 관리</div>
-        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
-            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택 (복수 가능)</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" id="makeup-grp-all-${cat.id}" onchange="toggleAllMakeupGroups('${cat.id}',this.checked)" style="accent-color:var(--accent3);">
-              <span style="font-weight:600;">전체 조</span>
-            </label>
-            ${(cat.groups||[]).map(g=>`
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-              <input type="checkbox" class="makeup-grp-cb-${cat.id}" value="${g.id}" style="accent-color:var(--accent3);">
-              <span>${g.label} ${formatAmPmRange(g.start,g.end)}</span>
-            </label>`).join('')}
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="position:relative;">
+            <button type="button" id="mk-dd-btn-${cat.id}" onclick="toggleGrpDropdown('mk-dd-${cat.id}','mk-dd-btn-${cat.id}')"
+              style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;min-width:130px;justify-content:space-between;">
+              <span id="mk-dd-label-${cat.id}">조 선택</span><span>▾</span>
+            </button>
+            <div id="mk-dd-${cat.id}" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+              <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;">
+                <input type="checkbox" id="makeup-grp-all-${cat.id}" onchange="toggleAllMakeupGroups('${cat.id}',this.checked);updateMkDdLabel('${cat.id}')" style="accent-color:var(--accent3);width:14px;height:14px;">전체 조
+              </label>
+              ${(cat.groups||[]).map(g=>`
+              <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" class="makeup-grp-cb-${cat.id}" value="${g.id}" onchange="updateMkDdLabel('${cat.id}')" style="accent-color:var(--accent3);width:14px;height:14px;">${g.label} ${formatAmPmRange(g.start,g.end)}
+              </label>`).join('')}
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;">
-            <label style="font-size:11px;color:var(--text-muted);">보강 날짜</label>
-            <input type="date" id="makeup-date-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;">
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:120px;">
-            <label style="font-size:11px;color:var(--text-muted);">사유</label>
-            <input type="text" id="makeup-reason-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;" placeholder="예: 컴퓨터 오류">
-          </div>
-          <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:1px;">
-            <button class="btn btn-admin btn-sm" onclick="addMakeup('${cat.id}')" style="margin-top:20px;">+ 추가</button>
-          </div>
+          <input type="date" id="makeup-date-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;flex:1;min-width:130px;">
+          <input type="text" id="makeup-reason-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;flex:2;min-width:100px;" placeholder="사유 (선택)">
+          <button class="btn btn-admin btn-sm" onclick="addMakeup('${cat.id}')">+ 추가</button>
         </div>
         ${getMakeupList(cat.id).length?`<div style="display:flex;flex-direction:column;gap:5px;">
           ${getMakeupList(cat.id).map((m,idx)=>{
@@ -5147,16 +5140,56 @@ function removeVacationDate(catId, dateStr, groupId=null){
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
 }
-// 공지사항 메뉴 휴강 조 체크박스 핸들러
+// 조 선택 드롭다운 토글 (휴강/보강 공통)
+function toggleGrpDropdown(menuId, btnId){
+  const menu=document.getElementById(menuId);
+  if(!menu) return;
+  const isOpen=menu.style.display==='block';
+  // 다른 드롭다운 모두 닫기
+  document.querySelectorAll('[id^="vac-dd-"],[id^="mk-dd-"]').forEach(el=>{
+    if(el.id!==menuId&&!el.id.endsWith('-btn')&&!el.id.endsWith('-label')) el.style.display='none';
+  });
+  menu.style.display=isOpen?'none':'block';
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('[id^="vac-dd-"],[id^="mk-dd-"]')) {
+    document.querySelectorAll('[id^="vac-dd-"],[id^="mk-dd-"]').forEach(el=>{
+      if(!el.id.endsWith('-btn')&&!el.id.endsWith('-label')) el.style.display='none';
+    });
+  }
+},true);
+
+function updateVacDdLabel(catId){
+  const allCb=document.getElementById(`vac-all-${catId}`);
+  const grps=[...document.querySelectorAll(`.vac-grp-cb-${catId}:checked`)];
+  const label=document.getElementById(`vac-dd-label-${catId}`);
+  if(!label) return;
+  if(allCb?.checked) label.textContent='전체 조';
+  else if(!grps.length) label.textContent='조 선택';
+  else if(grps.length===1) label.textContent=grps[0].closest('label')?.textContent?.trim()||'1개 조';
+  else label.textContent=grps.length+'개 조 선택';
+}
+function updateMkDdLabel(catId){
+  const allCb=document.getElementById(`makeup-grp-all-${catId}`);
+  const grps=[...document.querySelectorAll(`.makeup-grp-cb-${catId}:checked`)];
+  const label=document.getElementById(`mk-dd-label-${catId}`);
+  if(!label) return;
+  if(allCb?.checked) label.textContent='전체 조';
+  else if(!grps.length) label.textContent='조 선택';
+  else if(grps.length===1) label.textContent=grps[0].closest('label')?.textContent?.trim()||'1개 조';
+  else label.textContent=grps.length+'개 조 선택';
+}
+
+// 기존 함수에 라벨 업데이트 연동
 function toggleVacAllGroup(catId, checked){
-  // 전체 조 체크 시 개별 조 체크 해제
   document.querySelectorAll(`.vac-grp-cb-${catId}`).forEach(cb=>{ cb.checked=false; cb.disabled=checked; });
+  updateVacDdLabel(catId);
 }
 function onVacGrpCbChange(catId){
-  // 개별 조 체크 시 전체 조 자동 해제
   const allCb=document.getElementById(`vac-all-${catId}`);
   if(allCb) allCb.checked=false;
   document.querySelectorAll(`.vac-grp-cb-${catId}`).forEach(cb=>{ cb.disabled=false; });
+  updateVacDdLabel(catId);
 }
 function addVacation(catId){
   const input=document.getElementById(`vac-date-${catId}`);

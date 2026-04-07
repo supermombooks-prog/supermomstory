@@ -3555,6 +3555,7 @@ function downloadPDF(){
     calRows2.push(`<tr>${calCells2.split('</td>').slice(r*7,(r+1)*7).join('</td>')}</td></tr>`);
   }
 
+  const printScript='<'+'script>window.onload=function(){window.print();}<'+'/script>';
   const html=`<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -3654,7 +3655,7 @@ function downloadPDF(){
   </div>
 </div>
 
-<scr'+'ipt>window.onload=function(){window.print();}<'+'/script>
+${printScript}
 </body>
 </html>`;
 

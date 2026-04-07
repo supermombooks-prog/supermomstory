@@ -672,7 +672,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       </div>
       <div class="section-body" style="padding:0;">
         <div class="my-classes-table-wrap">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일</th><th>기간</th><th>시간</th><th>선생님</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일 · 시간</th><th>기간</th><th>선생님</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
         <div class="my-classes-cards" id="myClassesCards"></div>
@@ -2106,34 +2106,35 @@ function renderMyClasses(){
     return `<tr id="row-${e.id}">
       <td>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:8px;height:8px;border-radius:50%;background:${cat.color};flex-shrink:0;"></div>
-          <b>${flagInline(cat.subject)} ${cat.name}</b>
+          <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;"></div>
+          <span style="font-size:14px;font-weight:700;">${flagInline(cat.subject)} ${cat.name}</span>
         </div>
       </td>
-      <td><span class="badge" style="background:${(SC[cat.subject]||'#888')}22;color:${SC[cat.subject]||'#888'};">${cat.subject}</span></td>
-      <td>${cat.days.map(d=>DN[d]).join('·')}요일</td>
-      <td>${formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);font-size:11px;">미정</span>'}</td>
+      <td><span class="badge" style="background:${(SC[cat.subject]||'#888')}22;color:${SC[cat.subject]||'#888'};font-size:13px;">${cat.subject}</span></td>
       <td id="time-cell-${e.id}">
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-          ${grpLabel?`<span class="group-badge enrolled" style="cursor:default;">${grpLabel}</span>`:''}
-          <span style="font-family:'Gmarket Sans';font-weight:600;font-size:12px;color:var(--accent4);">${formatAmPmRange(dispStart,dispEnd)}</span>
-          ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px;" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:14px;font-weight:600;color:var(--text);">${cat.days.map(d=>DN[d]).join('·')}요일</span>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            ${grpLabel?`<span class="group-badge enrolled" style="cursor:default;font-size:12px;">${grpLabel}</span>`:''}
+            <span style="font-family:'Gmarket Sans';font-weight:600;font-size:13px;color:var(--accent4);">${formatAmPmRange(dispStart,dispEnd)}</span>
+            ${(cat.groups||[]).length>1?`<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px;" onclick="openChangeGroupModal('${e.id}','${cat.id}')">🔄 조변경</button>`:''}
+          </div>
         </div>
       </td>
-      <td>${cat.teacher||'—'}</td>
+      <td style="font-size:13px;">${formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);">미정</span>'}</td>
+      <td style="font-size:14px;">${cat.teacher||'—'}</td>
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
-          ${getNoticeForCat(cat.id)?`<div style="font-size:11px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${linkify(getNoticeForCat(cat.id))}</div>`:''}
-          ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw};if(!hw.text)return'';return`<div style="font-size:11px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${hw.text}</div>`;})()}
-          ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:11px;">—</span>`:''}
+          ${getNoticeForCat(cat.id)?`<div style="font-size:12px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${linkify(getNoticeForCat(cat.id))}</div>`:''}
+          ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw};if(!hw.text)return'';return`<div style="font-size:12px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${hw.text}</div>`;})()}
+          ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:12px;">—</span>`:''}
         </div>
       </td>
       <td id="hw-cell-${e.id}" style="min-width:140px;">
         ${getHomeworkCell(e.id, e.catalogId)}
       </td>
       <td id="zoom-cell-${e.id}">${zoomCell}</td>
-      <td id="hw-cell-${e.id}" style="display:none;"></td>
-      <td>${cat.curriculumUrl?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;">📚 커리큘럼</a>`:(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:11px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:11px;">—</span>'}</td>
+      <td>${cat.curriculumUrl?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;">📚 커리큘럼</a>`:(cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'<span style="color:var(--text-muted);font-size:12px;">—</span>'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="cancelById('${e.id}')">취소</button></td>
     </tr>`;
   }).join('');
@@ -2927,6 +2928,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ═══════════════════════════════════════
 // 현재 PDF용 선택 프로필 ID (null=현재 앱 프로필 따라감)
 let _printProfileId = '__current__';
+let _printListSort = 'day'; // 'day' | 'subject'
 
 function renderPrint(){
   // ── 프로필 탭 렌더 ──
@@ -3121,7 +3123,7 @@ function renderPrint(){
   for(let d=0;d<7;d++){
     listByDay[d].sort((a,b)=>a.cat.subject.localeCompare(b.cat.subject,'ko'));
   }
-  const listRows=(()=>{
+  const listRowsByDay=(()=>{
     let html='';
     for(let d=0;d<7;d++){
       const list=listByDay[d];
@@ -3143,6 +3145,38 @@ function renderPrint(){
     }
     return html||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>';
   })();
+
+  // 수업별(과목별) 정렬
+  const listBySubject={};
+  const subjectOrder=[];
+  rows.forEach(r=>{
+    const subj=r.cat.subject||'기타';
+    if(!listBySubject[subj]){ listBySubject[subj]=[]; subjectOrder.push(subj); }
+    listBySubject[subj].push(r);
+  });
+  subjectOrder.sort((a,b)=>a.localeCompare(b,'ko'));
+  const listRowsBySubject=(()=>{
+    let html='';
+    subjectOrder.forEach(subj=>{
+      const list=listBySubject[subj].sort((a,b)=>Math.min(...(a.cat.days||[99]))-Math.min(...(b.cat.days||[99])));
+      const bg=CPDF[subj]||'#f0f9ff';
+      const tc=CTXT[subj]||'#1e293b';
+      list.forEach((r,i)=>{
+        const grp=r.grp;
+        const timeStr=grp?`${grp.label} ${fmtAmPm(grp.start)}~${fmtAmPm(grp.end)}`:r.time;
+        html+=`<tr>
+          ${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:13px;color:${tc};vertical-align:middle;text-align:center;">${subj}</td>`:''}
+          <td style="border:1px solid #e2e8f0;padding:12px 10px;font-weight:700;font-size:12px;color:#1e293b;text-align:center;">${r.cat.days.map(d=>DN_ORDER[d]).join('·')}</td>
+          <td style="border:1px solid #e2e8f0;padding:12px 14px;font-weight:700;font-size:13px;color:#1e293b;">${r.cat.name}</td>
+          <td style="border:1px solid #e2e8f0;padding:12px 14px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>
+          <td style="border:1px solid #e2e8f0;padding:12px 14px;font-size:12px;color:#475569;">${timeStr}</td>
+          <td style="border:1px solid #e2e8f0;padding:12px 14px;font-size:12px;color:#475569;">${r.period}</td>
+        </tr>`;
+      });
+    });
+    return html||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>';
+  })();
+  const listRows=_printListSort==='subject'?listRowsBySubject:listRowsByDay;
 
 
   // ── 모바일용 요일별 시간표 카드 ──
@@ -3278,9 +3312,17 @@ function renderPrint(){
       <!-- 모바일: 카드 -->
       <div class="print-mobile-only" style="margin-bottom:20px;">${mobileTimetableHtml}</div>
 
-      <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 12px;">📋 수업 목록</div>
+      <div style="font-size:15px;font-weight:700;color:#334155;margin:0 0 10px;">📋 수업 목록</div>
+      <!-- 정렬 탭 -->
+      <div class="no-print" style="display:flex;gap:8px;margin-bottom:12px;">
+        <button id="sortTabDay" onclick="switchListSort('day')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📅 요일순</button>
+        <button id="sortTabSubject" onclick="switchListSort('subject')"
+          style="padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">📚 수업순</button>
+      </div>
       <div class="print-desktop-only">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <!-- 요일순 테이블 -->
+        <table id="listTableDay" style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead>
             <tr style="background:#1e293b;color:#fff;">
               <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
@@ -3291,11 +3333,43 @@ function renderPrint(){
               <th style="padding:12px 14px;font-size:12px;text-align:left;width:25%;">기간</th>
             </tr>
           </thead>
-          <tbody>${listRows}</tbody>
+          <tbody>${listRowsByDay}</tbody>
+        </table>
+        <!-- 수업순 테이블 -->
+        <table id="listTableSubject" style="width:100%;border-collapse:collapse;table-layout:fixed;display:none;">
+          <thead>
+            <tr style="background:#1e293b;color:#fff;">
+              <th style="padding:12px 10px;font-size:12px;text-align:center;width:8%;">과목</th>
+              <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:22%;">수업명</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:12%;">강사</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:27%;">시간/조</th>
+              <th style="padding:12px 14px;font-size:12px;text-align:left;width:25%;">기간</th>
+            </tr>
+          </thead>
+          <tbody>${listRowsBySubject}</tbody>
         </table>
       </div>
       <div class="print-mobile-only">${mobileListHtml}</div>
     </div>`;
+}
+
+function switchListSort(type){
+  _printListSort=type;
+  const dayTab=document.getElementById('sortTabDay');
+  const subTab=document.getElementById('sortTabSubject');
+  const dayTbl=document.getElementById('listTableDay');
+  const subTbl=document.getElementById('listTableSubject');
+  if(!dayTab||!subTab||!dayTbl||!subTbl) return;
+  if(type==='day'){
+    dayTbl.style.display=''; subTbl.style.display='none';
+    dayTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+    subTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;';
+  } else {
+    dayTbl.style.display='none'; subTbl.style.display='';
+    subTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+    dayTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;';
+  }
 }
 
 function downloadPDF(){
@@ -3365,15 +3439,54 @@ function downloadPDF(){
     return `<tr>${cells}</tr>`;
   }).join('');
 
-  const listRows=rows.map((r,i)=>`
-    <tr style="background:${i%2===0?'#fff':'#f8fafc'};">
-      <td>${r.cat.name}</td>
-      <td>${r.cat.subject}</td>
-      <td>${r.daysStr}</td>
-      <td>${r.time}</td>
-      <td>${r.cat.teacher||'—'}</td>
-      <td>${r.period}</td>
-    </tr>`).join('');
+  // PDF 수업목록: 화면에서 선택한 탭 정렬 그대로 사용
+  const pdfDN_ORDER=['월','화','수','목','금','토','일'];
+  const pdfCPDF={영어:'#dbeafe',일본어:'#fce7f3',중국어:'#fee2e2',프랑스어:'#d1fae5',독일어:'#fef3c7',스페인어:'#ffedd5',이탈리아어:'#dcfce7',러시아어:'#ede9fe'};
+  const pdfCTXT={영어:'#1e40af',일본어:'#9d174d',중국어:'#991b1b',프랑스어:'#065f46',독일어:'#854d0e',스페인어:'#9a3412',이탈리아어:'#14532d',러시아어:'#4c1d95'};
+  const pdfFmt=t=>{if(!t||!t.includes(':'))return t;const[hh,mm]=t.split(':');const h=parseInt(hh);const ap=h<12?'AM':'PM';const h12=h===0?12:h>12?h-12:h;return`${ap} ${String(h12).padStart(2,'0')}:${mm}`;};
+
+  const pdfListByDay={};
+  for(let d=0;d<7;d++) pdfListByDay[d]=[];
+  rows.forEach(r=>{ (r.cat.days||[]).forEach(d=>pdfListByDay[d].push(r)); });
+  for(let d=0;d<7;d++) pdfListByDay[d].sort((a,b)=>a.cat.subject.localeCompare(b.cat.subject,'ko'));
+
+  const pdfBySubject={};const pdfSubjOrder=[];
+  rows.forEach(r=>{const s=r.cat.subject||'기타';if(!pdfBySubject[s]){pdfBySubject[s]=[];pdfSubjOrder.push(s);}pdfBySubject[s].push(r);});
+  pdfSubjOrder.sort((a,b)=>a.localeCompare(b,'ko'));
+
+  const listRows=_printListSort==='subject'?(()=>{
+    let h2='';
+    pdfSubjOrder.forEach(subj=>{
+      const list=pdfBySubject[subj].sort((a,b)=>Math.min(...(a.cat.days||[99]))-Math.min(...(b.cat.days||[99])));
+      const bg=pdfCPDF[subj]||'#f0f9ff';const tc=pdfCTXT[subj]||'#1e293b';
+      list.forEach((r,i)=>{
+        const g=r.grp;const ts=g?`${g.label} ${pdfFmt(g.start)}~${pdfFmt(g.end)}`:r.time;
+        h2+=`<tr>${i===0?`<td rowspan="${list.length}" style="background:${bg};border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:12px;color:${tc};vertical-align:middle;text-align:center;">${subj}</td>`:''}
+          <td style="border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:12px;color:#1e293b;text-align:center;">${r.cat.days.map(d=>pdfDN_ORDER[d]).join('·')}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-weight:700;font-size:12px;color:#1e293b;">${r.cat.name}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${ts}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${r.period}</td></tr>`;
+      });
+    });
+    return h2||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>';
+  })():(()=>{
+    let h2='';
+    for(let d=0;d<7;d++){
+      const list=pdfListByDay[d];if(!list.length)continue;
+      list.forEach((r,i)=>{
+        const bg=pdfCPDF[r.cat.subject]||'#f0f9ff';const tc=pdfCTXT[r.cat.subject]||'#1e293b';
+        const g=r.grp;const ts=g?`${g.label} ${pdfFmt(g.start)}~${pdfFmt(g.end)}`:r.time;
+        h2+=`<tr>${i===0?`<td rowspan="${list.length}" style="background:#1e293b;border:1px solid #e2e8f0;padding:10px 8px;font-weight:700;font-size:13px;color:#fff;vertical-align:middle;text-align:center;">${pdfDN_ORDER[d]}</td>`:''}
+          <td style="background:${bg};border:1px solid #e2e8f0;padding:10px 12px;font-weight:700;color:${tc};font-size:12px;">${r.cat.subject}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-weight:700;font-size:12px;color:#1e293b;">${r.cat.name}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${r.cat.teacher||'—'}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${ts}</td>
+          <td style="border:1px solid #e2e8f0;padding:10px 12px;font-size:12px;color:#475569;">${r.period}</td></tr>`;
+      });
+    }
+    return h2||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>';
+  })();
 
   // ── 월간 캘린더 생성 ──
   const calYear=now.getFullYear();
@@ -3442,10 +3555,11 @@ function downloadPDF(){
   thead tr{background:#1e293b;color:#fff;}
   th{padding:8px 10px;font-size:12px;font-weight:600;}
   td{padding:6px 8px;border:1px solid #e2e8f0;font-size:11px;vertical-align:top;}
-  .time-col{font-weight:700;background:#f3f4f6;text-align:center;white-space:nowrap;font-size:12px;}
-  .cls-name{font-weight:700;font-size:11px;color:#1e293b;}
+  .time-col{font-weight:700;background:#f3f4f6;text-align:center;white-space:nowrap;font-size:12px;width:10%;}
+  .cls-name{font-weight:700;font-size:11px;color:#1e293b;word-break:keep-all;overflow-wrap:break-word;}
   .cls-time{font-size:10px;color:#475569;}
   .cls-teacher{font-size:10px;color:#94a3b8;}
+  table td, table th{overflow:hidden;}
   .sep{border-top:1px solid #cbd5e1;margin:4px 0;}
   .weekend{color:#f87171;}
   .weekend-sat{color:#60a5fa;}
@@ -3486,10 +3600,20 @@ function downloadPDF(){
 <div class="section-page page-break">
   <h2>📅 요일별 시간표</h2>
   <div class="section">
-    <table>
+    <table style="table-layout:fixed;width:100%;">
+      <colgroup>
+        <col style="width:10%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+        <col style="width:12.85%;">
+      </colgroup>
       <thead><tr>
         <th>시간</th>
-        <th class="weekend">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="weekend-sat">토</th>
+        <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="weekend-sat">토</th><th class="weekend">일</th>
       </tr></thead>
       <tbody>${timetableRows||'<tr><td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</td></tr>'}</tbody>
     </table>
@@ -3498,15 +3622,16 @@ function downloadPDF(){
 
 <!-- 3페이지: 수업 목록 -->
 <div class="section-page page-break">
-  <h2>📋 수업 목록</h2>
+  <h2>📋 수업 목록 (${_printListSort==='subject'?'수업순':'요일순'})</h2>
   <div class="section">
-    <table>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
       <thead><tr>
-        <th style="text-align:left;">수업명</th>
-        <th style="text-align:left;">과목</th>
-        <th style="text-align:left;">요일</th>
-        <th style="text-align:left;">시간/조</th>
-        <th style="text-align:left;">선생님</th>
+        ${_printListSort==='subject'
+          ?`<th style="width:8%;text-align:center;">과목</th><th style="width:6%;text-align:center;">요일</th>`
+          :`<th style="width:6%;text-align:center;">요일</th><th style="width:10%;text-align:left;">과목</th>`}
+        <th style="width:22%;text-align:left;">수업명</th>
+        <th style="width:12%;text-align:left;">강사</th>
+        <th style="width:27%;text-align:left;">시간/조</th>
         <th style="text-align:left;">기간</th>
       </tr></thead>
       <tbody>${listRows}</tbody>
@@ -4247,6 +4372,10 @@ function getFirstGroupStartMin(){
 
 function getGroupsFromForm(){
   const rows=[...document.getElementById('cat-groups-list').children];
+  // 기존 수업 수정 시 조 ID 보존 (새 ID 생성 시 수강생 enrollment의 groupId가 무효화됨)
+  const existingGroups=S.editingCatalogId
+    ?(S.catalog.find(c=>c.id===S.editingCatalogId)?.groups||[])
+    :[];
   return rows.map((row,i)=>{
     const labelIn=row.querySelector('.group-label-input');
     const sel=row.querySelector('.group-select');
@@ -4259,7 +4388,12 @@ function getGroupsFromForm(){
       const key=sel?.value||'09:00_09:20';
       [start,end]=key.split('_');
     }
-    return {id:uid(), label:labelIn?.value||((i+1)+'조'), start, end};
+    const label=labelIn?.value||((i+1)+'조');
+    // 같은 라벨+시간의 기존 조가 있으면 그 ID 재사용, 없으면 새 ID 생성
+    const existing=existingGroups.find(g=>g.label===label&&g.start===start&&g.end===end)
+      || existingGroups[i]; // 인덱스 기반 fallback
+    const id=existing?.id||uid();
+    return {id, label, start, end};
   });
 }
 

@@ -3363,7 +3363,30 @@ function renderPrint(){
     </div>`;
   }).filter(Boolean).join('') || '<div style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</div>';
 
-  // ── 모바일용 수업 목록 (언어별 → 요일별 정렬) ──
+  // ── 모바일용 수업 목록 ──
+  const DN_MOB=['월','화','수','목','금','토','일'];
+  // 요일순
+  const mobileListByDay=(()=>{
+    let html='';
+    for(let d=0;d<7;d++){
+      const list=rows.filter(r=>(r.cat.days||[]).includes(d)).sort((a,b)=>a.cat.subject.localeCompare(b.cat.subject,'ko'));
+      if(!list.length) continue;
+      html+=`<div style="margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">${DN_MOB[d]}요일</div>
+        ${list.map(r=>`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${r.cat.color};">
+          <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;">${r.cat.name}</div>
+          <div style="display:grid;grid-template-columns:3em 1fr;gap:3px 8px;font-size:12px;">
+            <span style="color:#94a3b8;">과목</span><span style="color:#475569;">${r.cat.subject}</span>
+            <span style="color:#94a3b8;">시간</span><span style="color:#475569;">${r.time}</span>
+            <span style="color:#94a3b8;">선생님</span><span style="color:#475569;">${r.cat.teacher||'—'}</span>
+            <span style="color:#94a3b8;">기간</span><span style="color:#475569;">${r.period}</span>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }
+    return html||'<div style="text-align:center;padding:16px;color:#94a3b8;">등록된 수업이 없습니다</div>';
+  })();
+  // 수업순
   const sortedRows=[...rows].sort((a,b)=>{
     if(a.cat.subject!==b.cat.subject) return a.cat.subject.localeCompare(b.cat.subject,'ko');
     return Math.min(...(a.cat.days||[99]))-Math.min(...(b.cat.days||[99]));
@@ -3374,7 +3397,7 @@ function renderPrint(){
     if(!subjectGroups[subj]) subjectGroups[subj]=[];
     subjectGroups[subj].push(r);
   });
-  const mobileListHtml=Object.entries(subjectGroups).map(([subj,list])=>
+  const mobileListBySubject=Object.entries(subjectGroups).map(([subj,list])=>
     `<div style="margin-bottom:16px;">
       <div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e2e8f0;">${subj}</div>
       ${list.map(r=>`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${r.cat.color};">
@@ -3387,6 +3410,7 @@ function renderPrint(){
         </div>
       </div>`).join('')}
     </div>`).join('');
+  const mobileListHtml=_printListSort==='subject'?mobileListBySubject:mobileListByDay;
 
   // ── 월간 캘린더 생성 ──
   const calYear=now.getFullYear();
@@ -3513,7 +3537,7 @@ function renderPrint(){
           <tbody>${listRowsBySubject}</tbody>
         </table>
       </div>
-      <div class="print-mobile-only">${mobileListHtml}</div>
+      <div class="print-mobile-only" id="mobileListWrap">${mobileListHtml}</div>
     </div>`;
 }
 
@@ -3533,6 +3557,8 @@ function switchListSort(type){
     subTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #1e293b;background:#1e293b;color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
     dayTab.style.cssText='padding:6px 16px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer;';
   }
+  // 모바일 목록도 재렌더
+  renderPrint();
 }
 
 function downloadPDF(){

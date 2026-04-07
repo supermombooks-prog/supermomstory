@@ -3025,9 +3025,19 @@ function renderPrint(){
   const CTXT={영어:'#1e40af',일본어:'#9d174d',중국어:'#991b1b',프랑스어:'#065f46',독일어:'#854d0e',스페인어:'#9a3412',이탈리아어:'#14532d',러시아어:'#4c1d95'};
   const CTME={영어:'#3b82f6',일본어:'#ec4899',중국어:'#ef4444',프랑스어:'#10b981',독일어:'#eab308',스페인어:'#f97316',이탈리아어:'#22c55e',러시아어:'#8b5cf6'};
 
-  // 시간대별 그룹 (1시간 단위 band)
+  // 시간대별 그룹 (1시간 단위 band) - 시작/종료 시간 모두 포함해야 rowspan 정확
   const bandMap={};
+  const addBand=(t)=>{
+    if(!t||!t.includes(':')) return;
+    const h2=parseInt(t.split(':')[0]);
+    const ampm=h2<12?'AM':'PM';
+    const h12=h2===0?12:h2>12?h2-12:h2;
+    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
+    if(!bandMap[band]) bandMap[band]=[];
+  };
+  // 시작 시간 밴드
   slots.forEach(t=>{
+    if(!t||!t.includes(':')) return;
     const h2=parseInt(t.split(':')[0]);
     const ampm=h2<12?'AM':'PM';
     const h12=h2===0?12:h2>12?h2-12:h2;
@@ -3035,6 +3045,23 @@ function renderPrint(){
     if(!bandMap[band]) bandMap[band]=[];
     bandMap[band].push(t);
   });
+  // 종료 시간 밴드도 추가 (90분·60분 수업이 다음 시간대까지 걸칠 수 있음)
+  targetEnrollments.forEach(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    const grp=getGroupForEnroll(e,cat);
+    if(!grp?.end) return;
+    const [hh,mm]=grp.end.split(':');
+    const h2=parseInt(hh), m2=parseInt(mm);
+    // 정각이면 그 전 시간대, 아니면 현재 시간대
+    const effH=m2===0?h2-1:h2;
+    if(effH<0) return;
+    addBand(`${String(effH).padStart(2,'0')}:00`);
+  });
+  // 밴드 키 시간순 정렬
+  const sortBand=(a,b)=>{
+    const toMin=s=>{const m=s.match(/(\d+)시대/);const h=parseInt(m?.[1]||0);const ap=s.startsWith('오후');return (ap?h<12?h+12:h:h===12?0:h)*60;};
+    return toMin(a)-toMin(b);
+  };
 
   const fmtAmPm=t=>{
     if(!t||!t.includes(':')) return t;
@@ -3045,8 +3072,8 @@ function renderPrint(){
     return `${ampm} ${h12}:${mm}`;
   };
 
-  // 밴드 목록 (순서 유지)
-  const bandKeys=Object.keys(bandMap);
+  // 밴드 목록 (시간순 정렬)
+  const bandKeys=Object.keys(bandMap).sort(sortBand);
 
   // 밴드 인덱스 계산 함수 (시작시간 → 밴드 인덱스)
   const getBandIndex=t=>{
@@ -3064,7 +3091,7 @@ function renderPrint(){
     const h2=parseInt(hh), m2=parseInt(mm);
     // 종료 시간이 정각이면 그 시간대에 포함되지 않으므로 -1
     const effH=m2===0?h2-1:h2;
-    const ampm=effH<12?'AM':'PM';
+    const ampm=effH<12?'오전':'오후';
     const h12=effH===0?12:effH>12?effH-12:effH;
     return bandKeys.indexOf(`${ampm} ${h12}시대`);
   };
@@ -3438,20 +3465,100 @@ function downloadPDF(){
   const slots=[...allSlots].sort();
 
   const CPDF={영어:'#dbeafe',일본어:'#fce7f3',중국어:'#fee2e2',프랑스어:'#d1fae5',독일어:'#fef3c7',스페인어:'#ffedd5',이탈리아어:'#dcfce7',러시아어:'#ede9fe'};
+  const pdfFmtAmPm=t=>{if(!t||!t.includes(':'))return t;const[hh,mm]=t.split(':');const h=parseInt(hh);const ap=h<12?'AM':'PM';const h12=h===0?12:h>12?h-12:h;return`${ap} ${String(h12).padStart(2,'0')}:${mm}`;};
 
-  const timetableRows=slots.map(t=>{
-    let cells=`<td class="time-col">${t}</td>`;
+  // PDF 시간대 밴드 생성 (시작+종료 시간 모두 포함해야 rowspan 정확)
+  const pdfBandMap={};
+  const pdfAddBand=t=>{
+    if(!t||!t.includes(':')) return;
+    const h2=parseInt(t.split(':')[0]);
+    const ampm=h2<12?'AM':'PM';
+    const h12=h2===0?12:h2>12?h2-12:h2;
+    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
+    if(!pdfBandMap[band]) pdfBandMap[band]=[];
+  };
+  slots.forEach(t=>{
+    if(!t||!t.includes(':')) return;
+    const h2=parseInt(t.split(':')[0]);
+    const ampm=h2<12?'AM':'PM';
+    const h12=h2===0?12:h2>12?h2-12:h2;
+    const band=`${ampm==='AM'?'오전':'오후'} ${h12}시대`;
+    if(!pdfBandMap[band]) pdfBandMap[band]=[];
+    pdfBandMap[band].push(t);
+  });
+  targetEnrollments.forEach(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    const grp=getGroupForEnroll(e,cat);
+    if(!grp?.end) return;
+    const [hh,mm]=grp.end.split(':');
+    const h2=parseInt(hh),m2=parseInt(mm);
+    const effH=m2===0?h2-1:h2;
+    if(effH<0) return;
+    pdfAddBand(`${String(effH).padStart(2,'0')}:00`);
+  });
+  const pdfSortBand=(a,b)=>{
+    const toMin=s=>{const m=s.match(/(\d+)시대/);const h=parseInt(m?.[1]||0);const ap=s.startsWith('오후');return(ap?h<12?h+12:h:h===12?0:h)*60;};
+    return toMin(a)-toMin(b);
+  };
+  const pdfBandKeys=Object.keys(pdfBandMap).sort(pdfSortBand);
+
+  const pdfGetBandIdx=t=>{
+    if(!t||!t.includes(':')) return -1;
+    const h2=parseInt(t.split(':')[0]);
+    const ampm=h2<12?'AM':'PM';
+    const h12=h2===0?12:h2>12?h2-12:h2;
+    return pdfBandKeys.indexOf(`${ampm==='AM'?'오전':'오후'} ${h12}시대`);
+  };
+  const pdfGetEndBandIdx=t=>{
+    if(!t||!t.includes(':')) return -1;
+    const [hh,mm]=t.split(':');
+    const h2=parseInt(hh),m2=parseInt(mm);
+    const effH=m2===0?h2-1:h2;
+    const ampm=effH<12?'AM':'PM';
+    const h12=effH===0?12:effH>12?effH-12:effH;
+    return pdfBandKeys.indexOf(`${ampm==='AM'?'오전':'오후'} ${h12}시대`);
+  };
+  const pdfSkip={};
+  pdfBandKeys.forEach((_,bi)=>{pdfSkip[bi]={};});
+
+  const CTXT2={영어:'#1e40af',일본어:'#9d174d',중국어:'#991b1b',프랑스어:'#065f46',독일어:'#854d0e',스페인어:'#9a3412',이탈리아어:'#14532d',러시아어:'#4c1d95'};
+  const CTME2={영어:'#3b82f6',일본어:'#ec4899',중국어:'#ef4444',프랑스어:'#10b981',독일어:'#eab308',스페인어:'#f97316',이탈리아어:'#22c55e',러시아어:'#8b5cf6'};
+
+  const timetableRows=pdfBandKeys.map((band,bi)=>{
+    const times=pdfBandMap[band]||[];
+    let cells=`<td class="time-col">${band}</td>`;
     for(let d=0;d<7;d++){
-      const cls=dayMap[d].filter(x=>x.grp?.start===t);
-      if(cls.length){
-        const bg=CPDF[cls[0].cat.subject]||'#e0f2fe';
-        cells+=`<td style="background:${bg};padding:6px 8px;vertical-align:top;">${cls.map(x=>
-          `<div class="cls-name">${x.cat.name}</div>
-           ${x.grp?.label?`<div class="cls-time">${x.grp.label}</div>`:''}
-           ${x.cat.teacher?`<div class="cls-teacher">${x.cat.teacher}</div>`:''}`
-        ).join('<div class="sep"></div>')}</td>`;
+      if(pdfSkip[bi][d]){ continue; }
+      const clsInBand=times.flatMap(t=>dayMap[d].filter(x=>x.grp?.start===t));
+      if(clsInBand.length){
+        const si=pdfGetBandIdx(clsInBand[0].grp?.start);
+        const ei=pdfGetEndBandIdx(clsInBand[0].grp?.end);
+        const span=(si>=0&&ei>=si)?ei-si+1:1;
+        for(let s=1;s<span;s++){if(pdfSkip[bi+s])pdfSkip[bi+s][d]=true;}
+        const bg=CPDF[clsInBand[0].cat.subject]||'#e0f2fe';
+        cells+=`<td rowspan="${span}" style="background:${bg};padding:6px 8px;vertical-align:middle;border:1px solid #e2e8f0;">${clsInBand.map(x=>{
+          const tc=CTXT2[x.cat.subject]||'#1e293b';
+          const tmc=CTME2[x.cat.subject]||'#3b82f6';
+          const kor=t=>{
+            if(!t||!t.includes(':')) return t;
+            const [hh,mm]=t.split(':');
+            const h2=parseInt(hh);
+            const ampm=h2<12?'오전':'오후';
+            const h12=h2===0?12:h2>12?h2-12:h2;
+            return mm==='00'?`${ampm}${h12}시`:`${ampm}${h12}:${mm}`;
+          };
+          const timeRange=x.grp?`${kor(x.grp.start)}~${kor(x.grp.end).replace(/오전|오후/,'')}`.trim():'';
+          const fmtKD=s=>{if(!s)return'';const[,m,day]=s.split('-');return`${parseInt(m)}월${parseInt(day)}일`;};
+          const period=(x.cat.dateStart||x.cat.dateEnd)?`(${fmtKD(x.cat.dateStart)}~${fmtKD(x.cat.dateEnd)})`:'';
+          return `<div>
+            <div class="cls-name" style="color:${tc};">${x.cat.name}</div>
+            ${x.grp?.label||x.cat.teacher?`<div class="cls-time">${[x.grp?.label,x.cat.teacher].filter(Boolean).join(' · ')}</div>`:''}
+            <div class="cls-time" style="color:${tmc};font-weight:600;">${timeRange}</div>
+            ${period?`<div class="cls-teacher">${period}</div>`:''}
+          </div>`;
+        }).join('<div class="sep"></div>')}</td>`;
       } else {
-        cells+=`<td style="background:#fafafa;"></td>`;
+        cells+=`<td style="background:#fafafa;border:1px solid #e2e8f0;"></td>`;
       }
     }
     return `<tr>${cells}</tr>`;
@@ -5057,8 +5164,9 @@ function renderTeachers(){
   const grid=document.getElementById('teacherGrid');
   const detail=document.getElementById('teacherDetailPanel');
 
-  // 필터 탭 (등록된 과목만)
-  const subjects=['전체',...new Set(S.teachers.flatMap(t=>t.subjects||[t.subject]).filter(Boolean))];
+  // 필터 탭 (등록된 과목만) - 기타는 항상 마지막
+  const rawSubjects=[...new Set(S.teachers.flatMap(t=>t.subjects||[t.subject]).filter(Boolean))];
+  const subjects=['전체',...rawSubjects.filter(s=>s!=='기타').sort(),...(rawSubjects.includes('기타')?['기타']:[])];
   if(bar){
     bar.innerHTML=subjects.map(s=>{
       const isActive=_teacherFilter===s;

@@ -990,6 +990,13 @@ create policy "public write notices" on notices for all using (true);</div>
         <input type="date" id="cat-vac-date" class="form-input" style="flex:1;">
         <button type="button" class="btn btn-admin btn-sm" onclick="addVacationFromModal()" style="white-space:nowrap;flex-shrink:0;">+ 추가</button>
       </div>
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" id="vac-mode-all" class="btn btn-sm btn-danger" onclick="setVacMode('all')" style="font-size:12px;">전체 조 휴강</button>
+          <button type="button" id="vac-mode-some" class="btn btn-sm btn-ghost" onclick="setVacMode('some')" style="font-size:12px;">특정 조만 휴강</button>
+        </div>
+        <div id="vac-group-picker" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:4px;"></div>
+      </div>
       <div id="cat-vac-list" style="display:flex;flex-wrap:wrap;gap:6px;min-height:0;"></div>
     </div>
 
@@ -1273,7 +1280,12 @@ function load(){
   S.kids=[];
   // Load catalog from local cache (Supabase load happens async after)
   const catCache=localStorage.getItem('zc4_catalog');
-  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];S.vacations=p.vacations||{};S.adminHomework=p.adminHomework||{};S.makeup=p.makeup||{};}
+  if(catCache){const p=JSON.parse(catCache);S.catalog=p.catalog||[];S.notices=p.notices||{};S.teachers=p.teachers||[];S.vacations=p.vacations||{};S.adminHomework=p.adminHomework||{};S.makeup=p.makeup||{};
+    // 구형 vacation(문자열 배열) → 신형({date,groupId}) 자동 마이그레이션
+    Object.keys(S.vacations).forEach(catId=>{
+      S.vacations[catId]=(S.vacations[catId]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+    });
+  }
   if(!S.catalog.length) seed();
   normalizeCatalog();
 }
@@ -1484,13 +1496,12 @@ function renderDashboard(){
         const tomorrow=new Date(now);
         tomorrow.setHours(0,0,0,0);
         tomorrow.setDate(tomorrow.getDate()+1);
-        const vacList=S.vacations[x.cat.id]||[];
         const cur=new Date(tomorrow);
         while(cur<=end){
           const dow=(cur.getDay()+6)%7;
           if(x.cat.days.includes(dow)){
             const ds=cur.toISOString().slice(0,10);
-            if(!vacList.includes(ds)) return false;
+            if(!isVacation(x.cat.id,ds,x.enroll?.groupId)) return false;
           }
           cur.setDate(cur.getDate()+1);
         }
@@ -1959,7 +1970,7 @@ function renderDayDetail(date) {
     const isDone = isToday && nowMin > em;
     const isNow  = isToday && nowMin >= sm && nowMin <= em;
     const zoomLink = x.enroll.myZoom || x.cat.zoom;
-    const isVac = (S.vacations[x.cat.id]||[]).includes(dateStr);
+    const isVac = isVacation(x.cat.id,dateStr,x.enroll?.groupId||x.grp?.id);
     return `<div class="detail-class-item" style="opacity:${isDone||isVac?0.55:1};${isNow&&!isVac?'border-color:var(--accent3);background:rgba(67,232,194,0.05);':''}${isVac?'border-color:var(--danger);background:rgba(255,92,92,0.05);':''}">
       <div class="detail-class-dot" style="background:${x.cat.color}22;overflow:hidden;padding:0;width:51px;height:34px;border-radius:6px;">${flagImg(x.cat.subject,34)}</div>
       <div class="detail-class-info">
@@ -2620,11 +2631,13 @@ function autoCalcSessions(force){
     cur.setDate(cur.getDate()+1);
   }
 
-  // 등록된 휴강 중 수업 요일에 해당하는 날 제외
-  // 날짜 문자열 직접 비교로 timezone 오류 완전 방지
+  // 등록된 휴강 중 수업 요일에 해당하는 날 제외 (전체 조 휴강만 카운트)
   const vacDates=_modalVacDates||[];
   let vacCount=0;
-  vacDates.forEach(d=>{
+  vacDates.forEach(v=>{
+    const d=typeof v==='string'?v:v.date;
+    const gid=typeof v==='string'?null:v.groupId;
+    if(gid!==null) return; // 특정 조만 휴강은 회차 계산에서 제외
     if(d>=startVal && d<=endVal){
       const vDate=new Date(d+'T00:00:00');
       const dow=(vDate.getDay()+6)%7;
@@ -2701,7 +2714,9 @@ function editCatalog(id){
   document.getElementById('cat-subject').value=cat.subject||'영어';
   document.getElementById('cat-capacity').value=cat.capacity||0;
   document.getElementById('cat-total-sessions').value=cat.totalSessions||0;
-  _modalVacDates=[...(S.vacations[cat.id]||[])];
+  _modalVacDates=(S.vacations[cat.id]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+  _vacMode='all'; _vacGroupIds=[];
+  setVacMode('all');
   renderModalVacList();
   document.getElementById('cat-curriculum-url').value=cat.curriculumUrl||'';
   populateTeacherSelect(cat.teacher||'', cat.subject||'영어');
@@ -2741,32 +2756,85 @@ function editCatalog(id){
 }
 
 // 수업 등록 모달 내 임시 휴강 목록
-let _modalVacDates = [];
+let _modalVacDates = []; // [{date,groupId}]
+let _vacMode = 'all'; // 'all' | 'some'
+let _vacGroupIds = []; // 특정 조 선택 시 선택된 groupId 배열
+
+function setVacMode(mode){
+  _vacMode=mode;
+  document.getElementById('vac-mode-all').className='btn btn-sm '+(mode==='all'?'btn-danger':'btn-ghost');
+  document.getElementById('vac-mode-some').className='btn btn-sm '+(mode==='some'?'btn-danger':'btn-ghost');
+  const picker=document.getElementById('vac-group-picker');
+  if(mode==='some'){
+    picker.style.display='flex';
+    renderVacGroupPicker();
+  } else {
+    picker.style.display='none';
+    _vacGroupIds=[];
+  }
+}
+
+function renderVacGroupPicker(){
+  const picker=document.getElementById('vac-group-picker');
+  if(!picker) return;
+  const catId=S.editingCatalogId;
+  const cat=S.catalog.find(c=>c.id===catId);
+  const groups=getGroupsFromForm()||cat?.groups||[];
+  picker.innerHTML=groups.map(g=>{
+    const sel=_vacGroupIds.includes(g.id);
+    return `<button type="button" onclick="toggleVacGroup('${g.id}')"
+      style="padding:4px 12px;border-radius:20px;border:1px solid ${sel?'var(--danger)':'var(--border)'};
+      background:${sel?'rgba(255,92,92,0.1)':'var(--surface2)'};
+      color:${sel?'var(--danger)':'var(--text)'};font-size:12px;font-weight:600;cursor:pointer;">
+      ${g.label} ${formatAmPmRange(g.start,g.end)}
+    </button>`;
+  }).join('');
+}
+
+function toggleVacGroup(groupId){
+  if(_vacGroupIds.includes(groupId)) _vacGroupIds=_vacGroupIds.filter(id=>id!==groupId);
+  else _vacGroupIds.push(groupId);
+  renderVacGroupPicker();
+}
 
 function renderModalVacList(){
   const el=document.getElementById('cat-vac-list');
   if(!el) return;
-  const sorted=[..._modalVacDates].sort();
+  const sorted=[..._modalVacDates].sort((a,b)=>a.date.localeCompare(b.date));
   const today=new Date().toISOString().slice(0,10);
   if(!sorted.length){
     el.innerHTML='<span style="font-size:11px;color:var(--text-muted);">등록된 휴강 없음</span>';
   } else {
-    el.innerHTML=sorted.map(d=>{
-      const isPast=d<today;
+    const catId=S.editingCatalogId;
+    const cat=S.catalog.find(c=>c.id===catId);
+    const groups=cat?.groups||[];
+    el.innerHTML=sorted.map((v,i)=>{
+      const isPast=v.date<today;
+      const grp=v.groupId?groups.find(g=>g.id===v.groupId):null;
+      const tag=grp?`<span style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:10px;padding:1px 7px;margin-left:4px;">${grp.label}만</span>`
+        :`<span style="font-size:10px;background:rgba(255,92,92,0.15);color:var(--danger);border-radius:10px;padding:1px 7px;margin-left:4px;">전체</span>`;
       return `<span style="display:inline-flex;align-items:center;gap:3px;background:${isPast?'rgba(0,0,0,0.06)':'rgba(255,92,92,0.1)'};color:${isPast?'var(--text-muted)':'var(--danger)'};border-radius:20px;padding:3px 10px;font-size:12px;border:1px solid ${isPast?'var(--border)':'rgba(255,92,92,0.3)'};">
-        🚫 ${d}<button onclick="_modalVacDates=_modalVacDates.filter(x=>x!=='${d}');renderModalVacList()" style="background:none;border:none;cursor:pointer;color:inherit;font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
+        🚫 ${v.date}${tag}<button onclick="_modalVacDates.splice(${i},1);renderModalVacList()" style="background:none;border:none;cursor:pointer;color:inherit;font-size:13px;padding:0;margin-left:2px;line-height:1;">✕</button>
       </span>`;
     }).join('');
   }
-  // 휴강 변경 시 회차 미리보기만 업데이트 (기존값 덮어쓰지 않음 - 수정모드에서 의도치않은 변경 방지)
   autoCalcSessions(false);
 }
 
 function addVacationFromModal(){
   const input=document.getElementById('cat-vac-date');
   if(!input||!input.value){showToast('⚠️ 날짜를 선택해주세요');return;}
-  if(!_modalVacDates.includes(input.value)){
-    _modalVacDates.push(input.value);
+  if(_vacMode==='some'&&!_vacGroupIds.length){showToast('⚠️ 조를 한 개 이상 선택해주세요');return;}
+  if(_vacMode==='all'){
+    if(!_modalVacDates.find(v=>v.date===input.value&&v.groupId===null)){
+      _modalVacDates.push({date:input.value,groupId:null});
+    }
+  } else {
+    _vacGroupIds.forEach(gid=>{
+      if(!_modalVacDates.find(v=>v.date===input.value&&v.groupId===gid)){
+        _modalVacDates.push({date:input.value,groupId:gid});
+      }
+    });
   }
   input.value='';
   renderModalVacList();
@@ -2783,6 +2851,14 @@ function removeVacation(catId,dateStr){
 // MAKEUP (보강) SYSTEM
 // ═══════════════════════════════════════
 function getMakeupList(catId){ return S.makeup[catId]||[]; }
+// 조별 휴강 체크: groupId가 null이면 전체휴강, 아니면 해당 조만 휴강
+function isVacation(catId, dateStr, groupId){
+  return (S.vacations[catId]||[]).some(v=>{
+    const vDate=typeof v==='string'?v:v.date;
+    const vGroup=typeof v==='string'?null:v.groupId;
+    return vDate===dateStr&&(vGroup===null||vGroup===groupId||!groupId);
+  });
+}
 // 조별 보강일 포함 종료일 계산
 function getPeriodWithMakeup(cat, grp){
   const base=formatDateRange(cat.dateStart,cat.dateEnd);
@@ -2799,22 +2875,44 @@ function getPeriodWithMakeup(cat, grp){
   return `${ext} <span style="font-size:10px;color:#f97316;">(보강포함)</span>`;
 }
 
+function toggleAllMakeupGroups(catId, checked){
+  document.querySelectorAll(`.makeup-grp-cb-${catId}`).forEach(cb=>{ cb.checked=checked; });
+}
+
 function addMakeup(catId){
   const dateEl=document.getElementById(`makeup-date-${catId}`);
-  const groupEl=document.getElementById(`makeup-group-${catId}`);
   const reasonEl=document.getElementById(`makeup-reason-${catId}`);
   if(!dateEl||!dateEl.value){showToast('⚠️ 보강 날짜를 선택해주세요');return;}
+
+  // 선택된 조 수집
+  const allChecked=document.getElementById(`makeup-grp-all-${catId}`)?.checked;
+  const groupCbs=[...document.querySelectorAll(`.makeup-grp-cb-${catId}:checked`)];
+  const groupIds=allChecked?['']:groupCbs.map(cb=>cb.value);
+
+  if(!groupIds.length){showToast('⚠️ 조를 하나 이상 선택해주세요');return;}
+
   if(!S.makeup[catId]) S.makeup[catId]=[];
-  const groupId=groupEl?.value||'';
-  const existing=S.makeup[catId].find(m=>m.date===dateEl.value&&m.groupId===groupId);
-  if(existing){showToast('⚠️ 이미 등록된 보강입니다');return;}
-  S.makeup[catId].push({date:dateEl.value, groupId, reason:reasonEl?.value.trim()||''});
+  const reason=reasonEl?.value.trim()||'';
+  let addedCount=0;
+
+  groupIds.forEach(groupId=>{
+    const existing=S.makeup[catId].find(m=>m.date===dateEl.value&&m.groupId===groupId);
+    if(!existing){
+      S.makeup[catId].push({date:dateEl.value, groupId, reason});
+      addedCount++;
+    }
+  });
+
+  if(!addedCount){showToast('⚠️ 선택한 조는 이미 모두 등록됐습니다');return;}
   S.makeup[catId].sort((a,b)=>a.date.localeCompare(b.date));
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
   dateEl.value=''; if(reasonEl) reasonEl.value='';
+  // 체크박스 초기화
+  document.getElementById(`makeup-grp-all-${catId}`)&&(document.getElementById(`makeup-grp-all-${catId}`).checked=false);
+  document.querySelectorAll(`.makeup-grp-cb-${catId}`).forEach(cb=>{ cb.checked=false; });
   renderAdminNotices();
-  showToast('🔁 보강이 등록됐습니다');
+  showToast(`🔁 보강 ${addedCount}건이 등록됐습니다`);
 }
 
 function removeMakeup(catId, idx){
@@ -3112,9 +3210,24 @@ function renderPrint(){
   const skip={};
   bandKeys.forEach((_,bi)=>{skip[bi]={};});
 
+  // 같은 시간대 라벨이 연속되는 행들의 rowspan 미리 계산
+  const labelRowSpan={};
+  bandKeys.forEach((band,bi)=>{
+    const label=getBandLabel(band);
+    if(bi===0||getBandLabel(bandKeys[bi-1])!==label){
+      let span=1;
+      for(let j=bi+1;j<bandKeys.length&&getBandLabel(bandKeys[j])===label;j++) span++;
+      labelRowSpan[bi]=span;
+    }
+  });
+
   const timetableRows=bandKeys.map((band,bi)=>{
     const label=getBandLabel(band);
-    let cells=`<td style="background:#f1f5f9;font-weight:700;padding:8px 10px;font-size:11px;color:#475569;white-space:nowrap;border:1px solid #e2e8f0;vertical-align:middle;">${label}</td>`;
+    // 같은 시간대 첫 행만 시간 셀 렌더 (rowspan으로 병합)
+    const timeCell=labelRowSpan[bi]!==undefined
+      ?`<td rowspan="${labelRowSpan[bi]}" style="background:#f1f5f9;font-weight:700;padding:8px 10px;font-size:11px;color:#475569;white-space:nowrap;border:1px solid #e2e8f0;vertical-align:middle;">${label}</td>`
+      :'';
+    let cells=timeCell;
     for(let d=0;d<7;d++){
       // 이미 위 행에서 rowspan으로 차지된 셀은 건너뜀
       if(skip[bi][d]){ continue; }
@@ -3488,11 +3601,25 @@ function downloadPDF(){
   const pdfSkip={};
   pdfBandKeys.forEach((_,bi)=>{pdfSkip[bi]={};});
 
+  // 같은 시간대 라벨 병합
+  const pdfLabelRowSpan={};
+  pdfBandKeys.forEach((band,bi)=>{
+    const label=pdfGetBandLabel(band);
+    if(bi===0||pdfGetBandLabel(pdfBandKeys[bi-1])!==label){
+      let span=1;
+      for(let j=bi+1;j<pdfBandKeys.length&&pdfGetBandLabel(pdfBandKeys[j])===label;j++) span++;
+      pdfLabelRowSpan[bi]=span;
+    }
+  });
+
   const CTXT2={영어:'#1e40af',일본어:'#9d174d',중국어:'#991b1b',프랑스어:'#065f46',독일어:'#854d0e',스페인어:'#9a3412',이탈리아어:'#14532d',러시아어:'#4c1d95'};
   const CTME2={영어:'#3b82f6',일본어:'#ec4899',중국어:'#ef4444',프랑스어:'#10b981',독일어:'#eab308',스페인어:'#f97316',이탈리아어:'#22c55e',러시아어:'#8b5cf6'};
 
   const timetableRows=pdfBandKeys.map((band,bi)=>{
-    let cells=`<td class="time-col">${pdfGetBandLabel(band)}</td>`;
+    const pdfTimeCell=pdfLabelRowSpan[bi]!==undefined
+      ?`<td class="time-col" rowspan="${pdfLabelRowSpan[bi]}">${pdfGetBandLabel(band)}</td>`
+      :'';
+    let cells=pdfTimeCell;
     for(let d=0;d<7;d++){
       if(pdfSkip[bi][d]){ continue; }
       const clsInBand=dayMap[d].filter(x=>x.grp?.start===band);
@@ -3904,14 +4031,30 @@ function renderAdminNotices(){
       <!-- 보강 관리 -->
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:8px;">🔁 조별 보강 날짜 관리</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <select id="makeup-group-${cat.id}" class="form-input" style="flex:1;min-width:100px;font-size:12px;padding:5px 8px;">
-            <option value="">전체 조</option>
-            ${(cat.groups||[]).map(g=>`<option value="${g.id}">${g.label} ${formatAmPmRange(g.start,g.end)}</option>`).join('')}
-          </select>
-          <input type="date" id="makeup-date-${cat.id}" class="form-input" style="flex:1;min-width:130px;font-size:12px;padding:6px 10px;">
-          <input type="text" id="makeup-reason-${cat.id}" class="form-input" style="flex:2;min-width:120px;font-size:12px;padding:6px 10px;" placeholder="사유 (예: 컴퓨터 오류)">
-          <button class="btn btn-admin btn-sm" onclick="addMakeup('${cat.id}')">+ 추가</button>
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
+            <label style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">조 선택 (복수 가능)</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" id="makeup-grp-all-${cat.id}" onchange="toggleAllMakeupGroups('${cat.id}',this.checked)" style="accent-color:var(--accent3);">
+              <span style="font-weight:600;">전체 조</span>
+            </label>
+            ${(cat.groups||[]).map(g=>`
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="checkbox" class="makeup-grp-cb-${cat.id}" value="${g.id}" style="accent-color:var(--accent3);">
+              <span>${g.label} ${formatAmPmRange(g.start,g.end)}</span>
+            </label>`).join('')}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:130px;">
+            <label style="font-size:11px;color:var(--text-muted);">보강 날짜</label>
+            <input type="date" id="makeup-date-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:120px;">
+            <label style="font-size:11px;color:var(--text-muted);">사유</label>
+            <input type="text" id="makeup-reason-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;" placeholder="예: 컴퓨터 오류">
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:1px;">
+            <button class="btn btn-admin btn-sm" onclick="addMakeup('${cat.id}')" style="margin-top:20px;">+ 추가</button>
+          </div>
         </div>
         ${getMakeupList(cat.id).length?`<div style="display:flex;flex-direction:column;gap:5px;">
           ${getMakeupList(cat.id).map((m,idx)=>{

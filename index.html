@@ -196,7 +196,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 
 /* MONTHLY CALENDAR */
 .mcal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding:4px 0;letter-spacing:0.5px;}
-.mcal-cell{min-height:100px;border-radius:10px;padding:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:3px;position:relative;}
+.mcal-cell{min-height:100px;border-radius:10px;padding:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;gap:3px;position:relative;min-width:0;overflow:hidden;}
 .mcal-cell:hover{border-color:var(--accent);background:rgba(108,138,255,0.06);}
 .mcal-cell.today{border-color:var(--accent);background:rgba(108,138,255,0.08);}
 .mcal-cell.selected{border-color:var(--accent3);background:rgba(67,232,194,0.07);box-shadow:0 0 0 2px rgba(67,232,194,0.2);}
@@ -205,7 +205,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .mcal-date{font-family:'Gmarket Sans',sans-serif;font-size:13px;font-weight:700;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;}
 .mcal-cell.today .mcal-date{background:var(--accent);color:#fff;}
 .mcal-date.weekend{color:var(--accent2);}
-.mcal-pill{border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;cursor:pointer;}
+.mcal-pill{border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;cursor:pointer;max-width:100%;display:block;}
 .mcal-more{font-size:10px;color:var(--text-muted);padding:1px 4px;font-weight:600;}
 
 /* Day detail panel */
@@ -623,7 +623,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
             <div class="mcal-dow">금</div>
             <div class="mcal-dow" style="color:var(--accent2);">토</div>
           </div>
-          <div id="monthGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+          <div id="monthGrid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;"></div>
         </div>
       </div>
       <!-- Day detail panel -->

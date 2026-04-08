@@ -1892,8 +1892,11 @@ function renderMonthlyCal() {
 
     const pillsHtml = shown.map(x => {
       const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-      const grp=getGroupForEnroll(x.enroll,x.cat);
-      const isVac=isVacation(x.cat.id,dateStr,grp?.id);
+      const isVac=(S.vacations[x.cat.id]||[]).some(v=>{
+        const vDate=typeof v==='string'?v:v.date;
+        const vGrp=typeof v==='string'?null:v.groupId;
+        return vDate===dateStr&&(vGrp===null||!x.grp||vGrp===x.grp?.id);
+      });
       const shortName=x.cat.name.length>4?x.cat.name.slice(0,4):x.cat.name;
       const color=isVac?'var(--danger)':x.cat.color;
       return `<div class="mcal-pill" style="background:${isVac?'rgba(255,92,92,0.12)':x.cat.color+'22'};color:${color};${isVac?'text-decoration:line-through;opacity:0.8;':''}"
@@ -3828,9 +3831,10 @@ function downloadPDF(){
   targetEnrollments.forEach(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return;
+    const grp=getGroupForEnroll(e,cat);
     cat.days.forEach(d=>{
       const jsDay=(d+1)%7;
-      dayMapCal[jsDay].push(cat);
+      dayMapCal[jsDay].push({cat,grp});
     });
   });
 
@@ -3847,8 +3851,12 @@ function downloadPDF(){
     const isHoliday=!!holidayName;
     const isRed=isWeekend||isHoliday;
     const classes=isOther?[]:dayMapCal[dow];
-    const pills=classes.map(cat=>{
-      const isVac=isVacation(cat.id,dateKey,null); // 전체 조 기준
+    const pills=classes.map(({cat,grp})=>{
+      const isVac=(S.vacations[cat.id]||[]).some(v=>{
+        const vDate=typeof v==='string'?v:v.date;
+        const vGrp=typeof v==='string'?null:v.groupId;
+        return vDate===dateKey&&(vGrp===null||!grp||vGrp===grp?.id);
+      });
       const bg=isVac?'#fee2e2':CPDF[cat.subject]||'#e0f2fe';
       return `<div style="font-size:8px;padding:1px 3px;border-radius:3px;margin-top:1px;background:${bg};color:${isVac?'#dc2626':'#1e293b'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isVac?'text-decoration:line-through;opacity:0.75;':''}">${cat.name}</div>`;
     }).join('');

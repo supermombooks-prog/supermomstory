@@ -1449,8 +1449,10 @@ function getEnrolledForDay(dow){
   return myEnrollments().map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat||!cat.days.includes(dow)) return null;
-    // 종료일이 지난 수업은 제외
+    // 종료일이 지난 수업 제외
     if(cat.dateEnd && cat.dateEnd < todayStr) return null;
+    // 아직 시작 안 된 수업 제외 (오늘 대시보드에 표시 안 함)
+    if(cat.dateStart && cat.dateStart > todayStr) return null;
     const grp=getGroupForEnroll(e,cat);
     const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
     const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
@@ -1680,7 +1682,7 @@ function renderEnroll(){
   };
   const open=cats.filter(c=>!isClosed(c)&&!isEnded(c));
   const closed=cats.filter(c=>isClosed(c)&&!isEnded(c));
-  const ended=cats.filter(c=>isEnded(c));
+  // 종료된 수업은 수강신청 목록에서 완전히 숨김 (같은 이름 신규 수업과 혼동 방지)
 
   const renderCard=(cat)=>{
     const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id);
@@ -1772,11 +1774,8 @@ function renderEnroll(){
     html+=closed.map(renderCard).join('');
   }
   if(ended.length){
-    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${open.length||closed.length?'20px':'4px'} 0 4px;">
-      <span style="font-size:15px;font-weight:800;color:var(--text-muted);">⏹ 종료된 수업</span>
-      <span style="font-size:12px;color:var(--text-muted);">${ended.length}개 수업</span>
-    </div>`;
-    html+=ended.map(renderCard).join('');
+    // 종료된 수업은 수강신청 목록에 표시하지 않음 (같은 이름 신규 수업과 혼동 방지)
+    // ended = [] 처리
   }
   // 저장공간 부족 기기 최적화: 유휴 시간에 렌더
   if(window.requestIdleCallback){
@@ -1801,7 +1800,22 @@ function quickEnrollWithTime(catId){ // deprecated
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
   if(cat.capacity>0&&S.enrollments.filter(e=>e.catalogId===catId).length>=cat.capacity){showToast('⚠️ 정원이 가득 찼습니다');return;}
-  if(S.enrollments.find(e=>e.catalogId===catId)){showToast('이미 수강 중인 수업입니다');return;}
+  const profId=S.currentProfileId||null;
+  if(S.enrollments.find(e=>e.catalogId===catId&&(e.profileId||null)===(profId))){showToast('이미 수강 중인 수업입니다');return;}
+  // 같은 이름의 다른 수업에 이미 신청되어 있으면 경고
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const sameNameActive=S.enrollments.find(e=>{
+    if((e.profileId||null)!==profId||e.catalogId===catId) return false;
+    const c=S.catalog.find(x=>x.id===e.catalogId);
+    if(!c||c.name!==cat.name) return false;
+    if(c.dateEnd&&c.dateEnd<todayStr) return false; // 이미 종료된 수업은 무시
+    return true;
+  });
+  if(sameNameActive){
+    const c=S.catalog.find(x=>x.id===sameNameActive.catalogId);
+    if(!confirm(`⚠️ "${cat.name}" 수업이 이미 신청되어 있습니다.\n(기간: ${formatDateRange(c?.dateStart,c?.dateEnd)||'미정'})\n\n그래도 추가로 신청하시겠습니까?`)) return;
+  }
   const myStart=document.getElementById(`ps-${catId}`)?.value||cat.start;
   const myEnd=document.getElementById(`pe-${catId}`)?.value||cat.end;
   S.enrollments.push({id:uid(),catalogId:catId,kidId:null,enrolledAt:new Date().toISOString(),myStart,myEnd});
@@ -3233,7 +3247,8 @@ function saveProfileAssign(){
   });
   save();
   closeModal('profileAssignModal');
-  renderMyClasses();renderDashboard();renderSidebarKids();
+  localStorage.removeItem('zc4_assignSkipped');
+  renderMyClasses();renderDashboard();renderSidebarKids();renderProfileBar();
   showToast('✅ 수업 배정이 완료됐습니다');
 }
 function closeProfileAssignModal(){
@@ -5179,10 +5194,16 @@ function renderProfileBar(){
     </div>`;
   }).join('');
 
+  const unassignedCount=getUnassignedEnrollments().length;
   const allChip = S.profiles.length>1
-    ? `<div class="profile-chip all-chip ${allActive?'active':''}" onclick="switchProfile(null)">
-        🏠 <span>전체</span>
-        <span style="font-size:10px;opacity:0.7;">${S.enrollments.length}</span>
+    ? `<div style="display:inline-flex;align-items:center;gap:2px;">
+        <div class="profile-chip all-chip ${allActive?'active':''}" onclick="switchProfile(null)">
+          🏠 <span>전체</span>
+          <span style="font-size:10px;opacity:0.7;">${getActiveEnrollments().length}</span>
+          ${unassignedCount>0?`<span style="font-size:10px;font-weight:700;background:rgba(255,181,71,0.2);color:var(--accent4);border-radius:20px;padding:1px 6px;border:0.5px solid rgba(255,181,71,0.4);">미배정 ${unassignedCount}</span>`:''}
+        </div>
+        ${unassignedCount>0?`<button onclick="openProfileAssignModal()" title="수강생 배정"
+          style="background:none;border:1px solid var(--border);border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:11px;color:var(--accent4);display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;margin-right:4px;">⚙</button>`:''}
        </div>`
     : '';
 
@@ -5285,10 +5306,15 @@ function myEnrollments(){
 function getActiveEnrollments(){
   const today=new Date(); today.setHours(0,0,0,0);
   const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  // 중복 enrollment 제거 (같은 profileId + catalogId)
+  const seen=new Set();
   return myEnrollments().filter(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return false;
     if(cat.dateEnd && cat.dateEnd < todayStr) return false;
+    const key=`${e.profileId||''}__${e.catalogId}`;
+    if(seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }

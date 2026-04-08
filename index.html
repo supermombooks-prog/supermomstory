@@ -219,7 +219,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 
 /* TABLE */
 .data-table{width:100%;border-collapse:collapse;}
-.data-table th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);}
+.data-table th{text-align:left;padding:10px 16px;font-size:13px;font-weight:700;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);}
 .data-table td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
 .data-table tr:last-child td{border-bottom:none;}
 .data-table tr:hover td{background:rgba(255,255,255,0.02);}
@@ -2170,7 +2170,7 @@ function renderMyClasses(){
   const bannerWrap=document.getElementById('myClassesBanner');
   if(bannerWrap){
     if(_myClassesSort==='ending'&&endingSoon.length){
-      bannerWrap.innerHTML=`<div style="margin:0 0 12px;padding:12px 16px;background:rgba(255,92,92,0.08);border:0.5px solid rgba(255,92,92,0.3);border-radius:10px;">
+      bannerWrap.innerHTML=`<div style="margin:14px 0 0;padding:12px 16px;background:rgba(255,92,92,0.08);border:0.5px solid rgba(255,92,92,0.3);border-radius:10px;">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
           <span style="font-size:15px;">⏰</span>
           <span style="font-size:13px;font-weight:700;color:var(--danger);">14일 이내 종강 예정 수업이에요</span>

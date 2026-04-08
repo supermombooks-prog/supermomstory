@@ -1892,7 +1892,8 @@ function renderMonthlyCal() {
 
     const pillsHtml = shown.map(x => {
       const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-      const isVac=(S.vacations[x.cat.id]||[]).includes(dateStr);
+      const grp=getGroupForEnroll(x.enroll,x.cat);
+      const isVac=isVacation(x.cat.id,dateStr,grp?.id);
       const shortName=x.cat.name.length>4?x.cat.name.slice(0,4):x.cat.name;
       const color=isVac?'var(--danger)':x.cat.color;
       return `<div class="mcal-pill" style="background:${isVac?'rgba(255,92,92,0.12)':x.cat.color+'22'};color:${color};${isVac?'text-decoration:line-through;opacity:0.8;':''}"
@@ -3600,7 +3601,7 @@ function renderPrint(){
       </div>
       <div class="print-desktop-only">
         <!-- 요일순 테이블 -->
-        <table id="listTableDay" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <table id="listTableDay" style="width:100%;border-collapse:collapse;table-layout:fixed;${_printListSort==='subject'?'display:none;':''}">
           <thead>
             <tr style="background:#1e293b;color:#fff;">
               <th style="padding:12px 10px;font-size:12px;text-align:center;width:6%;">요일</th>
@@ -3614,7 +3615,7 @@ function renderPrint(){
           <tbody>${listRowsByDay}</tbody>
         </table>
         <!-- 수업순 테이블 -->
-        <table id="listTableSubject" style="width:100%;border-collapse:collapse;table-layout:fixed;display:none;">
+        <table id="listTableSubject" style="width:100%;border-collapse:collapse;table-layout:fixed;${_printListSort==='subject'?'':'display:none;'}">
           <thead>
             <tr style="background:#1e293b;color:#fff;">
               <th style="padding:12px 10px;font-size:12px;text-align:center;width:11%;">과목</th>
@@ -3634,8 +3635,12 @@ function renderPrint(){
 
 function switchListSort(type){
   _printListSort=type;
-  // 모바일 포함 전체 재렌더 (탭 스타일도 renderPrint 안에서 _printListSort 기준으로 반영됨)
   renderPrint();
+  // renderPrint 후 테이블 표시 상태 즉시 적용
+  const dayTbl=document.getElementById('listTableDay');
+  const subTbl=document.getElementById('listTableSubject');
+  if(dayTbl) dayTbl.style.display=type==='subject'?'none':'';
+  if(subTbl) subTbl.style.display=type==='subject'?'':'none';
 }
 
 function downloadPDF(){
@@ -3842,11 +3847,10 @@ function downloadPDF(){
     const isHoliday=!!holidayName;
     const isRed=isWeekend||isHoliday;
     const classes=isOther?[]:dayMapCal[dow];
-    const vacList=classes.filter(cat=>(S.vacations[cat.id]||[]).includes(dateKey));
     const pills=classes.map(cat=>{
-      const isVac=vacList.includes(cat);
+      const isVac=isVacation(cat.id,dateKey,null); // 전체 조 기준
       const bg=isVac?'#fee2e2':CPDF[cat.subject]||'#e0f2fe';
-      return `<div style="font-size:8px;padding:1px 3px;border-radius:3px;margin-top:1px;background:${bg};color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isVac?'text-decoration:line-through;':''}">${cat.name}</div>`;
+      return `<div style="font-size:8px;padding:1px 3px;border-radius:3px;margin-top:1px;background:${bg};color:${isVac?'#dc2626':'#1e293b'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isVac?'text-decoration:line-through;opacity:0.75;':''}">${cat.name}</div>`;
     }).join('');
 
     calCells2+=`<td style="border:1px solid #e2e8f0;padding:4px;vertical-align:top;height:75px;overflow:hidden;${isOther?'background:#f8fafc;opacity:0.4;':''}${isToday?'background:#eff6ff;':''}">
@@ -4986,10 +4990,19 @@ function renderAdminSettings(){
 async function initSupabase(){
   const cfg=getSupaConfig();
   if(!cfg.ready) return;
-  const pulled=await pullCatalogFromSupa();
-  if(pulled){
-    renderPage(S.currentPage);
-    renderSidebarKids();
+  // 백그라운드 동기화 - UI 블로킹 없이
+  try {
+    const pulled=await pullCatalogFromSupa();
+    if(pulled){
+      // 현재 페이지만 조용히 갱신 (첫 렌더를 방해하지 않음)
+      requestAnimationFrame(()=>{
+        renderPage(S.currentPage);
+        renderSidebarKids();
+      });
+    }
+  } catch(e){
+    // 실패해도 로컬 데이터로 정상 작동
+    console.warn('Supabase sync skipped:', e);
   }
 }
 
@@ -6128,8 +6141,8 @@ setInterval(()=>{
 },10000);
 // 1분마다 전체 대시보드 새로고침 (오늘 수업 목록 등)
 setInterval(()=>{if(S.currentPage==='dashboard')renderDashboard();},60000);
-// Pull fresh catalog from Supabase if configured (non-blocking)
-initSupabase();
+// Pull fresh catalog from Supabase if configured - 첫 렌더 후 백그라운드에서 실행
+setTimeout(()=>initSupabase(), 300);
 
 // ── 스크롤 성능 최적화 ──
 document.addEventListener('touchstart', function(){}, {passive:true});

@@ -1913,15 +1913,17 @@ function renderMonthlyCal() {
     // Map JS day (0=Sun) to our DN index (0=Mon)
     const dnIdx = (dow + 6) % 7;
     const cellDateStr=isOther?'':`${year}-${String(month+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
-    const classes = isOther ? [] : getEnrolledForDay(dnIdx)
-      .filter(x=>{
-        // 셀 날짜 기준: 수업 기간 안에 있는 수업만 표시
-        if(!cellDateStr) return true;
-        if(x.cat.dateEnd && cellDateStr > x.cat.dateEnd) return false; // 종강 이후
-        if(x.cat.dateStart && cellDateStr < x.cat.dateStart) return false; // 시작 전
-        return true;
-      })
-      .sort((a,b) => a.cat.start.localeCompare(b.cat.start));
+    const classes = isOther ? [] : myEnrollments().map(e=>{
+      const cat=S.catalog.find(c=>c.id===e.catalogId);
+      if(!cat||!cat.days.includes(dnIdx)) return null;
+      // 셀 날짜 기준: 수업 기간 안에 있는지 체크
+      if(cat.dateEnd && cellDateStr > cat.dateEnd) return null;
+      if(cat.dateStart && cellDateStr < cat.dateStart) return null;
+      const grp=getGroupForEnroll(e,cat);
+      const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
+      const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
+      return {enroll:e, cat:{...cat,start:startTime,end:endTime}, grp};
+    }).filter(Boolean).sort((a,b)=>a.cat.start.localeCompare(b.cat.start));
 
     const MAX_SHOW = 3;
     const shown = classes.slice(0, MAX_SHOW);

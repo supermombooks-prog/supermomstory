@@ -1309,13 +1309,8 @@ function normalizeCatalog(){
       changed=true;
     }
   });
-  // 고아 enrollment 정리: catalogId가 없는 것만 삭제 (profileId 기준 삭제 제거 - 데이터 유실 방지)
-  if(S.catalog && S.catalog.length){
-    const knownCatIds=new Set(S.catalog.map(c=>c.id));
-    const before=S.enrollments.length;
-    S.enrollments=S.enrollments.filter(e=>knownCatIds.has(e.catalogId));
-    if(S.enrollments.length!==before) changed=true;
-  }
+  // 고아 enrollment는 삭제하지 않음 - 카탈로그 동기화 타이밍 문제로 수강생 데이터가 유실될 수 있음
+  // 화면 렌더 시점에 catalogId 기준으로 필터링하여 처리
   if(changed) save();
 }
 function uid(){return Math.random().toString(36).substr(2,9);}

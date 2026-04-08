@@ -3842,7 +3842,7 @@ function downloadPDF(){
     const dow=dateObj.getDay();
     const isToday=!isOther&&dayNum===now.getDate();
     const isWeekend=dow===0||dow===6;
-    const dateKey=isOther?'':dateObj.toISOString().slice(0,10);
+    const dateKey=isOther?'':`${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
     const holidayName=dateKey?holidays[dateKey]:'';
     const isHoliday=!!holidayName;
     const isRed=isWeekend||isHoliday;

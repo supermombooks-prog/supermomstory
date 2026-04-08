@@ -665,9 +665,10 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="section" id="myClassesSection">
       <div class="section-header">
         <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
-        <div style="display:flex;gap:6px;" id="myClassesSortTabs">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="myClassesSortTabs">
           <button class="filter-chip active" id="sortTab-day" onclick="_myClassesSort='day';renderMyClasses()">📅 요일순</button>
           <button class="filter-chip" id="sortTab-lang" onclick="_myClassesSort='lang';renderMyClasses()">🌐 언어순</button>
+          <button class="filter-chip" id="sortTab-ending" onclick="_myClassesSort='ending';renderMyClasses()" style="border-color:rgba(255,92,92,0.4);color:var(--danger);">⏰ 종강 예정 <span id="endingCount" style="font-size:10px;font-weight:700;background:var(--danger);color:#fff;border-radius:20px;padding:1px 6px;margin-left:2px;display:none;"></span></button>
         </div>
       </div>
       <div class="section-body" style="padding:0;">
@@ -2071,14 +2072,41 @@ function renderMyClasses(){
   if(document.getElementById('addClassPanel').style.display!=='none') renderAddClassPanel();
 
   // 탭 활성화
-  ['day','lang'].forEach(t=>{
+  ['day','lang','ending'].forEach(t=>{
     const el=document.getElementById(`sortTab-${t}`);
-    if(el) el.className='filter-chip'+(_myClassesSort===t?' active':'');
+    if(!el) return;
+    const isActive=_myClassesSort===t;
+    if(t==='ending'){
+      el.className='filter-chip'+(isActive?' active':'');
+      el.style.cssText=isActive?'background:var(--danger);color:#fff;border-color:var(--danger);':'border-color:rgba(255,92,92,0.4);color:var(--danger);';
+    } else {
+      el.className='filter-chip'+(isActive?' active':'');
+      el.style.cssText='';
+    }
   });
 
   const tbody=document.getElementById('myClassesBody');
   const rawEnrollments=myEnrollments().filter(e=>S.catalog.find(c=>c.id===e.catalogId));
   const count=rawEnrollments.length;
+
+  // 종강 예정 (14일 이내)
+  const today2=new Date(); today2.setHours(0,0,0,0);
+  const getDaysLeft=(cat)=>{
+    if(!cat||!cat.dateEnd) return null;
+    const end=new Date(cat.dateEnd); end.setHours(0,0,0,0);
+    return Math.round((end-today2)/(1000*60*60*24));
+  };
+  const endingSoon=rawEnrollments.filter(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    const d=getDaysLeft(cat);
+    return d!==null&&d>=0&&d<=14;
+  });
+  const endingCountEl=document.getElementById('endingCount');
+  if(endingCountEl){
+    if(endingSoon.length>0){ endingCountEl.textContent=endingSoon.length; endingCountEl.style.display='inline'; }
+    else endingCountEl.style.display='none';
+  }
+
   document.getElementById('myClassCount').textContent=count?`${count}개`:'';
 
   // 정렬 함수
@@ -2090,6 +2118,13 @@ function renderMyClasses(){
         if(!ca||!cb) return 0;
         if(ca.subject!==cb.subject) return ca.subject.localeCompare(cb.subject,'ko');
         return Math.min(...(ca.days||[99]))-Math.min(...(cb.days||[99]));
+      });
+    }
+    if(_myClassesSort==='ending'){
+      return [...list].sort((a,b)=>{
+        const ca=S.catalog.find(c=>c.id===a.catalogId);
+        const cb=S.catalog.find(c=>c.id===b.catalogId);
+        return (getDaysLeft(ca)??999)-(getDaysLeft(cb)??999);
       });
     }
     // 요일순 (기본)
@@ -2106,6 +2141,16 @@ function renderMyClasses(){
     });
   };
 
+  // 종강 예정 탭은 14일 이내만
+  const targetEnrollments=_myClassesSort==='ending'?endingSoon:rawEnrollments;
+
+  if(_myClassesSort==='ending'&&!endingSoon.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</td></tr>`;
+    const cardsEl=document.getElementById('myClassesCards');
+    if(cardsEl) cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</div>`;
+    return;
+  }
+
   if(!count){
     tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
       수강 중인 수업이 없습니다.<br>
@@ -2113,7 +2158,22 @@ function renderMyClasses(){
     </td></tr>`;
     return;
   }
-  tbody.innerHTML=sortEnrollments(myEnrollments()).map(e=>{
+
+  // 종강 예정 배너 (종강 탭일 때만)
+  const endingBanner=_myClassesSort==='ending'&&endingSoon.length?`
+    <tr><td colspan="7" style="padding:0;border:none;">
+      <div style="margin:12px 0;padding:12px 16px;background:rgba(255,92,92,0.08);border:0.5px solid rgba(255,92,92,0.3);border-radius:10px;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
+          <span style="font-size:15px;">⏰</span>
+          <span style="font-size:13px;font-weight:700;color:var(--danger);">14일 이내 종강 예정 수업이에요</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${endingSoon.map(e=>{const cat=S.catalog.find(c=>c.id===e.catalogId);const d=getDaysLeft(cat);return`<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:12px;background:rgba(255,92,92,0.12);color:var(--danger);">${cat?.name||''} <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--danger);color:#fff;">D-${d}</span></span>`;}).join('')}
+        </div>
+      </div>
+    </td></tr>`:'';
+
+  tbody.innerHTML=endingBanner+sortEnrollments(targetEnrollments).map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return '';
     const grp=getGroupForEnroll(e,cat);
@@ -2146,7 +2206,9 @@ function renderMyClasses(){
           </div>
         </div>
       </td>
-      <td style="font-size:13px;">${formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);">미정</span>'}</td>
+      <td style="font-size:13px;">
+        ${(()=>{const d=getDaysLeft(cat);const dStr=formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);">미정</span>';if(d===null||d>14) return dStr;const bg=d<=7?'var(--danger)':'var(--accent4)';return`${dStr}<span style="display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:${bg};color:#fff;">D-${d}</span>`;})()}
+      </td>
       <td style="font-size:14px;">${cat.teacher||'—'}</td>
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
@@ -2174,7 +2236,7 @@ function renderMyClasses(){
     if(!count){
       cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">수강 중인 수업이 없습니다.<br><button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="toggleAddClassPanel()">+ 수업 추가하기</button></div>`;
     } else {
-      cardsEl.innerHTML=sortEnrollments(myEnrollments()).map(e=>{
+      cardsEl.innerHTML=sortEnrollments(targetEnrollments).map(e=>{
         const cat=S.catalog.find(c=>c.id===e.catalogId);
         if(!cat) return '';
         const grp=getGroupForEnroll(e,cat);
@@ -2197,7 +2259,7 @@ function renderMyClasses(){
           </div>
           <div style="font-size:15px;color:var(--text-muted);margin-bottom:5px;">📅 ${daysStr}요일 · ${cat.teacher||'선생님 미정'}</div>
           <div style="font-size:16px;font-weight:700;color:var(--accent4);margin-bottom:5px;">${formatAmPmRange(dispStart,dispEnd)}</div>
-          <div style="font-size:14px;color:var(--text-muted);margin-bottom:${notice||adminHw?'10px':'14px'};">🗓 ${period}</div>
+          <div style="font-size:14px;color:var(--text-muted);margin-bottom:${notice||adminHw?'10px':'14px'};display:flex;align-items:center;gap:8px;">🗓 ${period}${(()=>{const d=getDaysLeft(cat);if(d===null||d>14)return'';const bg=d<=7?'var(--danger)':'var(--accent4)';return`<span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;background:${bg};color:#fff;">D-${d}</span>`;})()}</div>
           ${notice?`<div style="font-size:13px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;white-space:pre-wrap;">${linkify(notice)}</div>`:''}
           ${adminHw?`<div style="font-size:13px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:10px;white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${linkify(adminHw.text)}</div>`:''}
           <div id="zoom-btn-area-${e.id}" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">

@@ -1682,7 +1682,7 @@ function renderEnroll(){
   };
   const open=cats.filter(c=>!isClosed(c)&&!isEnded(c));
   const closed=cats.filter(c=>isClosed(c)&&!isEnded(c));
-  // 종료된 수업은 수강신청 목록에서 완전히 숨김 (같은 이름 신규 수업과 혼동 방지)
+  const ended=[]; // 종료된 수업은 수강신청 목록에서 숨김 (같은 이름 신규 수업과 혼동 방지)
 
   const renderCard=(cat)=>{
     const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id);

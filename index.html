@@ -664,7 +664,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <!-- ENROLLED LIST -->
     <div class="section" id="myClassesSection">
       <div class="section-header">
-        <div class="section-title">✅ 수강 중인 수업 <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
+        <div class="section-title"><span id="myClassesSectionIcon">✅</span> <span id="myClassesSectionTitle">수강 중인 수업</span> <span id="myClassCount" style="font-size:12px;color:var(--text-muted);margin-left:6px;font-weight:400;"></span></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;" id="myClassesSortTabs">
           <button class="filter-chip active" id="sortTab-day" onclick="_myClassesSort='day';renderMyClasses()">📅 요일순</button>
           <button class="filter-chip" id="sortTab-lang" onclick="_myClassesSort='lang';renderMyClasses()">🌐 언어순</button>
@@ -672,6 +672,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         </div>
       </div>
       <div class="section-body" style="padding:0;">
+        <div id="myClassesBanner" style="padding:0 16px;"></div>
         <div class="my-classes-table-wrap">
         <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일 · 시간</th><th>기간</th><th>선생님</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
@@ -2089,11 +2090,19 @@ function renderMyClasses(){
   const rawEnrollments=myEnrollments().filter(e=>S.catalog.find(c=>c.id===e.catalogId));
   const count=rawEnrollments.length;
 
-  // 종강 예정 (14일 이내)
+  // 종강 D-day 계산: dateEnd + 보강일 중 가장 늦은 날짜 기준
   const today2=new Date(); today2.setHours(0,0,0,0);
   const getDaysLeft=(cat)=>{
-    if(!cat||!cat.dateEnd) return null;
-    const end=new Date(cat.dateEnd); end.setHours(0,0,0,0);
+    if(!cat) return null;
+    let effectiveEnd=cat.dateEnd||null;
+    // 보강일이 dateEnd보다 늦으면 보강일 기준
+    const makeups=S.makeup[cat.id]||[];
+    if(makeups.length){
+      const latestMakeup=makeups.map(m=>m.date).sort().pop();
+      if(latestMakeup&&(!effectiveEnd||latestMakeup>effectiveEnd)) effectiveEnd=latestMakeup;
+    }
+    if(!effectiveEnd) return null;
+    const end=new Date(effectiveEnd); end.setHours(0,0,0,0);
     return Math.round((end-today2)/(1000*60*60*24));
   };
   const endingSoon=rawEnrollments.filter(e=>{
@@ -2144,36 +2153,53 @@ function renderMyClasses(){
   // 종강 예정 탭은 14일 이내만
   const targetEnrollments=_myClassesSort==='ending'?endingSoon:rawEnrollments;
 
+  // 섹션 타이틀 변경
+  const secTitle=document.getElementById('myClassesSectionTitle');
+  const secTitleIcon=document.getElementById('myClassesSectionIcon');
+  if(_myClassesSort==='ending'){
+    if(secTitle) secTitle.textContent=`종강 예정 수업`;
+    if(secTitleIcon) secTitleIcon.textContent='⏰';
+    document.getElementById('myClassCount').textContent=endingSoon.length?`${endingSoon.length}개`:'';
+  } else {
+    if(secTitle) secTitle.textContent='수강 중인 수업';
+    if(secTitleIcon) secTitleIcon.textContent='✅';
+    document.getElementById('myClassCount').textContent=count?`${count}개`:'';
+  }
+
+  // 배너를 테이블 위 별도 영역에 렌더
+  const bannerWrap=document.getElementById('myClassesBanner');
+  if(bannerWrap){
+    if(_myClassesSort==='ending'&&endingSoon.length){
+      bannerWrap.innerHTML=`<div style="margin:0 0 12px;padding:12px 16px;background:rgba(255,92,92,0.08);border:0.5px solid rgba(255,92,92,0.3);border-radius:10px;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
+          <span style="font-size:15px;">⏰</span>
+          <span style="font-size:13px;font-weight:700;color:var(--danger);">14일 이내 종강 예정 수업이에요</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${endingSoon.map(e=>{const cat=S.catalog.find(c=>c.id===e.catalogId);const d=getDaysLeft(cat);const bg=d<=7?'var(--danger)':'var(--accent4)';return`<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:12px;background:rgba(255,92,92,0.12);color:var(--danger);">${cat?.name||''} <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;background:${bg};color:#fff;">D-${d}</span></span>`;}).join('')}
+        </div>
+      </div>`;
+    } else {
+      bannerWrap.innerHTML='';
+    }
+  }
+
   if(_myClassesSort==='ending'&&!endingSoon.length){
-    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</td></tr>`;
     const cardsEl=document.getElementById('myClassesCards');
     if(cardsEl) cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</div>`;
     return;
   }
 
   if(!count){
-    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
+    tbody.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted);">
       수강 중인 수업이 없습니다.<br>
       <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="toggleAddClassPanel()">+ 수업 추가하기</button>
     </td></tr>`;
     return;
   }
 
-  // 종강 예정 배너 (종강 탭일 때만)
-  const endingBanner=_myClassesSort==='ending'&&endingSoon.length?`
-    <tr><td colspan="7" style="padding:0;border:none;">
-      <div style="margin:12px 0;padding:12px 16px;background:rgba(255,92,92,0.08);border:0.5px solid rgba(255,92,92,0.3);border-radius:10px;">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
-          <span style="font-size:15px;">⏰</span>
-          <span style="font-size:13px;font-weight:700;color:var(--danger);">14일 이내 종강 예정 수업이에요</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          ${endingSoon.map(e=>{const cat=S.catalog.find(c=>c.id===e.catalogId);const d=getDaysLeft(cat);return`<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:12px;background:rgba(255,92,92,0.12);color:var(--danger);">${cat?.name||''} <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--danger);color:#fff;">D-${d}</span></span>`;}).join('')}
-        </div>
-      </div>
-    </td></tr>`:'';
-
-  tbody.innerHTML=endingBanner+sortEnrollments(targetEnrollments).map(e=>{
+  tbody.innerHTML=sortEnrollments(targetEnrollments).map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return '';
     const grp=getGroupForEnroll(e,cat);
@@ -2976,6 +3002,9 @@ function addMakeup(catId){
   document.querySelectorAll(`.makeup-grp-cb-${catId}`).forEach(cb=>{ cb.checked=false; });
   renderAdminNotices();
   showToast(`🔁 보강 ${addedCount}건이 등록됐습니다`);
+  // 종강일 자동 재계산
+  const calculated2=calcActualEndDate(catId);
+  if(calculated2){ const f2=document.getElementById(`end-date-${catId}`);if(f2){f2.value=calculated2;f2.style.borderColor='var(--accent3)';} }
 }
 
 function removeMakeup(catId, idx){
@@ -4089,7 +4118,6 @@ function renderAdminNotices(){
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
           <div style="font-size:11px;font-weight:700;color:var(--danger);">🚫 휴강 날짜 관리</div>
-          ${cat.totalSessions?`<button class="btn btn-ghost btn-sm" onclick="autoExtendEndDate('${cat.id}')" style="font-size:11px;color:var(--accent4);border-color:rgba(255,181,71,0.4);" title="휴강 일수만큼 종료일 자동 연장">📅 종료일 자동 재계산</button>`:''}
         </div>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
           <div style="position:relative;">
@@ -4160,6 +4188,18 @@ function renderAdminNotices(){
             </span>`;
           }).join('')}
         </div>`:`<div style="font-size:11px;color:var(--text-muted);">등록된 보강 없음</div>`}
+      </div>
+
+      <!-- 종강일 관리 -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:10px;">🗓 종강일 관리</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="end-date-${cat.id}" class="form-input" value="${cat.dateEnd||''}"
+            style="font-size:12px;padding:6px 10px;flex:1;min-width:130px;">
+          ${cat.totalSessions?`<button class="btn btn-ghost btn-sm" onclick="autoExtendEndDate('${cat.id}')" style="font-size:11px;white-space:nowrap;color:var(--accent3);border-color:rgba(67,232,194,0.4);">🔄 자동 계산</button>`:''}
+          <button class="btn btn-admin btn-sm" onclick="saveEndDate('${cat.id}')" style="font-size:11px;white-space:nowrap;">💾 저장</button>
+        </div>
+        ${cat.totalSessions?`<div style="font-size:10px;color:var(--text-muted);margin-top:5px;">휴강·보강 기준으로 자동 계산 후 확인하고 저장하세요</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -5280,6 +5320,9 @@ function addVacation(catId){
   input.value='';
   renderAdminNotices();
   showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);
+  // 종강일 자동 재계산
+  const calculated=calcActualEndDate(catId);
+  if(calculated){ const f=document.getElementById(`end-date-${catId}`);if(f){f.value=calculated;f.style.borderColor='var(--accent4)';} }
 }
 function removeVacationByIndex(catId, dateStr, groupId){
   removeVacationDate(catId, dateStr, groupId||null);
@@ -5287,6 +5330,66 @@ function removeVacationByIndex(catId, dateStr, groupId){
   showToast('✅ 휴강이 취소됐습니다');
 }
 // 휴강을 고려해 totalSessions 회차가 끝나는 날짜를 자동 계산해 dateEnd 업데이트
+// 총 회차 기준 실제 종강일 계산 (휴강+보강 반영)
+function calcActualEndDate(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat||!cat.dateStart||!cat.totalSessions||!cat.days?.length) return null;
+
+  const toLocalDateStr=(d)=>{
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+
+  // 전체 조 기준 휴강일 목록 (groupId===null인 것만)
+  const vacDates=new Set((S.vacations[catId]||[])
+    .map(v=>typeof v==='string'?{date:v,groupId:null}:v)
+    .filter(v=>v.groupId===null)
+    .map(v=>v.date));
+
+  // 보강일 목록 (전체 조 보강만 카운트)
+  const makeupDates=new Set((S.makeup[catId]||[])
+    .filter(m=>!m.groupId)
+    .map(m=>m.date));
+
+  let count=0;
+  let lastClassDate=null;
+  const cur=new Date(cat.dateStart+'T00:00:00');
+  const maxDate=new Date(cat.dateStart+'T00:00:00');
+  maxDate.setFullYear(maxDate.getFullYear()+5);
+
+  // 보강일도 별도 수업일로 카운트
+  const allMakeups=[...makeupDates].sort();
+
+  while(cur<=maxDate){
+    const dow=(cur.getDay()+6)%7;
+    const dateStr=toLocalDateStr(cur);
+    // 정규 수업일 (요일 맞고 휴강 아닌 날)
+    if(cat.days.includes(dow)&&!vacDates.has(dateStr)){
+      count++;
+      lastClassDate=dateStr;
+      if(count>=cat.totalSessions) break;
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+
+  // 보강일로 추가 회차 채우기
+  if(count<cat.totalSessions){
+    for(const md of allMakeups){
+      if(count>=cat.totalSessions) break;
+      if(!cat.days.includes((new Date(md+'T00:00:00').getDay()+6)%7)){
+        count++;
+        if(!lastClassDate||md>lastClassDate) lastClassDate=md;
+      }
+    }
+  }
+
+  // 보강일이 정규 종강일보다 늦으면 보강일이 실제 종강일
+  for(const md of allMakeups){
+    if(!lastClassDate||md>lastClassDate) lastClassDate=md;
+  }
+
+  return lastClassDate;
+}
+
 function autoExtendEndDate(catId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat){showToast('⚠️ 수업을 찾을 수 없습니다');return;}
@@ -5294,44 +5397,27 @@ function autoExtendEndDate(catId){
   if(!cat.totalSessions){showToast('⚠️ 총 수업 회차가 설정되지 않았습니다');return;}
   if(!cat.days||!cat.days.length){showToast('⚠️ 수업 요일이 설정되지 않았습니다');return;}
 
-  const vacList=S.vacations[catId]||[];
-  let count=0;
-  const cur=new Date(cat.dateStart+'T00:00:00'); // 로컬 시간 기준 파싱
-  let lastClassDate=null;
-
-  // 최대 5년치까지 탐색 (무한루프 방지)
-  const maxDate=new Date(cat.dateStart+'T00:00:00');
-  maxDate.setFullYear(maxDate.getFullYear()+5);
-
-  // 로컬 날짜 문자열 생성 (toISOString은 UTC라 한국에서 하루 어긋남)
-  const toLocalDateStr=(d)=>{
-    const y=d.getFullYear();
-    const m=String(d.getMonth()+1).padStart(2,'0');
-    const dd=String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${dd}`;
-  };
-
-  while(cur<=maxDate){
-    const dow=(cur.getDay()+6)%7; // 0=월
-    if(cat.days.includes(dow)){
-      const dateStr=toLocalDateStr(cur);
-      if(!vacList.includes(dateStr)){
-        count++;
-        lastClassDate=dateStr;
-        if(count>=cat.totalSessions) break;
-      }
-    }
-    cur.setDate(cur.getDate()+1);
-  }
-
+  const lastClassDate=calcActualEndDate(catId);
   if(!lastClassDate){showToast('⚠️ 계산 오류: 날짜를 찾을 수 없습니다');return;}
 
-  const oldEnd=cat.dateEnd||'없음';
-  cat.dateEnd=lastClassDate;
+  // 날짜 입력 필드에 반영 (직접 수정 가능)
+  const input=document.getElementById(`end-date-${catId}`);
+  if(input){ input.value=lastClassDate; input.style.borderColor='var(--accent3)'; }
+  showToast(`📅 ${lastClassDate}로 계산됐습니다. 확인 후 저장해주세요.`);
+}
+
+// 종강일 직접 저장
+function saveEndDate(catId){
+  const input=document.getElementById(`end-date-${catId}`);
+  if(!input||!input.value){showToast('⚠️ 날짜를 입력해주세요');return;}
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  cat.dateEnd=input.value;
   save();
   if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  input.style.borderColor='';
   renderAdminNotices();
-  showToast(`📅 종료일이 ${lastClassDate}로 업데이트됐습니다 (기존: ${oldEnd})`);
+  showToast(`✅ 종강일이 ${input.value}로 저장됐습니다`);
 }
 
 // ═══════════════════════════════════════

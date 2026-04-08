@@ -1105,6 +1105,23 @@ create policy "public write notices" on notices for all using (true);</div>
   </div>
 </div>
 
+<!-- PROFILE ASSIGN MODAL -->
+<div class="modal-overlay" id="profileAssignModal">
+  <div class="modal" style="width:480px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title">👤 수업 수강생 배정</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;" id="profileAssignSubtitle"></div>
+    <div id="profileAssignList" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;margin-bottom:16px;max-height:320px;"></div>
+    <div style="font-size:12px;color:var(--text-muted);background:var(--surface2);border-radius:8px;padding:8px 12px;margin-bottom:14px;">각 수업을 어느 아이의 수업인지 선택하세요. 필요없는 수업은 삭제를 선택하세요.</div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeProfileAssignModal()">나중에 하기</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="profileAssignProgress" style="font-size:12px;color:var(--text-muted);"></span>
+        <button class="btn btn-primary" id="profileAssignSaveBtn" onclick="saveProfileAssign()" disabled style="opacity:0.4;">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- GROUP PICK MODAL -->
 <div class="modal-overlay" id="groupPickModal">
   <div class="modal" style="width:380px;">
@@ -2089,13 +2106,7 @@ function renderMyClasses(){
   });
 
   const tbody=document.getElementById('myClassesBody');
-  const todayStr2=(()=>{const t=new Date();return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;})();
-  const rawEnrollments=myEnrollments().filter(e=>{
-    const cat=S.catalog.find(c=>c.id===e.catalogId);
-    if(!cat) return false;
-    if(cat.dateEnd && cat.dateEnd < todayStr2) return false;
-    return true;
-  });
+  const rawEnrollments=getActiveEnrollments();
   const count=rawEnrollments.length;
 
   // 종강 D-day 계산: dateEnd + 보강일 중 가장 늦은 날짜 기준
@@ -3138,6 +3149,97 @@ function selectCatIcon(el){S.catIcon=el.dataset.subject||'기타';document.query
 function selectCatColor(el){S.catColor=el.dataset.color;document.querySelectorAll('#cat-color-picker .color-dot').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── 미배정 enrollment 배정 팝업 ──
+function getUnassignedEnrollments(){
+  if(!S.profiles||!S.profiles.length) return [];
+  const knownIds=new Set(S.profiles.map(p=>p.id));
+  return S.enrollments.filter(e=>!e.profileId||e.profileId==='default'||!knownIds.has(e.profileId));
+}
+function checkUnassignedEnrollments(){
+  if(localStorage.getItem('zc4_assignSkipped')==='1') return;
+  const unassigned=getUnassignedEnrollments();
+  if(unassigned.length>0) setTimeout(()=>openProfileAssignModal(),600);
+}
+function openProfileAssignModal(){
+  const unassigned=getUnassignedEnrollments();
+  if(!unassigned.length) return;
+  const sub=document.getElementById('profileAssignSubtitle');
+  if(sub) sub.textContent=`아이 프로필 추가 전에 등록된 수업 ${unassigned.length}개가 배정되지 않았습니다`;
+  const list=document.getElementById('profileAssignList');
+  if(!list) return;
+  list.innerHTML=unassigned.map((e,i)=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    const name=cat?.name||'(알 수 없는 수업)';
+    const color=cat?.color||'#888';
+    const profileOpts=S.profiles.map(p=>`<option value="${p.id}">${p.emoji||'👤'} ${p.name}</option>`).join('');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);" id="assign-row-${i}">
+      <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;"></div>
+      <span style="font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,181,71,0.15);color:var(--accent4);flex-shrink:0;" id="assign-badge-${i}">미배정</span>
+      <select class="form-input" style="font-size:12px;padding:5px 8px;width:auto;flex-shrink:0;" id="assign-sel-${i}" data-idx="${i}" onchange="onAssignChange(${i})">
+        <option value="">선택</option>
+        ${profileOpts}
+        <option value="__delete__">🗑 삭제</option>
+      </select>
+    </div>`;
+  }).join('');
+  updateAssignProgress();
+  openModal('profileAssignModal');
+}
+function onAssignChange(i){
+  const sel=document.getElementById(`assign-sel-${i}`);
+  const badge=document.getElementById(`assign-badge-${i}`);
+  const row=document.getElementById(`assign-row-${i}`);
+  if(!sel||!badge||!row) return;
+  if(sel.value==='__delete__'){
+    badge.textContent='삭제';badge.style.background='rgba(255,92,92,0.12)';badge.style.color='var(--danger)';
+    row.style.opacity='0.5';row.style.textDecoration='line-through';
+  } else if(sel.value){
+    const prof=S.profiles.find(p=>p.id===sel.value);
+    badge.textContent=`${prof?.emoji||'👤'} ${prof?.name||''}`;
+    badge.style.background='rgba(67,232,194,0.12)';badge.style.color='var(--accent3)';
+    row.style.opacity='1';row.style.textDecoration='none';
+  } else {
+    badge.textContent='미배정';badge.style.background='rgba(255,181,71,0.15)';badge.style.color='var(--accent4)';
+    row.style.opacity='1';row.style.textDecoration='none';
+  }
+  updateAssignProgress();
+}
+function updateAssignProgress(){
+  const unassigned=getUnassignedEnrollments();
+  const total=unassigned.length;
+  let done=0;
+  for(let i=0;i<total;i++){
+    const sel=document.getElementById(`assign-sel-${i}`);
+    if(sel&&sel.value) done++;
+  }
+  const prog=document.getElementById('profileAssignProgress');
+  if(prog) prog.textContent=`${done} / ${total} 완료`;
+  const btn=document.getElementById('profileAssignSaveBtn');
+  if(btn){btn.disabled=done<total;btn.style.opacity=done<total?'0.4':'1';}
+}
+function saveProfileAssign(){
+  const unassigned=getUnassignedEnrollments();
+  unassigned.forEach((e,i)=>{
+    const sel=document.getElementById(`assign-sel-${i}`);
+    if(!sel) return;
+    if(sel.value==='__delete__'){
+      S.enrollments=S.enrollments.filter(en=>en.id!==e.id);
+    } else if(sel.value){
+      const en=S.enrollments.find(en=>en.id===e.id);
+      if(en) en.profileId=sel.value;
+    }
+  });
+  save();
+  closeModal('profileAssignModal');
+  renderMyClasses();renderDashboard();renderSidebarKids();
+  showToast('✅ 수업 배정이 완료됐습니다');
+}
+function closeProfileAssignModal(){
+  closeModal('profileAssignModal');
+  localStorage.setItem('zc4_assignSkipped','1');
+}
 // 드래그 시작 위치 추적 — 모달 안에서 드래그해서 overlay에서 손 뗄 때 닫히는 버그 방지
 let _mouseDownTarget=null;
 document.addEventListener('mousedown',e=>{_mouseDownTarget=e.target;});
@@ -5130,6 +5232,9 @@ function saveProfile(){
   closeModal('profileModal');
   renderProfileBar();
   renderPage(S.currentPage);
+  // 새 프로필 추가 시 미배정 수업 다시 체크
+  localStorage.removeItem('zc4_assignSkipped');
+  checkUnassignedEnrollments();
 }
 
 function deleteProfile(profileId){
@@ -6119,6 +6224,7 @@ function updateThemeBtn(theme){
 
 renderProfileBar();
 renderDashboard();
+checkUnassignedEnrollments();
 setInterval(()=>{
   if(S.currentPage!=='dashboard') return;
   if(_isMobile()) return; // 모바일은 별도 타이머 처리

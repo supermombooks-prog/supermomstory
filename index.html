@@ -5178,9 +5178,17 @@ function renderProfileBar(){
   }
 
   const allActive = !S.currentProfileId;
+  const today4=new Date(); today4.setHours(0,0,0,0);
+  const todayStr4=`${today4.getFullYear()}-${String(today4.getMonth()+1).padStart(2,'0')}-${String(today4.getDate()).padStart(2,'0')}`;
   const chips = S.profiles.map(p => {
     const isActive = p.id === S.currentProfileId;
-    const cnt = S.enrollments.filter(e=>e.profileId===p.id).length;
+    const cnt = S.enrollments.filter(e=>{
+      if(e.profileId!==p.id) return false;
+      const cat=S.catalog.find(c=>c.id===e.catalogId);
+      if(!cat) return false;
+      if(cat.dateEnd && cat.dateEnd < todayStr4) return false;
+      return true;
+    }).length;
     return `<div style="display:inline-flex;align-items:center;gap:2px;">
       <div class="profile-chip ${isActive?'active':''}" onclick="switchProfile('${p.id}')" style="${isActive?'border-color:'+p.color+';background:'+p.color+'22;color:'+p.color+';':''}">
         <span class="profile-emoji">${p.emoji}</span>
@@ -5195,11 +5203,21 @@ function renderProfileBar(){
   }).join('');
 
   const unassignedCount=getUnassignedEnrollments().length;
+  // 전체 숫자: 모든 프로필의 활성 수업 합계 (고정)
+  const totalAllProfiles=S.profiles.reduce((sum,p)=>{
+    return sum+S.enrollments.filter(e=>{
+      if(e.profileId!==p.id) return false;
+      const cat=S.catalog.find(c=>c.id===e.catalogId);
+      if(!cat) return false;
+      if(cat.dateEnd&&cat.dateEnd<todayStr4) return false;
+      return true;
+    }).length;
+  },0);
   const allChip = S.profiles.length>1
     ? `<div style="display:inline-flex;align-items:center;gap:2px;">
         <div class="profile-chip all-chip ${allActive?'active':''}" onclick="switchProfile(null)">
           🏠 <span>전체</span>
-          <span style="font-size:10px;opacity:0.7;">${getActiveEnrollments().length}</span>
+          <span style="font-size:10px;opacity:0.7;">${totalAllProfiles}</span>
           ${unassignedCount>0?`<span style="font-size:10px;font-weight:700;background:rgba(255,181,71,0.2);color:var(--accent4);border-radius:20px;padding:1px 6px;border:0.5px solid rgba(255,181,71,0.4);">미배정 ${unassignedCount}</span>`:''}
         </div>
         ${unassignedCount>0?`<button onclick="openProfileAssignModal()" title="수강생 배정"

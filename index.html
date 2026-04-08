@@ -2151,7 +2151,7 @@ function renderMyClasses(){
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
           ${getNoticeForCat(cat.id)?`<div style="font-size:12px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${linkify(getNoticeForCat(cat.id))}</div>`:''}
-          ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw,expiresAt:''};if(!hw.text)return'';if(hw.expiresAt){const now=new Date();const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;if(hw.expiresAt<today)return'';}return`<div style="font-size:12px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${hw.text}</div>`;})()}
+          ${(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw,expiresAt:''};if(!hw.text)return'';if(hw.expiresAt){const now=new Date();const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;if(hw.expiresAt<today)return'';}return`<div style="font-size:12px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${linkify(hw.text)}</div>`;})()}
           ${!getNoticeForCat(cat.id)&&!S.adminHomework?.[cat.id]?`<span style="color:var(--text-muted);font-size:12px;">—</span>`:''}
         </div>
       </td>
@@ -4206,7 +4206,7 @@ function deleteRosterEntry(catId,idx){
 function linkify(text){
   if(!text) return '';
   const urlReg=/(https?:\/\/[^\s<>"']+)/g;
-  return text.replace(urlReg, url=>`<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${url}','_blank')||(window.location.href='${url}')" style="color:var(--accent);word-break:break-all;text-decoration:underline;">${url}</a>`);
+  return text.replace(urlReg, url=>`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)!important;word-break:break-all;text-decoration:underline!important;font-weight:500;">${url}</a>`);
 }
 
 function getNoticeForCat(catId){

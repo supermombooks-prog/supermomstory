@@ -1432,11 +1432,14 @@ function getGroupForEnroll(e, cat){
   return (cat.groups||[])[0]||null;
 }
 function getEnrolledForDay(dow){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   return myEnrollments().map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat||!cat.days.includes(dow)) return null;
+    // 종료일이 지난 수업은 제외
+    if(cat.dateEnd && cat.dateEnd < todayStr) return null;
     const grp=getGroupForEnroll(e,cat);
-    // 조 시간이 없으면 수업의 첫번째 조 또는 기본값 사용
     const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
     const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
     const displayCat={...cat, start:startTime, end:endTime};
@@ -2091,7 +2094,13 @@ function renderMyClasses(){
   });
 
   const tbody=document.getElementById('myClassesBody');
-  const rawEnrollments=myEnrollments().filter(e=>S.catalog.find(c=>c.id===e.catalogId));
+  const todayStr2=(()=>{const t=new Date();return`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;})();
+  const rawEnrollments=myEnrollments().filter(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return false;
+    if(cat.dateEnd && cat.dateEnd < todayStr2) return false;
+    return true;
+  });
   const count=rawEnrollments.length;
 
   // 종강 D-day 계산: dateEnd + 보강일 중 가장 늦은 날짜 기준
@@ -3540,8 +3549,14 @@ function renderPrint(){
     const classes=isOther?[]:dayMapJS[dow];
 
     const pills=classes.map(x=>{
-      const bg=CPDF[x.cat.subject]||'#e0f2fe';
-      return `<div style="font-size:9px;padding:1px 4px;border-radius:3px;margin-top:1px;background:${bg};color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x.cat.name}</div>`;
+      const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const isVac=(S.vacations[x.cat.id]||[]).some(v=>{
+        const vDate=typeof v==='string'?v:v.date;
+        const vGrp=typeof v==='string'?null:v.groupId;
+        return vDate===dateStr&&(vGrp===null||!x.grp||vGrp===x.grp?.id);
+      });
+      const bg=isVac?'#fee2e2':CPDF[x.cat.subject]||'#e0f2fe';
+      return `<div style="font-size:9px;padding:1px 4px;border-radius:3px;margin-top:1px;background:${bg};color:${isVac?'#dc2626':'#1e293b'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${isVac?'text-decoration:line-through;opacity:0.75;':''}">${x.cat.name}</div>`;
     }).join('');
 
     calCells+=`<td style="border:1px solid #e2e8f0;padding:4px;vertical-align:top;height:80px;min-height:80px;max-height:80px;overflow:hidden;${isOther?'background:#f8fafc;opacity:0.4;':''}${isToday?'background:#eff6ff;':''}">
@@ -5168,7 +5183,14 @@ function myEnrollments(){
 
 // Get current profile's enrollments
 function getActiveEnrollments(){
-  return myEnrollments();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  return myEnrollments().filter(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return false;
+    if(cat.dateEnd && cat.dateEnd < todayStr) return false;
+    return true;
+  });
 }
 
 // Get current profile object

@@ -674,7 +674,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       <div class="section-body" style="padding:0;">
         <div id="myClassesBanner" style="padding:0 16px;"></div>
         <div class="my-classes-table-wrap">
-        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일 · 시간</th><th>기간</th><th>선생님</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
+        <table class="data-table"><thead><tr><th>수업명</th><th>과목</th><th>요일 · 시간</th><th>기간</th><th>공지/숙제</th><th>학생 숙제 기록</th><th>줌 링크</th><th>커리큘럼</th><th></th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
         <div class="my-classes-cards" id="myClassesCards"></div>
@@ -1596,7 +1596,14 @@ function renderDashboard(){
         <div style="font-size:12px;color:var(--text-muted);">${x.diff===0?'오늘':DN[x.dow]+'요일'}</div>
       </div>`).join('');
 
-  const dc=[0,1,2,3,4,5,6].map(d=>({day:DN[d],count:getEnrolledForDay(d).length}));
+  const activeEnrolls=getActiveEnrollments();
+  const dc=[0,1,2,3,4,5,6].map(d=>{
+    const count=activeEnrolls.filter(e=>{
+      const cat=S.catalog.find(c=>c.id===e.catalogId);
+      return cat&&cat.days.includes(d);
+    }).length;
+    return {day:DN[d],count};
+  });
   const mx=Math.max(...dc.map(d=>d.count),1);
   document.getElementById('dayDist').innerHTML=dc.map(d=>`
     <div style="display:flex;align-items:center;gap:10px;padding:3px 0;">
@@ -2259,9 +2266,12 @@ function renderMyClasses(){
 
     return `<tr id="row-${e.id}">
       <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;"></div>
-          <span style="font-size:14px;font-weight:700;">${flagInline(cat.subject)} ${cat.name}</span>
+        <div style="display:flex;align-items:flex-start;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;margin-top:4px;"></div>
+          <div>
+            <span style="font-size:14px;font-weight:700;">${flagInline(cat.subject)} ${cat.name}</span>
+            ${cat.teacher?`<div style="font-size:12px;color:var(--text-muted);margin-top:3px;">👩‍🏫 ${cat.teacher}</div>`:''}
+          </div>
         </div>
       </td>
       <td><span class="badge" style="background:${(SC[cat.subject]||'#888')}22;color:${SC[cat.subject]||'#888'};font-size:13px;">${cat.subject}</span></td>
@@ -2278,7 +2288,6 @@ function renderMyClasses(){
       <td style="font-size:13px;">
         ${(()=>{const d=getDaysLeft(cat);const dStr=formatDateRange(cat.dateStart,cat.dateEnd)||'<span style="color:var(--text-muted);">미정</span>';if(d===null||d>14) return dStr;const bg=d<=7?'var(--danger)':'var(--accent4)';return`${dStr}<span style="display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:${bg};color:#fff;">D-${d}</span>`;})()}
       </td>
-      <td style="font-size:14px;">${cat.teacher||'—'}</td>
       <td>
         <div style="display:flex;flex-direction:column;gap:5px;max-width:200px;">
           ${getNoticeForCat(cat.id)?`<div style="font-size:12px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;">${linkify(getNoticeForCat(cat.id))}</div>`:''}

@@ -1574,6 +1574,7 @@ function renderDashboard(){
             ${content?`<div id="${uid2}" style="display:none;margin-top:8px;font-size:13px;color:var(--text-muted);line-height:1.8;white-space:pre-wrap;">${content}</div>`:''}
           </div>`;
         })()}
+        ${(()=>{const notice=getNoticeForCat(x.cat.id);return notice?`<div style="margin-top:8px;padding:7px 10px;border-radius:6px;background:rgba(255,126,179,0.08);border-left:3px solid var(--admin);white-space:pre-wrap;font-size:12px;color:var(--text);line-height:1.6;">${linkify(notice)}</div>`:'';})()}
         ${getAdminHwForDashboard(x.cat.id)}
         ${getHomeworkForEnroll(x.enroll.id,x.cat.id)}
       </div>`
@@ -4484,7 +4485,14 @@ function linkify(text){
 function getNoticeForCat(catId){
   const raw=S.notices[catId];
   if(!raw) return '';
-  const n=typeof raw==='object'?raw:{text:raw,expiresAt:''};
+  let n;
+  if(typeof raw==='object'){
+    n=raw;
+  } else {
+    // JSON 문자열로 저장된 경우 파싱 시도
+    try{ const parsed=JSON.parse(raw); n=typeof parsed==='object'?parsed:{text:raw,expiresAt:''}; }
+    catch(e){ n={text:raw,expiresAt:''}; }
+  }
   if(!n.text) return '';
   if(n.expiresAt){
     const today=new Date();

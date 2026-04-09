@@ -127,7 +127,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 /* SECTION */
 .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
 .section-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
-.section-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.section-title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:7px;}
 .section-body{padding:18px 20px;}
 
 /* LAYOUT */
@@ -2268,9 +2268,12 @@ function renderMyClasses(){
       <td>
         <div style="display:flex;align-items:flex-start;gap:8px;">
           <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;margin-top:4px;"></div>
-          <div>
-            <span style="font-size:14px;font-weight:700;">${flagInline(cat.subject)} ${cat.name}</span>
-              ${cat.teacher?`<div style="font-size:13px;color:var(--text-muted);margin-top:3px;">${cat.teacher}</div>`:''}
+          <div style="display:grid;grid-template-columns:25px 1fr;gap:0 2px;align-items:start;">
+            <div style="padding-top:1px;">${flagInline(cat.subject)}</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;">${cat.name}</div>
+              ${cat.teacher?`<div style="font-size:13px;color:var(--text-muted);margin-top:2px;">${cat.teacher}</div>`:''}
+            </div>
           </div>
         </div>
       </td>

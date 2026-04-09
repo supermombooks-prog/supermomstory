@@ -4401,7 +4401,12 @@ function saveNotice(catId){
   if(val) S.notices[catId]={text:val,expiresAt:exp};
   else delete S.notices[catId];
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  // 공지만 Supabase에 저장 (전체 카탈로그 push 금지 - enrollment 오류 방지)
+  if(getSupaConfig().ready){
+    const row={catalog_id:catId,content:val?{text:val,expiresAt:exp}:null,updated_at:new Date().toISOString()};
+    if(val) supaFetch('notices','POST',[row]).catch(()=>{});
+    else supaFetch(`notices?catalog_id=eq.${catId}`,'DELETE').catch(()=>{});
+  }
   showToast(val?`📢 공지사항이 저장되었습니다${exp?' ('+exp+' 만료)':''}`:'🗑️ 공지사항이 삭제되었습니다');
   renderAdminNotices();
 }
@@ -5061,7 +5066,16 @@ async function pullCatalogFromSupa(){
     }
     if(noticeRows){
       S.notices={};
-      noticeRows.forEach(r=>{S.notices[r.catalog_id]=r.content;});
+      noticeRows.forEach(r=>{
+        if(!r.content) return;
+        // content가 JSON 문자열이면 파싱
+        if(typeof r.content==='string'){
+          try{ S.notices[r.catalog_id]=JSON.parse(r.content); }
+          catch(e){ S.notices[r.catalog_id]={text:r.content,expiresAt:''}; }
+        } else {
+          S.notices[r.catalog_id]=r.content;
+        }
+      });
     }
     // catalog만 저장 (personal 데이터인 profiles/enrollments 건드리지 않음)
     localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
@@ -5076,20 +5090,19 @@ async function pullCatalogFromSupa(){
 async function pushCatalogToSupa(){
   const cfg=getSupaConfig();
   if(!cfg.ready){showToast('⚠️ Supabase 설정을 먼저 완료해주세요');return;}
-  document.getElementById('supaActionResult').innerHTML='<span style="color:var(--accent4);">⏳ 업로드 중...</span>';
+  const resultEl=document.getElementById('supaActionResult');
+  if(resultEl) resultEl.innerHTML='<span style="color:var(--accent4);">⏳ 업로드 중...</span>';
   try {
-    // Upsert catalog rows
     const rows=S.catalog.map(cat=>({id:cat.id, data:cat, updated_at:new Date().toISOString()}));
-    // Save teachers in a special catalog entry
-    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers,vacations:S.vacations,makeup:S.makeup}, updated_at:new Date().toISOString()});
+    if(S.teachers.length) rows.push({id:'__teachers__', data:{teachers:S.teachers,vacations:S.vacations,makeup:S.makeup,adminHomework:S.adminHomework}, updated_at:new Date().toISOString()});
     await supaFetch('catalog', 'POST', rows);
-    // Upsert notices
     const noticeRows=Object.entries(S.notices).map(([k,v])=>({catalog_id:k,content:v,updated_at:new Date().toISOString()}));
     if(noticeRows.length) await supaFetch('notices', 'POST', noticeRows);
-    document.getElementById('supaActionResult').innerHTML='<span style="color:var(--accent3);">✅ 클라우드에 업로드 완료! 수강생들이 앱을 새로고침하면 최신 수업을 볼 수 있습니다.</span>';
+    if(resultEl) resultEl.innerHTML='<span style="color:var(--accent3);">✅ 클라우드에 업로드 완료! 수강생들이 앱을 새로고침하면 최신 수업을 볼 수 있습니다.</span>';
     showToast('✅ Supabase에 수업 데이터 업로드 완료!');
   } catch(e){
-    document.getElementById('supaActionResult').innerHTML=`<span style="color:var(--danger);">❌ 오류: ${e.message}</span>`;
+    if(resultEl) resultEl.innerHTML=`<span style="color:var(--danger);">❌ 오류: ${e.message}</span>`;
+    console.error('pushCatalogToSupa error:',e);
   }
 }
 

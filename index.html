@@ -531,6 +531,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="nav-item" data-page="schedule" onclick="navigateTo('schedule')"><span class="nav-icon">📅</span>월간 캘린더</div>
     <div class="nav-item" data-page="myclasses" onclick="navigateTo('myclasses')"><span class="nav-icon">📖</span>내 수업 목록</div>
     <div class="nav-item" data-page="print" onclick="navigateTo('print')"><span class="nav-icon">📄</span>시간표 PDF</div>
+    <div class="nav-item" data-page="history" onclick="navigateTo('history')"><span class="nav-icon">🏆</span>수강 이력</div>
   </div>
 
   <div id="adminNav" style="display:none;">
@@ -682,6 +683,15 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     </div>
   </div>
 
+
+  <!-- HISTORY -->
+  <div class="page-view" id="page-history">
+    <div id="historyProfileBanner"></div>
+    <div class="page-header">
+      <div><div class="page-title">🏆 수강 이력</div><div class="page-sub">종강된 수업 기록 · 수료증 다운로드</div></div>
+    </div>
+    <div id="historyContent"></div>
+  </div>
 
   <!-- ADMIN DASHBOARD -->
   <div class="page-view" id="page-admin-dashboard">
@@ -1393,7 +1403,7 @@ function navigateTo(page){
   renderPage(page); renderSidebarKids();
 }
 function renderPage(p){
-  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-catalog':renderAdminCatalog,'admin-enrollments':renderAdminEnrollments,'admin-notices':renderAdminNotices,'admin-roster':renderAdminRoster,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
+  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,history:renderHistory,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-catalog':renderAdminCatalog,'admin-enrollments':renderAdminEnrollments,'admin-notices':renderAdminNotices,'admin-roster':renderAdminRoster,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
   map[p]?.();
 }
 
@@ -1693,7 +1703,8 @@ function renderEnroll(){
   const ended=[]; // 종료된 수업은 수강신청 목록에서 숨김 (같은 이름 신규 수업과 혼동 방지)
 
   const renderCard=(cat)=>{
-    const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id);
+    const profId=S.currentProfileId||null;
+    const enrollsForCat=myEnrollments().filter(e=>e.catalogId===cat.id&&(e.profileId||null)===profId);
     const isEnrolled=enrollsForCat.length>0;
     const daysStr=cat.days.map(d=>DN[d]).join('·');
     const period=formatDateRange(cat.dateStart,cat.dateEnd);
@@ -1720,7 +1731,7 @@ function renderEnroll(){
           style="width:100%;padding:9px;border-radius:var(--radius-sm);border:1.5px solid var(--accent3);
           background:rgba(67,232,194,0.08);color:var(--accent3);
           font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">
-          ✅ 수업목록에서 삭제
+          ✅ 수강중 (조 추가/변경)
         </button>`
       :`<button onclick="toggleEnrollCard('${cat.id}')"
           style="width:100%;padding:9px;border-radius:var(--radius-sm);border:1.5px solid var(--accent);
@@ -1809,8 +1820,9 @@ function quickEnrollWithTime(catId){ // deprecated
   if(!cat) return;
   if(cat.capacity>0&&S.enrollments.filter(e=>e.catalogId===catId).length>=cat.capacity){showToast('⚠️ 정원이 가득 찼습니다');return;}
   const profId=S.currentProfileId||null;
-  if(S.enrollments.find(e=>e.catalogId===catId&&(e.profileId||null)===(profId))){showToast('이미 수강 중인 수업입니다');return;}
-  // 같은 이름의 다른 수업에 이미 신청되어 있으면 경고
+  if(S.enrollments.find(e=>e.catalogId===catId&&e.groupId===groupId&&(e.profileId||null)===(profId))){
+    showToast('이미 내 목록에 추가된 조입니다');return;
+  }
   const today=new Date(); today.setHours(0,0,0,0);
   const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const sameNameActive=S.enrollments.find(e=>{
@@ -3184,8 +3196,131 @@ function deleteCatalog(id){
 // ═══ HELPERS ═══
 function selectCatIcon(el){S.catIcon=el.dataset.subject||'기타';document.querySelectorAll('#cat-icon-picker .icon-opt').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');}
 function selectCatColor(el){S.catColor=el.dataset.color;document.querySelectorAll('#cat-color-picker .color-dot').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');}
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function renderHistory(){
+  const hb=document.getElementById('historyProfileBanner');
+  if(hb) hb.innerHTML=S.profiles.length?getProfileBanner():'';
+
+  const el=document.getElementById('historyContent');
+  if(!el) return;
+
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // 히스토리에서 숨긴 enrollment ID 목록
+  const hidden=new Set(JSON.parse(localStorage.getItem('zc4_history_hidden')||'[]'));
+
+  // 종강된 수업 enrollment 수집
+  const allEnrolls=myEnrollments().filter(e=>{
+    if(hidden.has(e.id)) return false;
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return false;
+    if(!cat.dateEnd) return false;
+    return cat.dateEnd < todayStr;
+  });
+
+  // 프로필 탭 필터
+  const _histProfile=window._histProfileFilter||'all';
+
+  const filtered=_histProfile==='all'?allEnrolls:allEnrolls.filter(e=>e.profileId===_histProfile);
+
+  // 통계
+  const totalSessions=filtered.reduce((s,e)=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    return s+(cat?.totalSessions||0);
+  },0);
+  const teachers=new Set(filtered.map(e=>S.catalog.find(c=>c.id===e.catalogId)?.teacher).filter(Boolean));
+  const subjectCounts={};
+  filtered.forEach(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(cat?.subject) subjectCounts[cat.subject]=(subjectCounts[cat.subject]||0)+1;
+  });
+  const topSubject=Object.entries(subjectCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
+
+  // 프로필 탭
+  const profileTabHtml=S.profiles.length>1?`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="filter-chip${_histProfile==='all'?' active':''}" onclick="window._histProfileFilter='all';renderHistory()">전체</button>
+      ${S.profiles.map(p=>`<button class="filter-chip${_histProfile===p.id?' active':''}" onclick="window._histProfileFilter='${p.id}';renderHistory()">${p.emoji} ${p.name}</button>`).join('')}
+    </div>`:'';
+
+  // 연도별 그룹
+  const byYear={};
+  filtered.sort((a,b)=>{
+    const ca=S.catalog.find(c=>c.id===a.catalogId);
+    const cb=S.catalog.find(c=>c.id===b.catalogId);
+    return (cb?.dateEnd||'').localeCompare(ca?.dateEnd||'');
+  }).forEach(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return;
+    const year=cat.dateEnd?.slice(0,4)||'미정';
+    if(!byYear[year]) byYear[year]=[];
+    byYear[year].push({e,cat});
+  });
+
+  // 과목별 바 차트
+  const maxCnt=Math.max(...Object.values(subjectCounts),1);
+  const subjectBars=Object.entries(subjectCounts).sort((a,b)=>b[1]-a[1]).map(([subj,cnt])=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+      <span style="font-size:13px;color:var(--text);min-width:70px;">${subj}</span>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:20px;overflow:hidden;">
+        <div style="width:${Math.round(cnt/maxCnt*100)}%;height:100%;background:var(--accent);border-radius:20px;transition:width 0.5s;"></div>
+      </div>
+      <span style="font-size:12px;color:var(--text-muted);min-width:28px;text-align:right;">${cnt}개</span>
+    </div>`).join('');
+
+  // 수강 이력 목록
+  const historyRows=Object.entries(byYear).map(([year,list])=>`
+    <div style="padding:8px 16px;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface2);border-bottom:0.5px solid var(--border);">${year}년</div>
+    ${list.map(({e,cat})=>{
+      const prof=S.profiles.find(p=>p.id===e.profileId);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:0.5px solid var(--border);">
+        <div style="width:4px;height:48px;border-radius:2px;background:${cat.color};flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">${cat.name}${prof?` <span style="font-size:11px;font-weight:400;color:var(--text-muted);">${prof.emoji} ${prof.name}</span>`:''}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${cat.teacher||'—'} · ${cat.subject} · ${cat.days.map(d=>DN[d]).join('·')}요일 · ${formatDateRange(cat.dateStart,cat.dateEnd)||'미정'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+          ${cat.totalSessions?`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(67,232,194,0.12);color:var(--accent3);font-weight:700;">${cat.totalSessions}회 완료</span>`:''}
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="downloadCertificate('${e.id}','${cat.id}')">🎓 수료증</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--text-muted);" onclick="hideHistory('${e.id}')">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`).join('');
+
+  el.innerHTML=`
+    ${profileTabHtml}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+      <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-value">${filtered.length}</div><div class="stat-label">완료한 수업</div></div>
+      <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${totalSessions}</div><div class="stat-label">총 수강 회차</div></div>
+      <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" style="font-size:16px;">${topSubject}</div><div class="stat-label">가장 많이 수강</div></div>
+    </div>
+    ${Object.keys(subjectCounts).length?`
+    <div class="section" style="margin-bottom:16px;">
+      <div class="section-header"><div class="section-title">과목별 수강 이력</div></div>
+      <div class="section-body" style="padding:0;">${subjectBars}</div>
+    </div>`:''}
+    <div class="section">
+      <div class="section-header"><div class="section-title">수강 이력</div></div>
+      <div class="section-body" style="padding:0;">
+        ${filtered.length?historyRows:`<div style="text-align:center;padding:40px;color:var(--text-muted);">종강된 수업이 없습니다</div>`}
+      </div>
+    </div>`;
+}
+
+function hideHistory(enrollId){
+  if(!confirm('이 수업을 수강 이력에서 숨기시겠습니까?')) return;
+  const hidden=new Set(JSON.parse(localStorage.getItem('zc4_history_hidden')||'[]'));
+  hidden.add(enrollId);
+  localStorage.setItem('zc4_history_hidden',JSON.stringify([...hidden]));
+  renderHistory();
+  showToast('🗑 이력에서 숨겼습니다');
+}
+
+function downloadCertificate(enrollId, catId){
+  showToast('🎓 수료증 준비 중... (이미지 업로드 후 활성화됩니다)');
+}
 
 // ── 미배정 enrollment 배정 팝업 ──
 function getUnassignedEnrollments(){
@@ -4634,25 +4769,14 @@ function changeGroup(enrollId, newGroupId){
 function toggleEnrollCard(catId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
-  const profId=S.currentProfileId||'default';
-  const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
   const groups=cat.groups||[];
 
-  if(enrolled.length>0){
-    // 이미 수강중 → 전체 취소 확인
-    if(!confirm(`"${cat.name}" 수강을 취소하시겠습니까?`)) return;
-    S.enrollments=S.enrollments.filter(e=>!(e.catalogId===catId&&(e.profileId||'default')===profId));
-    save(); showToast('☑️ 수강이 취소되었습니다');
-    renderEnroll(); renderSidebarKids(); return;
-  }
-
   if(groups.length===1){
-    // 조가 1개면 바로 추가
+    // 조가 1개면 토글
     quickEnrollGroup(catId, groups[0].id);
     return;
   }
-
-  // 조가 여러 개 → 모달로 선택
+  // 조가 여러 개 → 모달로 선택 (이미 수강중이어도 추가 가능)
   openGroupPickModal(catId);
 }
 
@@ -5398,7 +5522,7 @@ function getActiveEnrollments(){
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return false;
     if(cat.dateEnd && cat.dateEnd < todayStr) return false;
-    const key=`${e.profileId||''}__${e.catalogId}`;
+    const key=`${e.profileId||''}__${e.catalogId}__${e.groupId||''}`;
     if(seen.has(key)) return false;
     seen.add(key);
     return true;

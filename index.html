@@ -3324,16 +3324,24 @@ function renderPrint(){
   }
 
   // ── 어떤 enrollment 쓸지 결정 ──
+  const today_p=new Date(); today_p.setHours(0,0,0,0);
+  const todayStr_p=`${today_p.getFullYear()}-${String(today_p.getMonth()+1).padStart(2,'0')}-${String(today_p.getDate()).padStart(2,'0')}`;
+  const filterEnded=(list)=>list.filter(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return false;
+    if(cat.dateEnd && cat.dateEnd < todayStr_p) return false;
+    return true;
+  });
   let targetEnrollments;
   let targetName='내 수업';
   if(_printProfileId==='__current__'){
-    targetEnrollments=myEnrollments();
+    targetEnrollments=filterEnded(myEnrollments());
     const prof=getCurrentProfile();
     if(prof) targetName=prof.emoji+' '+prof.name;
     else if(S.profiles.length>1) targetName='전체';
   } else {
     const prof=S.profiles.find(p=>p.id===_printProfileId);
-    targetEnrollments=S.enrollments.filter(e=>e.profileId===_printProfileId);
+    targetEnrollments=filterEnded(S.enrollments.filter(e=>e.profileId===_printProfileId));
     if(prof) targetName=prof.emoji+' '+prof.name;
   }
 
@@ -3802,16 +3810,24 @@ function switchListSort(type){
 }
 
 function downloadPDF(){
+  const today_p=new Date(); today_p.setHours(0,0,0,0);
+  const todayStr_p=`${today_p.getFullYear()}-${String(today_p.getMonth()+1).padStart(2,'0')}-${String(today_p.getDate()).padStart(2,'0')}`;
+  const filterEnded=(list)=>list.filter(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return false;
+    if(cat.dateEnd && cat.dateEnd < todayStr_p) return false;
+    return true;
+  });
   let targetEnrollments;
   let targetName='내 수업';
   if(_printProfileId==='__current__'){
-    targetEnrollments=myEnrollments();
+    targetEnrollments=filterEnded(myEnrollments());
     const prof=getCurrentProfile();
     if(prof) targetName=prof.emoji+' '+prof.name;
     else if(S.profiles.length>1) targetName='전체';
   } else {
     const prof=S.profiles.find(p=>p.id===_printProfileId);
-    targetEnrollments=S.enrollments.filter(e=>e.profileId===_printProfileId);
+    targetEnrollments=filterEnded(S.enrollments.filter(e=>e.profileId===_printProfileId));
     if(prof) targetName=prof.emoji+' '+prof.name;
   }
 

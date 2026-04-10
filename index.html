@@ -3196,6 +3196,9 @@ function deleteCatalog(id){
 // ═══ HELPERS ═══
 function selectCatIcon(el){S.catIcon=el.dataset.subject||'기타';document.querySelectorAll('#cat-icon-picker .icon-opt').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');}
 function selectCatColor(el){S.catColor=el.dataset.color;document.querySelectorAll('#cat-color-picker .color-dot').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
 function renderHistory(){
   const hb=document.getElementById('historyProfileBanner');
   if(hb) hb.innerHTML=S.profiles.length?getProfileBanner():'';

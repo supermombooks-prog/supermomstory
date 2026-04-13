@@ -4533,7 +4533,7 @@ function renderAdminNotices(){
           <div style="font-size:11px;font-weight:700;color:var(--danger);">🚫 휴강 날짜 관리</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <div style="position:relative;">
+          <div class="grp-dd-wrap" style="position:relative;">
             <button type="button" id="vac-dd-btn-${cat.id}" onclick="toggleGrpDropdown('vac-dd-${cat.id}','vac-dd-btn-${cat.id}')"
               style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;min-width:130px;justify-content:space-between;">
               <span id="vac-dd-label-${cat.id}">조 선택</span><span>▾</span>
@@ -4571,7 +4571,7 @@ function renderAdminNotices(){
       <div style="border-top:1px solid var(--border);padding-top:12px;">
         <div style="font-size:11px;font-weight:700;color:var(--accent3);margin-bottom:8px;">🔁 조별 보강 날짜 관리</div>
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
-          <div style="position:relative;">
+          <div class="grp-dd-wrap" style="position:relative;">
             <button type="button" id="mk-dd-btn-${cat.id}" onclick="toggleGrpDropdown('mk-dd-${cat.id}','mk-dd-btn-${cat.id}')"
               style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;min-width:130px;justify-content:space-between;">
               <span id="mk-dd-label-${cat.id}">조 선택</span><span>▾</span>
@@ -5736,12 +5736,10 @@ function toggleGrpDropdown(menuId, btnId){
   menu.style.display=isOpen?'none':'block';
 }
 document.addEventListener('click',function(e){
-  // 드롭다운 버튼 또는 드롭다운 메뉴 내부 클릭이면 닫지 않음
-  const insideDropdown=e.target.closest('[id^="vac-dd-"],[id^="mk-dd-"],[id^="vac-all-"],[id^="makeup-grp-all-"]');
-  const insideMenu=e.target.closest('div[id^="vac-dd-"],div[id^="mk-dd-"]');
-  if(insideDropdown||insideMenu) return;
+  // 드롭다운 래퍼(.grp-dd-wrap) 내부 클릭이면 닫지 않음
+  if(e.target.closest('.grp-dd-wrap')) return;
   document.querySelectorAll('div[id^="vac-dd-"],div[id^="mk-dd-"]').forEach(el=>{
-    if(!el.id.endsWith('-btn')&&!el.id.endsWith('-label')) el.style.display='none';
+    el.style.display='none';
   });
 });
 

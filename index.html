@@ -1525,8 +1525,8 @@ function renderDashboard(){
       const sm=toMin(x.cat.start),em=toMin(x.cat.end);
       const isDone=nowMin>em,isNow=nowMin>=sm&&nowMin<=em;
       const zoomLink=x.enroll.myZoom||x.cat.zoom;
-      const isVacation=isTodayVacation(x.cat.id);
-      const sessionNum=calcSessionNumber(x.cat, new Date());
+      const isVacation=isTodayVacation(x.cat.id, x.enroll?.groupId||x.grp?.id);
+      const sessionNum=calcSessionNumber(x.cat, new Date(), x.enroll?.groupId||x.grp?.id);
       const totalSess=x.cat.totalSessions||0;
       const sessionBadge=sessionNum?`<span style="font-size:13px;font-weight:700;background:var(--accent)22;color:var(--accent);padding:3px 10px;border-radius:20px;white-space:nowrap;">${sessionNum}회차${totalSess?` / ${totalSess}회`:''}</span>`:'';
       // 종강일 체크: dateEnd가 오늘과 같은지
@@ -3374,61 +3374,128 @@ function downloadCertificate(enrollId, catId){
   const today=new Date();
   const issueDate=today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일 발급';
 
-  const img=new Image();
-  img.onload=function(){
-    const canvas=document.createElement('canvas');
-    canvas.width=1600; canvas.height=1131;
-    const ctx=canvas.getContext('2d');
+  const W=1600, H=1131, stripeH=52;
+  const canvas=document.createElement('canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
 
-    // 배경 이미지
-    ctx.drawImage(img,0,0,1600,1131);
+  // 배경
+  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
 
-    // 텍스트 공통 설정
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
+  // 상하 파란 줄무늬 바
+  ctx.fillStyle='#1A2E6B';
+  ctx.fillRect(0,0,W,stripeH); ctx.fillRect(0,H-stripeH,W,stripeH);
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  for(let i=0;i<120;i++){
+    ctx.fillRect(i*14,0,7,stripeH);
+    ctx.fillRect(i*14,H-stripeH,7,stripeH);
+  }
 
-    // 수강생 이름 (굵게, 크게)
-    ctx.font='bold 72px "Nanum Square Round", "Apple SD Gothic Neo", sans-serif';
-    ctx.fillStyle='#1A2E6B';
-    ctx.fillText(studentName, 800, 500);
+  // 외곽 테두리
+  ctx.strokeStyle='#1A2E6B'; ctx.lineWidth=12;
+  ctx.strokeRect(6,6,W-12,H-12);
+  ctx.strokeStyle='#C9A84C'; ctx.lineWidth=3;
+  ctx.strokeRect(22,22,W-44,H-44);
+  ctx.strokeStyle='#1A2E6B'; ctx.lineWidth=1.2;
+  ctx.strokeRect(30,30,W-60,H-60);
 
-    // 이름 아래 장식선
-    ctx.strokeStyle='#1A2E6B';
-    ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(560,535); ctx.lineTo(750,535); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(850,535); ctx.lineTo(1040,535); ctx.stroke();
-    // 다이아몬드
-    ctx.fillStyle='#1A2E6B';
-    ctx.beginPath();
-    ctx.moveTo(800,522); ctx.lineTo(815,535); ctx.lineTo(800,548); ctx.lineTo(785,535);
-    ctx.closePath(); ctx.fill();
+  // 모서리 골드 L자
+  ctx.strokeStyle='#C9A84C'; ctx.lineWidth=4;
+  [[44,58],[W-44,58],[44,H-58],[W-44,H-58]].forEach(([cx,cy],i)=>{
+    const sx=i%2===0?1:-1, sy=i<2?1:-1;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+sx*70,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+sy*70); ctx.stroke();
+  });
 
-    // "의 수강 과정" 문구
-    ctx.font='24px "Nanum Square Round", "Apple SD Gothic Neo", sans-serif';
-    ctx.fillStyle='#444444';
-    ctx.fillText(className+' 과정을 성공적으로 수료하였으며', 800, 590);
-    ctx.fillText('지속적인 학습에 대한 헌신과 노력에 감사드립니다.', 800, 625);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
 
-    // 세부 정보
-    ctx.font='22px "Nanum Square Round", "Apple SD Gothic Neo", sans-serif';
-    ctx.fillStyle='#555555';
-    const detail=[teacherName?'담당 강사: '+teacherName:'', sessions, period].filter(Boolean).join('    |    ');
-    ctx.fillText(detail, 800, 690);
+  // CERTIFICATE
+  ctx.font='bold 112px Georgia,serif'; ctx.fillStyle='#1A2E6B';
+  ctx.fillText('CERTIFICATE',W/2,178);
+  ctx.font='500 34px Georgia,serif';
+  ctx.fillText('OF COMPLETION',W/2,244);
 
-    // 발급일
-    ctx.font='20px "Nanum Square Round", "Apple SD Gothic Neo", sans-serif';
-    ctx.fillStyle='#555555';
-    ctx.fillText(issueDate+'     수퍼맘스토리', 800, 1080);
-
-    // PNG 다운로드
-    const link=document.createElement('a');
-    link.download=studentName+'_'+className+'_수료증.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-    showToast('🎓 수료증 다운로드 완료!');
+  // 골드선 공통 함수 (450~1150 통일)
+  const GL=450, GR=1150;
+  const goldLine=(y)=>{
+    ctx.strokeStyle='#C9A84C'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(GL,y); ctx.lineTo(GR,y); ctx.stroke();
   };
-  img.src=CERT_BG_B64;
+  goldLine(272);
+
+  // presented to
+  ctx.font='italic 26px Georgia,serif'; ctx.fillStyle='#888';
+  ctx.fillText('this certificate is proudly presented to',W/2,312);
+
+  // 이름
+  ctx.font='bold italic 92px Georgia,serif'; ctx.fillStyle='#1A2E6B';
+  ctx.fillText(studentName,W/2,418);
+
+  // 이름 장식선 + 다이아몬드
+  ctx.strokeStyle='#1A2E6B'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(GL,472); ctx.lineTo(730,472); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(870,472); ctx.lineTo(GR,472); ctx.stroke();
+  ctx.fillStyle='#1A2E6B';
+  ctx.beginPath(); ctx.moveTo(800,459); ctx.lineTo(818,472); ctx.lineTo(800,485); ctx.lineTo(782,472); ctx.closePath(); ctx.fill();
+
+  goldLine(500);
+
+  // 수료 문구
+  ctx.font='36px "Nanum Square Round","Apple SD Gothic Neo",sans-serif'; ctx.fillStyle='#333';
+  ctx.fillText(className+' 과정을 성공적으로 수료하였으며',W/2,558);
+  ctx.fillText('지속적인 학습에 대한 헌신과 노력에 감사드립니다.',W/2,608);
+
+  // 세부정보
+  ctx.font='28px "Nanum Square Round","Apple SD Gothic Neo",sans-serif'; ctx.fillStyle='#666';
+  const detail=[teacherName?'담당 강사: '+teacherName:'',sessions,period].filter(Boolean).join('    |    ');
+  ctx.fillText(detail,W/2,672);
+
+  goldLine(698);
+
+  // 골드 씰
+  const sx=W/2, sy=870, sr=70;
+  const grd=ctx.createRadialGradient(sx-20,sy-20,6,sx,sy,sr);
+  grd.addColorStop(0,'#fce97a'); grd.addColorStop(0.45,'#D4A840'); grd.addColorStop(1,'#7a5010');
+  ctx.fillStyle=grd;
+  for(let i=0;i<28;i++){
+    const a=i*Math.PI/14, b=(i+0.5)*Math.PI/14;
+    ctx.beginPath();
+    ctx.moveTo(sx+Math.cos(a)*sr,sy+Math.sin(a)*sr);
+    ctx.lineTo(sx+Math.cos(b)*(sr+12),sy+Math.sin(b)*(sr+12));
+    ctx.lineTo(sx+Math.cos(a+Math.PI/14)*sr,sy+Math.sin(a+Math.PI/14)*sr);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(sx,sy,sr*0.72,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(sx,sy,sr*0.55,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='bold 32px Georgia,serif';
+  ctx.fillText('★',sx,sy);
+
+  // 월계수
+  const drawLeaves=(cx,cy,flip)=>{
+    ctx.save(); ctx.translate(cx,cy); if(flip) ctx.scale(-1,1);
+    ctx.strokeStyle='rgba(26,46,107,0.2)'; ctx.lineWidth=1.5;
+    [[-48,-4],[-32,10],[-14,18],[4,16],[20,8],[34,-4]].forEach(([lx,ly],i)=>{
+      ctx.beginPath(); ctx.ellipse(lx,ly,11,5,(i-2)*0.2,0,Math.PI*2); ctx.stroke();
+    });
+    ctx.restore();
+  };
+  drawLeaves(490,870,false); drawLeaves(1110,870,true);
+
+  // 발급일
+  ctx.font='30px "Nanum Square Round","Apple SD Gothic Neo",sans-serif'; ctx.fillStyle='#444';
+  ctx.fillText(issueDate+'     수퍼맘스토리',W/2,H-stripeH-34);
+
+  // PNG 다운로드
+  const link=document.createElement('a');
+  link.download=studentName+'_'+className+'_수료증.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+  showToast('🎓 수료증 다운로드 완료!');
 }
+
 
 // ── 미배정 enrollment 배정 팝업 ──
 function getUnassignedEnrollments(){
@@ -4775,7 +4842,8 @@ function openCurriculumModal(catId, enrollId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
   const curriculum=cat.curriculum||[];
-  const todaySession=calcSessionNumber(cat, new Date())||0;
+  const enroll=S.enrollments.find(e=>e.id===enrollId);
+  const todaySession=calcSessionNumber(cat, new Date(), enroll?.groupId)||0;
   const totalSess=cat.totalSessions||curriculum.length;
 
   document.getElementById('curriculumModalTitle').textContent=`📚 ${cat.name} 커리큘럼`;
@@ -5694,32 +5762,63 @@ function copyCatalog(id){
 // ═══════════════════════════════════════
 // VACATION & SESSION SYSTEM
 // ═══════════════════════════════════════
-function calcSessionNumber(cat, targetDate){
+function calcSessionNumber(cat, targetDate, groupId){
   if(!cat.dateStart||!cat.days||!cat.days.length) return null;
-  const start=new Date(cat.dateStart);
+  const toLocalDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const target=targetDate?new Date(targetDate):new Date();
   target.setHours(23,59,59,0);
+  const targetStr=toLocalDate(target);
+
+  // 휴강 목록: 전체조 휴강 + 해당 조 휴강
+  const vacList=(S.vacations[cat.id]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+  const isVacDay=(dateStr)=>vacList.some(v=>{
+    if(v.date!==dateStr) return false;
+    if(v.groupId===null||v.groupId===undefined) return true; // 전체조 휴강
+    if(groupId&&v.groupId===groupId) return true; // 해당 조 휴강
+    return false;
+  });
+
+  // 보강 목록: 전체조 보강 + 해당 조 보강 (정규 수업 요일 아닌 날만 추가 회차)
+  const makeupList=(S.makeup[cat.id]||[]).filter(m=>{
+    if(m.date>targetStr) return false;
+    if(!m.groupId) return true; // 전체조 보강
+    if(groupId&&m.groupId===groupId) return true; // 해당 조 보강
+    return false;
+  });
+  // 정규 요일 아닌 보강만 추가 회차로 카운트
+  const extraMakeups=new Set(makeupList
+    .filter(m=>{
+      const dow=(new Date(m.date+'T00:00:00').getDay()+6)%7;
+      return !cat.days.includes(dow); // 정규 요일 아닌 날 = 추가 보강
+    })
+    .map(m=>m.date)
+  );
+
+  const start=new Date(cat.dateStart+'T00:00:00');
   if(target<start) return null;
   let count=0;
   const cur=new Date(start);
-  cur.setHours(0,0,0,0);
-  const vacList=S.vacations[cat.id]||[];
-  const toLocalDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   while(cur<=target){
     const dow=(cur.getDay()+6)%7;
-    if(cat.days.includes(dow)){
-      const dateStr=toLocalDate(cur);
-      if(!vacList.includes(dateStr)) count++;
-    }
+    const dateStr=toLocalDate(cur);
+    if(cat.days.includes(dow)&&!isVacDay(dateStr)) count++;
     cur.setDate(cur.getDate()+1);
   }
+  // 추가 보강 회차 더하기
+  count+=extraMakeups.size;
   return count>0?count:null;
 }
 
-function isTodayVacation(catId){
+function isTodayVacation(catId, groupId){
   const d=new Date();
   const today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return (S.vacations[catId]||[]).includes(today);
+  return (S.vacations[catId]||[]).some(v=>{
+    const vObj=typeof v==='string'?{date:v,groupId:null}:v;
+    if(vObj.date!==today) return false;
+    if(vObj.groupId===null||vObj.groupId===undefined) return true; // 전체조
+    if(groupId&&vObj.groupId===groupId) return true; // 해당 조
+    return false;
+  });
 }
 
 function addVacationDate(catId, dateStr, groupId=null){

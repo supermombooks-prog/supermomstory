@@ -5856,7 +5856,16 @@ function getActiveEnrollments(){
   return myEnrollments().filter(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return false;
-    if(cat.dateEnd && cat.dateEnd < todayStr) return false;
+    // 보강일까지 포함한 실제 종강일로 비교 (종강일 수정 후 사라지는 현상 방지)
+    if(cat.dateEnd){
+      let effectiveEnd=cat.dateEnd;
+      const makeups=(S.makeup[cat.id]||[]).filter(m=>m&&m.date&&(!m.groupId||m.groupId===e.groupId));
+      if(makeups.length){
+        const latestMakeup=makeups.map(m=>m.date).filter(Boolean).sort().pop();
+        if(latestMakeup&&latestMakeup>effectiveEnd) effectiveEnd=latestMakeup;
+      }
+      if(effectiveEnd&&effectiveEnd<todayStr) return false;
+    }
     const key=`${e.profileId||''}__${e.catalogId}__${e.groupId||''}`;
     if(seen.has(key)) return false;
     seen.add(key);

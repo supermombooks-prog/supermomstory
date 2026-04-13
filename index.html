@@ -688,7 +688,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
   <div class="page-view" id="page-history">
     <div id="historyProfileBanner"></div>
     <div class="page-header">
-      <div><div class="page-title">🏆 수강 이력</div><div class="page-sub">종강된 수업 기록 · 수료증 다운로드</div></div>
+      <div><div class="page-title">🏆 수강 이력</div><div class="page-sub">종강된 수업 기록 · 수료증 다운로드 · 후기 작성</div></div>
     </div>
     <div id="historyContent"></div>
   </div>
@@ -1140,6 +1140,42 @@ create policy "public write notices" on notices for all using (true);</div>
     <div id="groupPickList" style="display:flex;flex-direction:column;gap:8px;"></div>
     <div class="form-actions" style="margin-top:16px;">
       <button class="btn btn-primary" onclick="closeModal('groupPickModal');renderEnroll();">완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal" style="width:420px;">
+    <div class="modal-title">✏️ 수업 후기 남기기</div>
+    <div class="modal-sub" id="rvModalSub" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;"></div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">별점</div>
+      <div id="rvStarRow" style="display:flex;gap:6px;">
+        <span class="rv-star" data-v="1" onclick="setReviewStar(1)" style="font-size:26px;cursor:pointer;color:#ddd;">★</span>
+        <span class="rv-star" data-v="2" onclick="setReviewStar(2)" style="font-size:26px;cursor:pointer;color:#ddd;">★</span>
+        <span class="rv-star" data-v="3" onclick="setReviewStar(3)" style="font-size:26px;cursor:pointer;color:#ddd;">★</span>
+        <span class="rv-star" data-v="4" onclick="setReviewStar(4)" style="font-size:26px;cursor:pointer;color:#ddd;">★</span>
+        <span class="rv-star" data-v="5" onclick="setReviewStar(5)" style="font-size:26px;cursor:pointer;color:#ddd;">★</span>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">한줄 후기</div>
+      <input id="rvText" type="text" placeholder="수업 한 줄 소감을 남겨주세요" style="width:100%;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">좋았던 점</div>
+        <textarea id="rvPros" rows="3" placeholder="예) 체계적인 커리큘럼" style="width:100%;resize:none;"></textarea>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">아쉬운 점</div>
+        <textarea id="rvCons" rows="3" placeholder="예) 숙제가 조금 많아요" style="width:100%;resize:none;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('reviewModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveReview()">저장하기</button>
     </div>
   </div>
 </div>
@@ -3307,24 +3343,54 @@ function renderHistory(){
       <span style="font-size:12px;color:var(--text-muted);min-width:28px;text-align:right;">${cnt}개</span>
     </div>`).join('');
 
+  // 후기 데이터 로드
+  const reviews=JSON.parse(localStorage.getItem('zc4_reviews')||'{}');
+
   // 수강 이력 목록
   const historyRows=Object.entries(byYear).map(([year,list])=>`
     <div style="padding:8px 16px;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface2);border-bottom:0.5px solid var(--border);">${year}년</div>
     ${list.map(({e,cat})=>{
       const prof=S.profiles.find(p=>p.id===e.profileId);
-      return `<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:0.5px solid var(--border);">
-        <div style="width:4px;height:48px;border-radius:2px;background:${cat.color};flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">${cat.name}${prof?` <span style="font-size:11px;font-weight:400;color:var(--text-muted);">${prof.emoji} ${prof.name}</span>`:''}</div>
-          <div style="font-size:12px;color:var(--text-muted);">${cat.teacher||'—'} · ${cat.subject} · ${cat.days.map(d=>DN[d]).join('·')}요일 · ${formatDateRange(cat.dateStart,cat.dateEnd)||'미정'}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-          ${cat.totalSessions?`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(67,232,194,0.12);color:var(--accent3);font-weight:700;">${cat.totalSessions}회 완료</span>`:''}
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="downloadCertificate('${e.id}','${cat.id}')">🎓 수료증</button>
-            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--text-muted);" onclick="hideHistory('${e.id}')">🗑</button>
+      const rv=reviews[e.id];
+      const starStr=rv?'★'.repeat(rv.star)+'☆'.repeat(5-rv.star):'';
+      const reviewBlock=rv?`
+        <div id="rv-block-${e.id}" style="max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 16px;">
+          <div style="background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:12px;">
+            <div style="font-size:14px;color:#F5A623;letter-spacing:1px;margin-bottom:4px;">${starStr}</div>
+            ${rv.text?`<div style="font-size:13px;color:var(--text);margin-bottom:6px;">${rv.text}</div>`:''}
+            ${(rv.pros||rv.cons)?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              ${rv.pros?`<div style="background:var(--card-bg);border:0.5px solid var(--border);border-radius:8px;padding:7px 10px;">
+                <div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">좋았던 점</div>
+                <div style="font-size:12px;color:var(--text);">${rv.pros}</div>
+              </div>`:''}
+              ${rv.cons?`<div style="background:var(--card-bg);border:0.5px solid var(--border);border-radius:8px;padding:7px 10px;">
+                <div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:2px;">아쉬운 점</div>
+                <div style="font-size:12px;color:var(--text);">${rv.cons}</div>
+              </div>`:''}
+            </div>`:''}
+          </div>
+        </div>`:''  ;
+      const reviewBtn=rv
+        ?`<button class="btn btn-ghost btn-sm" style="font-size:11px;background:rgba(99,153,34,0.10);border-color:rgba(99,153,34,0.3);color:#3B6D11;" onclick="toggleReview('${e.id}')"><span id="rv-stars-${e.id}" style="color:#F5A623;">★</span> 후기 보기 <span id="rv-chev-${e.id}" style="font-size:10px;transition:transform .3s;display:inline-block;">▾</span></button>
+           <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="openReviewModal('${e.id}','${cat.id}')">✏️ 수정</button>`
+        :`<button class="btn btn-ghost btn-sm" style="font-size:11px;background:rgba(24,95,165,0.08);border-color:rgba(24,95,165,0.25);color:#185FA5;" onclick="openReviewModal('${e.id}','${cat.id}')">✏️ 후기 쓰기</button>`;
+      return `<div style="border-bottom:0.5px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;">
+          <div style="width:4px;height:48px;border-radius:2px;background:${cat.color};flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">${cat.name}${prof?` <span style="font-size:11px;font-weight:400;color:var(--text-muted);">${prof.emoji} ${prof.name}</span>`:''}</div>
+            <div style="font-size:12px;color:var(--text-muted);">${cat.teacher||'—'} · ${cat.subject||''} · ${cat.days?.map(d=>DN[d]).join('·')||''}요일 · ${formatDateRange(cat.dateStart,cat.dateEnd)||'미정'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+            ${cat.totalSessions?`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(67,232,194,0.12);color:var(--accent3);font-weight:700;">${cat.totalSessions}회 완료</span>`:''}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="downloadCertificate('${e.id}','${cat.id}')">🎓 수료증</button>
+              ${reviewBtn}
+              <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--text-muted);" onclick="hideHistory('${e.id}')">🗑</button>
+            </div>
           </div>
         </div>
+        ${reviewBlock}
       </div>`;
     }).join('')}`).join('');
 
@@ -3348,7 +3414,63 @@ function renderHistory(){
     </div>`;
 }
 
-function hideHistory(enrollId){
+// ── 후기 기능 ──
+let _rvEnrollId='', _rvCatId='', _rvStar=0;
+
+function openReviewModal(enrollId, catId){
+  _rvEnrollId=enrollId; _rvCatId=catId; _rvStar=0;
+  const cat=S.catalog.find(c=>c.id===catId);
+  document.getElementById('rvModalSub').textContent=(cat?.name||'')+(cat?.teacher?' · '+cat.teacher+'샘':'');
+  // 기존 후기 불러오기
+  const reviews=JSON.parse(localStorage.getItem('zc4_reviews')||'{}');
+  const rv=reviews[enrollId]||{};
+  setReviewStar(rv.star||0);
+  document.getElementById('rvText').value=rv.text||'';
+  document.getElementById('rvPros').value=rv.pros||'';
+  document.getElementById('rvCons').value=rv.cons||'';
+  openModal('reviewModal');
+}
+
+function setReviewStar(n){
+  _rvStar=n;
+  document.querySelectorAll('.rv-star').forEach(s=>{
+    s.style.color=parseInt(s.dataset.v)<=n?'#F5A623':'#ddd';
+  });
+}
+
+function saveReview(){
+  if(!_rvStar){showToast('⭐ 별점을 선택해주세요');return;}
+  const reviews=JSON.parse(localStorage.getItem('zc4_reviews')||'{}');
+  reviews[_rvEnrollId]={
+    star:_rvStar,
+    text:document.getElementById('rvText').value.trim(),
+    pros:document.getElementById('rvPros').value.trim(),
+    cons:document.getElementById('rvCons').value.trim(),
+    updatedAt:new Date().toISOString()
+  };
+  localStorage.setItem('zc4_reviews',JSON.stringify(reviews));
+  closeModal('reviewModal');
+  renderHistory();
+  showToast('✅ 후기가 저장되었습니다');
+}
+
+function toggleReview(enrollId){
+  const block=document.getElementById('rv-block-'+enrollId);
+  const chev=document.getElementById('rv-chev-'+enrollId);
+  if(!block) return;
+  const isOpen=block.style.maxHeight&&block.style.maxHeight!=='0px';
+  if(isOpen){
+    block.style.maxHeight='0';
+    block.style.padding='0 16px';
+    if(chev) chev.style.transform='rotate(0deg)';
+  } else {
+    block.style.maxHeight='400px';
+    block.style.padding='0 16px';
+    if(chev) chev.style.transform='rotate(180deg)';
+  }
+}
+
+
   if(!confirm('이 수업을 수강 이력에서 숨기시겠습니까?')) return;
   const hidden=new Set(JSON.parse(localStorage.getItem('zc4_history_hidden')||'[]'));
   hidden.add(enrollId);
@@ -3450,7 +3572,7 @@ function downloadCertificate(enrollId, catId){
   const detail=[teacherName?'담당 강사: '+teacherName:'',sessions,period].filter(Boolean).join('    |    ');
   ctx.fillText(detail,W/2,672);
 
-  goldLine(698);
+  goldLine(730);
 
   // 골드 씰
   const sx=W/2, sy=870, sr=70;

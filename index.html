@@ -1583,6 +1583,7 @@ function renderDashboard(){
   document.getElementById('st-enrolled').textContent=getActiveEnrollments().length;
   const todayDow=(now.getDay()+6)%7;
   const todayC=getEnrolledForDay(todayDow);
+
   document.getElementById('st-today').textContent=todayC.length;
   const nowSec=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
   const nowMin=now.getHours()*60+now.getMinutes();
@@ -1614,8 +1615,8 @@ function renderDashboard(){
       const sessionNum=calcSessionNumber(x.cat, new Date(), x.enroll?.groupId||x.grp?.id);
       const totalSess=x.cat.totalSessions||0;
       const sessionBadge=sessionNum?`<span style="font-size:13px;font-weight:700;background:var(--accent)22;color:var(--accent);padding:3px 10px;border-radius:20px;white-space:nowrap;">${sessionNum}회차${totalSess?` / ${totalSess}회`:''}</span>`:'';
-      // 종강일 체크: dateEnd가 오늘과 같은지
-      const todayStr=now.toISOString().slice(0,10);
+      // 종강일 체크: dateEnd가 오늘과 같은지 (로컬 날짜 기준)
+      const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
       const isLastDay=x.cat.dateEnd && x.cat.dateEnd===todayStr && !isVacation;
       // 마지막 회차 체크: totalSessions와 sessionNum이 같을 때도 종강
       const isLastSession=(()=>{
@@ -1630,8 +1631,8 @@ function renderDashboard(){
         while(cur<=end){
           const dow=(cur.getDay()+6)%7;
           if(x.cat.days.includes(dow)){
-            const ds=cur.toISOString().slice(0,10);
-            if(!isVacation(x.cat.id,ds,x.enroll?.groupId)) return false;
+            const ds=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+            if(!isTodayVacation(x.cat.id,x.enroll?.groupId)) return false;
           }
           cur.setDate(cur.getDate()+1);
         }

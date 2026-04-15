@@ -1423,6 +1423,11 @@ function normalizeCatalog(){
       cat.groups=[{id:uid(),label:'1조',start:cat.start||'10:00',end:cat.end||'10:20'}];
       changed=true;
     }
+    // days 배열이 문자열로 저장된 경우 숫자로 변환 (Supabase JSON 파싱 시 발생)
+    if(cat.days&&cat.days.length&&typeof cat.days[0]==='string'){
+      cat.days=cat.days.map(Number);
+      changed=true;
+    }
   });
   // 고아 enrollment는 삭제하지 않음 - 카탈로그 동기화 타이밍 문제로 수강생 데이터가 유실될 수 있음
   // 화면 렌더 시점에 catalogId 기준으로 필터링하여 처리
@@ -1546,9 +1551,17 @@ function getEnrolledForDay(dow){
   const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   return myEnrollments().map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
-    if(!cat||!cat.days.includes(dow)) return null;
-    // 종료일이 지난 수업 제외
-    if(cat.dateEnd && cat.dateEnd < todayStr) return null;
+    if(!cat||!cat.days.map(Number).includes(dow)) return null;
+    // 종료일이 지난 수업 제외 (보강일 포함 실제 종강일 기준)
+    if(cat.dateEnd){
+      let effectiveEnd=cat.dateEnd;
+      const makeups=(S.makeup[cat.id]||[]).filter(m=>m&&m.date&&(!m.groupId||m.groupId===e.groupId));
+      if(makeups.length){
+        const latestMakeup=makeups.map(m=>m.date).filter(Boolean).sort().pop();
+        if(latestMakeup&&latestMakeup>effectiveEnd) effectiveEnd=latestMakeup;
+      }
+      if(effectiveEnd&&effectiveEnd<todayStr) return null;
+    }
     // 아직 시작 안 된 수업 제외 (오늘 대시보드에 표시 안 함)
     if(cat.dateStart && cat.dateStart > todayStr) return null;
     const grp=getGroupForEnroll(e,cat);

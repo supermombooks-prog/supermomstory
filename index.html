@@ -1816,6 +1816,12 @@ function renderEnroll(){
       ?`<a href="${cat.detailUrl}" target="_blank" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">🔍 상세보기</a>`
       :`<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;opacity:0.35;cursor:default;">🔍 상세보기</button>`;
 
+    const curriculumBtn=cat.curriculumUrl
+      ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">📚 커리큘럼</a>`
+      :(cat.curriculum||[]).length
+        ?`<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="event.stopPropagation();openCurriculumModal('${cat.id}','')">📚 커리큘럼</button>`
+        :'';
+
     const enrollBtn=cat.enrollUrl
       ?`<a href="${cat.enrollUrl}" target="_blank" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">📝 접수하기</a>`
       :`<button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;opacity:0.35;cursor:default;">📝 접수하기</button>`;
@@ -1870,9 +1876,10 @@ function renderEnroll(){
       </div>`:''}
       ${cat.desc?`<div class="catalog-desc">${cat.desc}</div>`:''}
       <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--border);margin-top:auto;">
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${!isClosed(cat)&&!isEnded(cat)?enrollBtn:''}
           ${detailBtn}
+          ${curriculumBtn}
         </div>
         ${!isEnded(cat)?myListBtn:''}
       </div>

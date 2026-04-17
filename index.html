@@ -4437,7 +4437,7 @@ function downloadPDF(){
   const pdfListByDay={};
   for(let d=0;d<7;d++) pdfListByDay[d]=[];
   rows.forEach(r=>{ (r.cat.days||[]).forEach(d=>pdfListByDay[d].push(r)); });
-  for(let d=0;d<7;d++) pdfListByDay[d].sort((a,b)=>a.cat.subject.localeCompare(b.cat.subject,'ko'));
+  for(let d=0;d<7;d++) pdfListByDay[d].sort((a,b)=>(a.grp?.start||a.cat.start||'').localeCompare(b.grp?.start||b.cat.start||''));
 
   const pdfBySubject={};const pdfSubjOrder=[];
   rows.forEach(r=>{const s=r.cat.subject||'기타';if(!pdfBySubject[s]){pdfBySubject[s]=[];pdfSubjOrder.push(s);}pdfBySubject[s].push(r);});

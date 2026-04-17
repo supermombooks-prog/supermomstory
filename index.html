@@ -4014,7 +4014,7 @@ function renderPrint(){
     (r.cat.days||[]).forEach(d=>{ listByDay[d].push(r); });
   });
   for(let d=0;d<7;d++){
-    listByDay[d].sort((a,b)=>a.cat.subject.localeCompare(b.cat.subject,'ko'));
+    listByDay[d].sort((a,b)=>(a.grp?.start||a.cat.start||'').localeCompare(b.grp?.start||b.cat.start||''));
   }
   const listRowsByDay=(()=>{
     let html='';
@@ -4177,7 +4177,7 @@ function renderPrint(){
       if(x.cat.dateEnd && ds > x.cat.dateEnd) return false;
       if(x.cat.dateStart && ds < x.cat.dateStart) return false;
       return true;
-    });
+    }).sort((a,b)=>(a.grp?.start||a.cat.start||'').localeCompare(b.grp?.start||b.cat.start||''));
 
     const pills=classes.map(x=>{
       const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
@@ -4508,7 +4508,7 @@ function downloadPDF(){
       if(cat.dateEnd && dateKey > cat.dateEnd) return false;
       if(cat.dateStart && dateKey < cat.dateStart) return false;
       return true;
-    });
+    }).sort((a,b)=>(a.grp?.start||a.cat.start||'').localeCompare(b.grp?.start||b.cat.start||''));
     const pills=classes.map(({cat,grp})=>{
       const isVac=(S.vacations[cat.id]||[]).some(v=>{
         const vDate=typeof v==='string'?v:v.date;

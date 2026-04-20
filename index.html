@@ -4731,7 +4731,10 @@ function renderAdminNotices(){
   // 선생님 필터 적용
   if(_noticesTeacherFilter!=='전체') cats=cats.filter(c=>c.teacher===_noticesTeacherFilter);
 
-  const today=new Date().toISOString().slice(0,10);
+  const today=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+
+  // 종강된 수업 제외
+  cats=cats.filter(c=>!c.dateEnd||c.dateEnd>=today);
 
   // 다음 수업일 계산 헬퍼
   const getNextClassDate=(cat)=>{

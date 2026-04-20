@@ -1868,7 +1868,7 @@ function renderEnroll(){
           </div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
-        ${isEnded(cat)?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`:checkBtn}
+        ${isEnded(cat)?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`:''}
       </div>
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>

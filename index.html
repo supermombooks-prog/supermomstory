@@ -1848,24 +1848,38 @@ function renderEnroll(){
           + 수업목록에 추가
         </button>`;
 
-    return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in" style="${isEnded(cat)?'filter:grayscale(1);opacity:0.65;':''}"">
+    const isOpenStatus=!isClosed(cat)&&!isEnded(cat);
+    const statusBar=isEnded(cat)?''
+      :isClosed(cat)
+        ?`<div style="position:absolute;top:0;left:0;right:0;height:4px;background:#E24B4A;border-radius:var(--radius) var(--radius) 0 0;"></div>`
+        :`<div style="position:absolute;top:0;left:0;right:0;height:4px;background:#639922;border-radius:var(--radius) var(--radius) 0 0;"></div>`;
+    const statusBadge=isEnded(cat)?''
+      :isClosed(cat)
+        ?`<span style="flex-shrink:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;background:#FCEBEB;color:#A32D2D;padding:2px 8px;border-radius:20px;border:1px solid #F09595;">🔒 모집완료</span>`
+        :`<span style="flex-shrink:0;display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;background:#EAF3DE;color:#27500A;padding:2px 8px;border-radius:20px;border:1px solid #C0DD97;">🟢 모집중</span>`;
+    return `<div class="catalog-card ${isEnrolled?'enrolled':''} ${isClosed(cat)?'closed-class':''}animate-in" style="padding-top:18px;position:relative;${isEnded(cat)?'filter:grayscale(1);opacity:0.65;':''}">
+      ${statusBar}
       <div class="catalog-card-top">
         <div class="catalog-icon" style="background:${cat.color}22;">${flagImg(cat.subject)}</div>
         <div style="flex:1;min-width:0;">
-          <div class="catalog-name">${cat.name}</div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+            <div class="catalog-name" style="flex:1;min-width:0;">${cat.name}</div>
+            ${statusBadge}
+          </div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
         </div>
-        ${isEnded(cat)
-          ?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`
-          :isClosed(cat)
-            ?`<span style="font-size:10px;font-weight:700;color:var(--danger);background:rgba(255,92,92,0.1);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">🔒 모집완료</span>`
-            :checkBtn}
+        ${isEnded(cat)?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`:checkBtn}
       </div>
       <div class="catalog-tags">
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${cat.totalSessions?`<span class="tag" style="color:var(--accent);border-color:rgba(108,138,255,0.3);">🔢 총 ${cat.totalSessions}회</span>`:''}
         ${period?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${period}</span>`:''}
+        ${cat.curriculumUrl
+          ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="tag" style="color:#27500A;border-color:#C0DD97;background:#EAF3DE;cursor:pointer;text-decoration:none;font-weight:700;">📚 커리큘럼</a>`
+          :(cat.curriculum||[]).length
+            ?`<button onclick="event.stopPropagation();openCurriculumModal('${cat.id}','')" class="tag" style="color:#27500A;border-color:#C0DD97;background:#EAF3DE;cursor:pointer;font-weight:700;border-radius:20px;font-size:11px;padding:3px 9px;">📚 커리큘럼</button>`
+            :''}
       </div>
       ${isEnrolled?`<div style="display:flex;flex-wrap:wrap;gap:5px;">
         ${groups.filter(g=>enrollsForCat.find(e=>e.groupId===g.id)).map(g=>`
@@ -1879,7 +1893,6 @@ function renderEnroll(){
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           ${!isClosed(cat)&&!isEnded(cat)?enrollBtn:''}
           ${detailBtn}
-          ${curriculumBtn}
         </div>
         ${!isEnded(cat)?myListBtn:''}
       </div>
@@ -1888,16 +1901,18 @@ function renderEnroll(){
 
   let html='';
   if(open.length){
-    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-      <span style="font-size:15px;font-weight:800;color:var(--accent3);">🟢 모집중</span>
-      <span style="font-size:12px;color:var(--text-muted);">${open.length}개 수업</span>
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 4px 10px;margin-bottom:8px;border-bottom:2px solid #639922;">
+      <span style="font-size:16px;">🟢</span>
+      <span style="font-size:17px;font-weight:700;color:#27500A;">모집중</span>
+      <span style="font-size:12px;font-weight:700;background:#639922;color:#fff;padding:2px 10px;border-radius:20px;margin-left:2px;">${open.length}개 수업</span>
     </div>`;
     html+=open.map(renderCard).join('');
   }
   if(closed.length){
-    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:${open.length?'20px':'4px'} 0 4px;">
-      <span style="font-size:15px;font-weight:800;color:var(--danger);">🔒 모집완료</span>
-      <span style="font-size:12px;color:var(--text-muted);">${closed.length}개 수업</span>
+    html+=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:0 4px 10px;margin:${open.length?'24px':'4px'} 0 8px;border-bottom:2px solid #E24B4A;">
+      <span style="font-size:16px;">🔒</span>
+      <span style="font-size:17px;font-weight:700;color:#A32D2D;">모집완료</span>
+      <span style="font-size:12px;font-weight:700;background:#E24B4A;color:#fff;padding:2px 10px;border-radius:20px;margin-left:2px;">${closed.length}개 수업</span>
     </div>`;
     html+=closed.map(renderCard).join('');
   }

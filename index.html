@@ -1735,7 +1735,7 @@ function renderEnroll(){
   if(eb) eb.innerHTML=S.profiles.length?getProfileBanner():'';
   const bar=document.getElementById('enrollFilterBar');
   bar.querySelectorAll('.filter-chip').forEach(c=>c.remove());
-  const subjects=['전체','영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','기타'];
+  const subjects=['전체','영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어','기타'];
   const search=document.getElementById('enrollSearch');
   subjects.forEach(s=>{
     const c=document.createElement('div');
@@ -1746,7 +1746,7 @@ function renderEnroll(){
   });
 
   const q=(search?.value||'').toLowerCase();
-  const FIXED=['영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어'];
+  const FIXED=['영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어'];
   let cats=S.catalog;
   if(S.filterSubject==='기타') cats=cats.filter(c=>!FIXED.includes(c.subject));
   else if(S.filterSubject!=='전체') cats=cats.filter(c=>c.subject===S.filterSubject);

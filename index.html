@@ -3712,16 +3712,16 @@ function renderHistory(){
       </div>`;
     }).join('')}`).join('');
 
-  // ── 월별 수강 현황 차트 데이터 계산 ──
+  // ── 월별 수료 현황 차트 데이터 계산 (종강된 수업 수 기준) ──
   const curYear=today.getFullYear();
   const curMonth=today.getMonth(); // 0-indexed
   const monthlyData=Array(12).fill(0);
   filtered.forEach(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
-    if(!cat||!cat.dateEnd||!cat.totalSessions) return;
+    if(!cat||!cat.dateEnd) return;
     const endYear=parseInt(cat.dateEnd.slice(0,4));
     const endMonth=parseInt(cat.dateEnd.slice(5,7))-1;
-    if(endYear===curYear) monthlyData[endMonth]+=(cat.totalSessions||0);
+    if(endYear===curYear) monthlyData[endMonth]+=1; // 수업 1개 = 1 카운트
   });
   const maxMonthly=Math.max(...monthlyData,1);
   const months=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -3729,14 +3729,16 @@ function renderHistory(){
     const v=monthlyData[i];
     const isCur=i===curMonth;
     const isFuture=i>curMonth;
-    const pct=isFuture?0:Math.round(v/maxMonthly*100)||2;
-    const bg=isCur?'#378ADD':isFuture?'transparent':v===Math.max(...monthlyData.slice(0,curMonth+1))?'#639922':'#85B7EB';
-    const border=isFuture?'0.5px solid var(--border)':'none';
+    const pct=v>0?Math.round(v/maxMonthly*100):0;
+    const bg=isCur?'#378ADD':v===Math.max(...monthlyData.slice(0,curMonth+1))&&v>0?'#639922':'#85B7EB';
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;">
       <div style="flex:1;width:100%;display:flex;align-items:flex-end;">
-        <div style="width:100%;height:${isFuture?8:pct}%;background:${bg};border:${border};${isFuture?'opacity:0.25;':''}border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:3px;">
-          ${!isFuture&&v>0?`<span style="font-size:8px;font-weight:500;color:#fff;">${v}</span>`:''}
-        </div>
+        ${isFuture
+          ?`<div style="width:100%;height:8px;background:var(--border);border-radius:4px 4px 0 0;opacity:0.2;"></div>`
+          :v>0
+            ?`<div style="width:100%;height:${pct}%;background:${bg};border-radius:3px 3px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:3px;"><span style="font-size:9px;font-weight:500;color:#fff;">${v}</span></div>`
+            :`<div style="width:100%;height:4px;background:var(--border);border-radius:2px;opacity:0.4;"></div>`
+        }
       </div>
       <span style="font-size:${i>=9?'8px':'9px'};color:${isCur?'var(--text)':'var(--text-muted)'};font-weight:${isCur?'700':'400'};">${m}</span>
     </div>`;
@@ -3842,7 +3844,7 @@ function renderHistory(){
       <!-- 왼쪽: 차트 + 뱃지 -->
       <div style="display:flex;flex-direction:column;gap:12px;${isWide?'':'margin-bottom:12px;'}">
         <div class="section">
-          <div class="section-header"><div class="section-title">📈 월별 수강 현황 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${curYear}년</span></div></div>
+          <div class="section-header"><div class="section-title">📈 월별 수료 현황 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${curYear}년 · 종강된 수업 수</span></div></div>
           <div class="section-body">
             <div style="display:flex;align-items:flex-end;gap:3px;height:80px;">${monthlyBars}</div>
           </div>

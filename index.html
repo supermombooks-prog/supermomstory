@@ -1207,7 +1207,7 @@ create policy "public write notices" on notices for all using (true);</div>
     <div id="groupPickList" style="display:flex;flex-direction:column;gap:8px;"></div>
     <div class="form-actions" style="margin-top:16px;">
       <button class="btn btn-ghost" onclick="cancelGroupPick()">취소</button>
-      <button class="btn btn-primary" onclick="closeModal('groupPickModal');renderEnroll();renderMyClasses();">완료</button>
+      <button class="btn btn-primary" onclick="window._groupPickSnapshot=null;closeModal('groupPickModal');renderEnroll();renderMyClasses();">완료</button>
     </div>
   </div>
 </div>
@@ -1888,16 +1888,17 @@ function renderEnroll(){
   // 선생님 필터 적용
   if(_enrollTeacherFilter!=='전체') cats=cats.filter(c=>c.teacher===_enrollTeacherFilter);
 
+  // 종강된 수업 제외
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const isEnded=(cat)=>cat.dateEnd&&cat.dateEnd<todayStr;
+  cats=cats.filter(c=>!isEnded(c));
+
   const grid=document.getElementById('enrollCatalogGrid');
   if(!cats.length){
     grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">🔍</div><div class="empty-text">검색 결과가 없습니다</div></div>`;
     return;
   }
-
-  // 모집중/모집완료 자동 분류: 수동 closed 플래그 OR 시작일이 오늘 이전
-  const today=new Date(); today.setHours(0,0,0,0);
-  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const isEnded=(cat)=>cat.dateEnd&&cat.dateEnd<todayStr;
   const isClosed=(cat)=>{
     if(isEnded(cat)) return false; // 종료된 수업은 별도 처리
     if(cat.closed) return true; // 수동 모집완료
@@ -1910,7 +1911,7 @@ function renderEnroll(){
   };
   const open=cats.filter(c=>!isClosed(c)&&!isEnded(c));
   const closed=cats.filter(c=>isClosed(c)&&!isEnded(c));
-  const ended=[]; // 종료된 수업은 수강신청 목록에서 숨김 (같은 이름 신규 수업과 혼동 방지)
+  const ended=cats.filter(c=>isEnded(c)); // 종강된 수업 — 아래에서 표시 안 함
 
   const renderCard=(cat)=>{
     const profId=S.currentProfileId||null;
@@ -2331,7 +2332,7 @@ function renderAddClassPanel(){
       const isActive=_addClassFilter===s;
       const color=SC[s];
       const flag=s!=='전체'?`<span style="display:inline-flex;align-items:center;margin-right:4px;">${flagInline(s)}</span>`:'';
-      const cnt=s==='전체'?S.catalog.length:S.catalog.filter(c=>c.subject===s).length;
+      const cnt=s==='전체'?S.catalog.filter(c=>!_isEnded(c)).length:S.catalog.filter(c=>c.subject===s&&!_isEnded(c)).length;
       return `<div class="filter-chip ${isActive?'active':''}"
         style="${isActive&&color?`background:${color}22;color:${color};border-color:${color};`:''}"
         onclick="_addClassFilter='${s}';renderAddClassPanel()">
@@ -2340,7 +2341,12 @@ function renderAddClassPanel(){
     }).join('');
   }
 
-  const cats=_addClassFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_addClassFilter);
+  const _today=new Date(); _today.setHours(0,0,0,0);
+  const _todayStr=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
+  const _isEnded=(cat)=>cat.dateEnd&&cat.dateEnd<_todayStr;
+
+  const cats=(_addClassFilter==='전체'?S.catalog:S.catalog.filter(c=>c.subject===_addClassFilter))
+    .filter(c=>!_isEnded(c)); // 종강된 수업 제외
 
   list.innerHTML=cats.map(cat=>{
     const daysStr=cat.days.map(d=>DN[d]).join('·');
@@ -5449,6 +5455,10 @@ function changeGroup(enrollId, newGroupId){
 function cancelGroupPick(){
   // 모달 열기 전 상태로 복원
   if(window._groupPickSnapshot){
+    // 스냅샷 이후 추가된 enrollment → Supabase에서도 삭제
+    const snapshotIds=new Set(window._groupPickSnapshot.map(e=>e.id));
+    const added=S.enrollments.filter(e=>!snapshotIds.has(e.id));
+    added.forEach(e=>deleteEnrollmentFromSupa(e.id).catch(()=>{}));
     S.enrollments=window._groupPickSnapshot;
     save();
     window._groupPickSnapshot=null;
@@ -5477,8 +5487,10 @@ function openGroupPickModal(catId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
   const profId=S.currentProfileId||'default';
-  // 모달 열 때 현재 enrollment 스냅샷 저장 (취소 시 복원용)
-  window._groupPickSnapshot=JSON.parse(JSON.stringify(S.enrollments));
+  // 모달 처음 열 때만 스냅샷 저장 (pickGroup 재호출 시 덮어쓰지 않음)
+  if(!window._groupPickSnapshot){
+    window._groupPickSnapshot=JSON.parse(JSON.stringify(S.enrollments));
+  }
   window._groupPickCatId=catId;
   const groups=cat.groups||[];
   const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);

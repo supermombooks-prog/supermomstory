@@ -595,6 +595,14 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
         <div class="page-sub">수업을 클릭해서 내 수업 목록에 추가·관리하세요</div>
       </div>
     </div>
+    <div style="padding:0 16px 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="display:inline-flex;border:0.5px solid var(--border);border-radius:20px;overflow:hidden;">
+        <span id="enrollModeBtn-lang" onclick="setEnrollMode('lang')"
+          style="padding:7px 16px;font-size:13px;cursor:pointer;background:var(--accent);color:#fff;transition:all .15s;">🌐 언어별</span>
+        <span id="enrollModeBtn-day" onclick="setEnrollMode('day')"
+          style="padding:7px 16px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--text-muted);border-left:0.5px solid var(--border);transition:all .15s;">📅 요일별</span>
+      </div>
+    </div>
     <div class="filter-bar" id="enrollFilterBar">
       <input class="search-input" id="enrollSearch" placeholder="🔍 수업 검색..." oninput="renderEnroll()">
     </div>
@@ -1730,32 +1738,72 @@ function renderDashboard(){
 
 // ═══ ENROLL ═══
 let _enrollTeacherFilter='전체';
+let _enrollMode='lang'; // 'lang' | 'day'
+let _enrollDayFilter='전체';
+
+function setEnrollMode(mode){
+  _enrollMode=mode;
+  _enrollDayFilter='전체';
+  S.filterSubject='전체';
+  _enrollTeacherFilter='전체';
+  // 세그먼트 버튼 스타일 업데이트
+  const langBtn=document.getElementById('enrollModeBtn-lang');
+  const dayBtn=document.getElementById('enrollModeBtn-day');
+  if(langBtn&&dayBtn){
+    langBtn.style.background=mode==='lang'?'var(--accent)':'var(--surface)';
+    langBtn.style.color=mode==='lang'?'#fff':'var(--text-muted)';
+    dayBtn.style.background=mode==='day'?'var(--accent)':'var(--surface)';
+    dayBtn.style.color=mode==='day'?'#fff':'var(--text-muted)';
+  }
+  renderEnroll();
+}
+
 function renderEnroll(){
   const eb=document.getElementById('enrollProfileBanner');
   if(eb) eb.innerHTML=S.profiles.length?getProfileBanner():'';
   const bar=document.getElementById('enrollFilterBar');
   bar.querySelectorAll('.filter-chip').forEach(c=>c.remove());
-  const subjects=['전체','영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어','기타'];
   const search=document.getElementById('enrollSearch');
-  subjects.forEach(s=>{
-    const c=document.createElement('div');
-    c.className='filter-chip'+(S.filterSubject===s?' active':'');
-    c.textContent=s;
-    c.onclick=()=>{S.filterSubject=s;_enrollTeacherFilter='전체';renderEnroll();};
-    bar.insertBefore(c,search);
-  });
+
+  if(_enrollMode==='lang'){
+    const subjects=['전체','영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어','기타'];
+    subjects.forEach(s=>{
+      const c=document.createElement('div');
+      c.className='filter-chip'+(S.filterSubject===s?' active':'');
+      c.textContent=s;
+      c.onclick=()=>{S.filterSubject=s;_enrollTeacherFilter='전체';renderEnroll();};
+      bar.insertBefore(c,search);
+    });
+  } else {
+    const days=['전체','월','화','수','목','금','토','일'];
+    days.forEach(d=>{
+      const c=document.createElement('div');
+      c.className='filter-chip'+(_enrollDayFilter===d?' active':'');
+      c.textContent=d;
+      c.onclick=()=>{_enrollDayFilter=d;renderEnroll();};
+      bar.insertBefore(c,search);
+    });
+  }
 
   const q=(search?.value||'').toLowerCase();
   const FIXED=['영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어'];
   let cats=S.catalog;
-  if(S.filterSubject==='기타') cats=cats.filter(c=>!FIXED.includes(c.subject));
-  else if(S.filterSubject!=='전체') cats=cats.filter(c=>c.subject===S.filterSubject);
+
+  if(_enrollMode==='lang'){
+    if(S.filterSubject==='기타') cats=cats.filter(c=>!FIXED.includes(c.subject));
+    else if(S.filterSubject!=='전체') cats=cats.filter(c=>c.subject===S.filterSubject);
+  } else {
+    if(_enrollDayFilter!=='전체'){
+      const dowIdx=['월','화','수','목','금','토','일'].indexOf(_enrollDayFilter);
+      cats=cats.filter(c=>(c.days||[]).includes(dowIdx));
+    }
+  }
   if(q) cats=cats.filter(c=>c.name.toLowerCase().includes(q)||(c.teacher||'').toLowerCase().includes(q));
 
   // 선생님 필터 탭 - 언어를 선택했을 때만 표시
   const teacherBar=document.getElementById('enrollTeacherFilterBar');
   if(teacherBar){
-    if(S.filterSubject==='전체'){
+    if(_enrollMode==='day'||S.filterSubject==='전체'){
       teacherBar.style.display='none';
       teacherBar.innerHTML='';
       _enrollTeacherFilter='전체';

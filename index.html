@@ -85,7 +85,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .kid-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 
 /* MAIN */
-.main{margin-left:250px;flex:1;padding:32px 38px;max-width:calc(100vw - 250px);position:relative;z-index:1;}
+.main{margin-left:250px;flex:1;padding:32px 38px;max-width:calc(100vw - 250px);position:relative;z-index:1;}.page-view{max-width:900px;}
 
 /* HEADER */
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
@@ -3803,7 +3803,7 @@ function renderHistory(){
         <span style="font-size:13px;font-weight:500;color:${titleColor};">${label}</span>
         <span style="font-size:11px;opacity:.7;margin-left:auto;color:${subColor};">${val}${suffix}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,120px));gap:8px;margin-bottom:12px;max-width:560px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">
         ${steps.map((s,i)=>{
           const isDone=i<=done;
           const isCur=i===done+1;
@@ -3828,27 +3828,27 @@ function renderHistory(){
 
   el.innerHTML=`
     ${profileTabHtml}
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;max-width:640px;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">
       <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-value">${filtered.length}</div><div class="stat-label">완료한 수업</div></div>
       <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${totalSessions}</div><div class="stat-label">총 수강 회차</div></div>
       <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-value" style="font-size:16px;">${topSubject}</div><div class="stat-label">가장 많이 수강</div></div>
     </div>
 
-    <div class="section" style="margin-bottom:12px;max-width:640px;">
+    <div class="section" style="margin-bottom:12px;">
       <div class="section-header"><div class="section-title">📈 월별 수강 현황 <span style="font-size:12px;font-weight:400;color:var(--text-muted);">${curYear}년</span></div></div>
       <div class="section-body">
         <div style="display:flex;align-items:flex-end;gap:3px;height:80px;">${monthlyBars}</div>
       </div>
     </div>
 
-    <div class="section" style="margin-bottom:12px;overflow:hidden;max-width:640px;">
+    <div class="section" style="margin-bottom:12px;overflow:hidden;">
       <div style="padding:14px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <span style="font-size:15px;font-weight:700;color:var(--text);">🏅 뱃지 컬렉션</span>
           <span style="font-size:12px;color:var(--text-muted);">${earnedBadges}/${totalBadges} 획득</span>
         </div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">현재 도전 중인 뱃지 · 시리즈당 1개</div>
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,120px));gap:8px;max-width:560px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
           ${activeBadge1}${activeBadge2}${activeBadge3}${activeBadge4}
         </div>
       </div>

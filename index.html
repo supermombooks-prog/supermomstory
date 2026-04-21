@@ -1769,13 +1769,27 @@ function renderDashboard(){
       upItems.push({...x,dow:d,diff});
     });
   }
+  const UPCOMING_LIMIT=6;
+  const upVisible=upItems.slice(0,UPCOMING_LIMIT);
+  const upHidden=upItems.slice(UPCOMING_LIMIT);
+  const renderUpItem=x=>`<div class="upcoming-item">
+      <div class="upcoming-dot" style="background:${x.cat.color};"></div>
+      <div style="flex:1;"><div class="upcoming-name">${flagInline(x.cat.subject)} ${x.cat.name}</div><div class="upcoming-time">${formatKoreanTime(x.cat.start)} · ${x.cat.teacher||''}</div></div>
+      <div style="font-size:12px;color:var(--text-muted);">${x.diff===0?'오늘':DN[x.dow]+'요일'}</div>
+    </div>`;
+  const moreBtnHtml=upHidden.length?`
+    <div id="upcomingMoreWrap" style="max-height:0;overflow:hidden;transition:max-height .35s ease;">
+      ${upHidden.map(renderUpItem).join('')}
+    </div>
+    <div style="padding-top:8px;border-top:0.5px solid var(--border);margin-top:4px;">
+      <button onclick="toggleUpcomingMore(this)" data-cnt="${upHidden.length}" style="width:100%;background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 0;">
+        <span class="up-more-text">+ ${upHidden.length}개 더보기</span>
+        <span class="up-more-chev" style="font-size:11px;transition:transform .25s;">▾</span>
+      </button>
+    </div>`:'' ;
   document.getElementById('upcomingList').innerHTML=upItems.length===0
     ?`<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px 0;">이번 주 남은 수업 없음</div>`
-    :upItems.slice(0,20).map(x=>`<div class="upcoming-item">
-        <div class="upcoming-dot" style="background:${x.cat.color};"></div>
-        <div style="flex:1;"><div class="upcoming-name">${flagInline(x.cat.subject)} ${x.cat.name}</div><div class="upcoming-time">${formatKoreanTime(x.cat.start)} · ${x.cat.teacher||''}</div></div>
-        <div style="font-size:12px;color:var(--text-muted);">${x.diff===0?'오늘':DN[x.dow]+'요일'}</div>
-      </div>`).join('');
+    :upVisible.map(renderUpItem).join('')+moreBtnHtml;
 
   const activeEnrolls=getActiveEnrollments();
   const dc=[0,1,2,3,4,5,6].map(d=>{
@@ -2238,6 +2252,18 @@ function selectDay(year, month, day) {
   selectedDate = new Date(year, month, day);
   renderMonthlyCal();
   renderDayDetail(selectedDate);
+}
+
+function toggleUpcomingMore(btn){
+  const wrap=document.getElementById('upcomingMoreWrap');
+  if(!wrap) return;
+  const isOpen=wrap.style.maxHeight&&wrap.style.maxHeight!=='0px';
+  wrap.style.maxHeight=isOpen?'0':'600px';
+  const text=btn.querySelector('.up-more-text');
+  const chev=btn.querySelector('.up-more-chev');
+  const cnt=btn.dataset.cnt||'';
+  if(text) text.textContent=isOpen?`+ ${cnt}개 더보기`:'접기';
+  if(chev) chev.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';
 }
 
 function renderDayDetail(date) {

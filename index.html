@@ -706,17 +706,64 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="admin-bar">🔑 관리자 모드 · 수업 카탈로그 및 수강 현황 관리</div>
     <div style="height:22px;"></div>
     <div class="page-header">
-      <div><div class="page-title" style="color:var(--admin);">관리자 대시보드 📊</div><div class="page-sub">수업 운영 현황</div></div>
+      <div><div class="page-title" style="color:var(--admin);">관리자 대시보드 📊</div><div class="page-sub" id="adm-date">수업 운영 현황</div></div>
       <button class="btn btn-admin" onclick="openAddCatalog()">+ 수업 등록</button>
     </div>
+
+    <!-- 통계 카드 -->
     <div class="stats-row">
       <div class="stat-card animate-in"><div class="stat-icon">📋</div><div class="stat-value" id="adm-catalog">0</div><div class="stat-label">등록된 수업</div></div>
-      <div class="stat-card animate-in"><div class="stat-icon">📝</div><div class="stat-value" id="adm-enrolls">0</div><div class="stat-label">총 수강 신청</div></div>
-      <div class="stat-card animate-in"><div class="stat-icon">📝</div><div class="stat-value" id="adm-kids">0</div><div class="stat-label">총 수강 신청</div></div>
-      <div class="stat-card animate-in"><div class="stat-icon">📅</div><div class="stat-value" id="adm-today">0</div><div class="stat-label">오늘 수업 수</div></div>
+      <div class="stat-card animate-in"><div class="stat-icon">👥</div><div class="stat-value" id="adm-enrolls">0</div><div class="stat-label">총 수강신청</div></div>
+      <div class="stat-card animate-in"><div class="stat-icon">📅</div><div class="stat-value" id="adm-today">0</div><div class="stat-label">오늘 수업</div></div>
+      <div class="stat-card animate-in"><div class="stat-icon" style="color:var(--danger);">⏰</div><div class="stat-value" id="adm-ending" style="color:var(--danger);">0</div><div class="stat-label">종강 임박</div></div>
     </div>
+
+    <!-- 빠른 액션 -->
+    <div class="section" style="margin-bottom:16px;">
+      <div class="section-header"><div class="section-title">⚡ 빠른 액션</div></div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;">
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="openAddCatalog()">
+            <span style="font-size:22px;">📋</span><span style="font-size:12px;">수업 추가</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-notices')">
+            <span style="font-size:22px;">📢</span><span style="font-size:12px;">공지 등록</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-enrollments')">
+            <span style="font-size:22px;">👥</span><span style="font-size:12px;">수강 현황</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-roster')">
+            <span style="font-size:22px;">📝</span><span style="font-size:12px;">수강생 명단</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-teachers')">
+            <span style="font-size:22px;">👩‍🏫</span><span style="font-size:12px;">강사 관리</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-settings')">
+            <span style="font-size:22px;">⚙️</span><span style="font-size:12px;">설정</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 오늘의 수업 + 종강 임박 2열 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;" id="adm-two-col">
+      <div class="section">
+        <div class="section-header"><div class="section-title" id="adm-today-title">📅 오늘의 수업</div></div>
+        <div class="section-body" style="padding:0;" id="adm-today-list">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">로딩 중...</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">⏰ 종강 임박 수업</div></div>
+        <div class="section-body" style="padding:0;" id="adm-ending-list">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">로딩 중...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수업별 현황 -->
     <div class="section">
-      <div class="section-header"><div class="section-title">📋 수업별 수강 신청 현황</div></div>
+      <div class="section-header"><div class="section-title">📋 수업별 수강 현황</div></div>
       <div class="section-body"><div style="display:flex;flex-direction:column;gap:10px;" id="adminCatalogSummary"></div></div>
     </div>
   </div>
@@ -808,11 +855,23 @@ create table if not exists notices (
   content text,
   updated_at timestamptz default now()
 );
+create table if not exists enrollments (
+  id text primary key,
+  catalog_id text,
+  group_id text,
+  profile_id text,
+  profile_name text,
+  enrolled_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
 alter table catalog enable row level security;
 alter table notices enable row level security;
+alter table enrollments enable row level security;
 create policy "public read catalog" on catalog for select using (true);
 create policy "public write catalog" on catalog for all using (true);
 create policy "public read notices" on notices for select using (true);
+create policy "public write notices" on notices for all using (true);
+create policy "public write enrollments" on enrollments for all using (true);
 create policy "public write notices" on notices for all using (true);</div>
         <ol start="4" style="font-size:13px;line-height:2;color:var(--text-muted);padding-left:20px;">
           <li>좌측 메뉴 <b style="color:var(--text);">Settings → API</b> 클릭</li>
@@ -1700,14 +1759,19 @@ function renderDashboard(){
   const todayIdx=(now.getDay()+6)%7;
   const upItems=[];
   for(let d=todayIdx;d<7;d++){
-    getEnrolledForDay(d).forEach(x=>{
+    // 해당 요일의 실제 날짜 계산 (오늘 기준으로 며칠 후인지)
+    const diff=d-todayIdx;
+    const refDate=new Date(now);
+    refDate.setDate(refDate.getDate()+diff);
+    refDate.setHours(0,0,0,0);
+    getEnrolledForDay(d, refDate).forEach(x=>{
       if(d===todayIdx&&toMin(x.cat.start)<=nowMin) return;
-      upItems.push({...x,dow:d,diff:d-todayIdx});
+      upItems.push({...x,dow:d,diff});
     });
   }
   document.getElementById('upcomingList').innerHTML=upItems.length===0
     ?`<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px 0;">이번 주 남은 수업 없음</div>`
-    :upItems.slice(0,6).map(x=>`<div class="upcoming-item">
+    :upItems.slice(0,20).map(x=>`<div class="upcoming-item">
         <div class="upcoming-dot" style="background:${x.cat.color};"></div>
         <div style="flex:1;"><div class="upcoming-name">${flagInline(x.cat.subject)} ${x.cat.name}</div><div class="upcoming-time">${formatKoreanTime(x.cat.start)} · ${x.cat.teacher||''}</div></div>
         <div style="font-size:12px;color:var(--text-muted);">${x.diff===0?'오늘':DN[x.dow]+'요일'}</div>
@@ -2562,7 +2626,9 @@ function cancelById(eid){
   const cat=S.catalog.find(c=>c.id===e?.catalogId);
   if(!confirm(`"${cat?.name}" 수업을 취소하시겠습니까?`)) return;
   S.enrollments=S.enrollments.filter(x=>x.id!==eid);
-  save(); showToast('🗑️ 수강 취소 완료'); renderMyClasses(); renderSidebarKids();
+  save();
+  deleteEnrollmentFromSupa(eid).catch(()=>{});
+  showToast('🗑️ 수강 취소 완료'); renderMyClasses(); renderSidebarKids();
 }
 
 function editTime(eid){
@@ -2659,21 +2725,110 @@ function saveZoom(eid){
 
 // ═══ ADMIN RENDER ═══
 function renderAdminDashboard(){
+  const now=new Date();
+  const todayStr=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${['일','월','화','수','목','금','토'][now.getDay()]})`;
+  const dateEl=document.getElementById('adm-date');
+  if(dateEl) dateEl.textContent=todayStr;
+
+  const td=(now.getDay()+6)%7;
+  const todayStr2=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const activeCats=S.catalog.filter(c=>(!c.dateEnd||c.dateEnd>=todayStr2));
+
+  // 종강 임박 (14일 이내)
+  const endingSoon=activeCats.filter(c=>{
+    if(!c.dateEnd) return false;
+    const diff=Math.round((new Date(c.dateEnd)-now)/(1000*60*60*24));
+    return diff>=0&&diff<=14;
+  }).sort((a,b)=>a.dateEnd.localeCompare(b.dateEnd));
+
   document.getElementById('adm-catalog').textContent=S.catalog.length;
   document.getElementById('adm-enrolls').textContent=S.enrollments.length;
-  document.getElementById('adm-kids').textContent=S.enrollments.length;
-  const td=(new Date().getDay()+6)%7;
-  document.getElementById('adm-today').textContent=S.catalog.filter(c=>c.days.includes(td)).length;
-  document.getElementById('adminCatalogSummary').innerHTML=S.catalog.map(cat=>{
-    const cnt=S.enrollments.filter(e=>e.catalogId===cat.id).length;
+  document.getElementById('adm-today').textContent=activeCats.filter(c=>c.days.includes(td)).length;
+  document.getElementById('adm-ending').textContent=endingSoon.length;
+
+  // 오늘의 수업 섹션
+  const todayTitle=document.getElementById('adm-today-title');
+  const DN2=['일','월','화','수','목','금','토'];
+  if(todayTitle) todayTitle.textContent=`📅 오늘의 수업 (${DN2[now.getDay()]}요일)`;
+  const todayCats=activeCats.filter(c=>c.days.includes(td)).sort((a,b)=>(a.groups?.[0]?.start||'').localeCompare(b.groups?.[0]?.start||''));
+  const todayListEl=document.getElementById('adm-today-list');
+  if(todayListEl){
+    if(!todayCats.length){
+      todayListEl.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">오늘 진행 수업이 없습니다</div>`;
+    } else {
+      todayListEl.innerHTML=todayCats.map(cat=>{
+        const cnt=S.enrollments.filter(e=>e.catalogId===cat.id).length;
+        const timeStr=(cat.groups||[]).map(g=>formatKoreanRange(g.start,g.end)).join(' / ');
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+          <div style="width:32px;height:32px;border-radius:6px;background:${cat.color}22;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,32)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${cat.teacher||'미정'} · ${timeStr} · 수강 ${cnt}명</div>
+          </div>
+          ${cat.zoom?`<a href="${cat.zoom}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.zoom}','_blank')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(24,95,165,0.25);background:#E6F1FB;color:#0C447C;text-decoration:none;white-space:nowrap;flex-shrink:0;">🎥 줌 입장</a>`:''}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 종강 임박 섹션
+  const endingListEl=document.getElementById('adm-ending-list');
+  if(endingListEl){
+    if(!endingSoon.length){
+      endingListEl.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">14일 이내 종강 예정 수업 없음</div>`;
+    } else {
+      endingListEl.innerHTML=endingSoon.map(cat=>{
+        const diff=Math.round((new Date(cat.dateEnd)-now)/(1000*60*60*24));
+        const badgeColor=diff<=3?'var(--danger)':diff<=7?'var(--accent4)':'var(--accent3)';
+        const bgColor=diff<=3?'rgba(255,92,92,0.1)':diff<=7?'rgba(255,181,71,0.1)':'rgba(67,232,194,0.1)';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+          <div style="width:32px;height:32px;border-radius:6px;background:${cat.color}22;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,32)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${cat.teacher||'미정'} · 종강 ${cat.dateEnd}</div>
+          </div>
+          <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${bgColor};color:${badgeColor};flex-shrink:0;">D-${diff}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Supabase 수강현황 로드 (연결된 경우)
+  if(getSupaConfig().ready){
+    pullEnrollmentsFromSupa().then(rows=>{
+      if(!rows) return;
+      const supaCount=rows.length;
+      const enrollsEl=document.getElementById('adm-enrolls');
+      if(enrollsEl) enrollsEl.textContent=supaCount;
+      // 수업별 수강자 수 업데이트
+      renderAdminCatalogSummary(rows);
+    }).catch(()=>renderAdminCatalogSummary(null));
+  } else {
+    renderAdminCatalogSummary(null);
+  }
+}
+
+function renderAdminCatalogSummary(supaRows){
+  const el=document.getElementById('adminCatalogSummary');
+  if(!el) return;
+  el.innerHTML=S.catalog.map(cat=>{
+    // Supabase 데이터 있으면 그걸 쓰고, 없으면 localStorage 기준
+    const cnt=supaRows
+      ? supaRows.filter(r=>r.catalog_id===cat.id).length
+      : S.enrollments.filter(e=>e.catalogId===cat.id).length;
     const pct=cat.capacity>0?Math.round(cnt/cat.capacity*100):null;
+    // Supabase 수강생 이름 목록
+    const names=supaRows
+      ? [...new Set(supaRows.filter(r=>r.catalog_id===cat.id).map(r=>r.profile_name).filter(Boolean))]
+      : [];
     return `<div class="admin-class-card animate-in">
       <div class="admin-class-icon" style="background:${cat.color}22;overflow:hidden;padding:0;">${flagImg(cat.subject,38)}</div>
       <div class="admin-class-info">
         <div class="admin-class-name">${cat.name}</div>
         <div class="admin-class-meta">${cat.subject} · ${cat.days.map(d=>DN[d]).join('·')}요일 · ${(cat.groups||[]).map(g=>g.label+' '+formatKoreanRange(g.start,g.end)).join(' / ')} · ${cat.teacher||'미정'}${formatDateRange(cat.dateStart,cat.dateEnd)?' · 🗓 '+formatDateRange(cat.dateStart,cat.dateEnd):''}</div>
+        ${names.length?`<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">👥 ${names.join(', ')}</div>`:''}
         ${pct!==null?`<div style="margin-top:6px;background:var(--surface);border-radius:4px;overflow:hidden;height:4px;">
-          <div style="width:${pct}%;height:4px;background:${pct>=100?'var(--danger)':'var(--accent3)'};border-radius:4px;transition:width 0.6s;"></div></div>`:''}
+          <div style="width:${Math.min(pct,100)}%;height:4px;background:${pct>=100?'var(--danger)':'var(--accent3)'};border-radius:4px;transition:width 0.6s;"></div></div>`:''}
       </div>
       <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
         <div><div class="enroll-count">${cnt}${cat.capacity>0?'/'+cat.capacity:''}</div><div class="enroll-label">신청자</div></div>
@@ -5349,7 +5504,9 @@ function pickGroup(catId, groupId){
   const already=S.enrollments.find(e=>e.catalogId===catId&&e.groupId===groupId&&(e.profileId||'default')===profId);
   if(already){
     S.enrollments=S.enrollments.filter(e=>e.id!==already.id);
-    save(); showToast('☑️ 수강이 취소되었습니다');
+    save();
+    deleteEnrollmentFromSupa(already.id).catch(()=>{});
+    showToast('☑️ 수강이 취소되었습니다');
     openGroupPickModal(catId);
     renderEnroll();
     return;
@@ -5440,8 +5597,10 @@ function quickEnrollGroup(catId, groupId){
   }
   const grp=(cat.groups||[]).find(g=>g.id===groupId);
   if(!grp) return;
-  S.enrollments.push({id:uid(),catalogId:catId,groupId,profileId:profId,enrolledAt:new Date().toISOString()});
+  const newEnroll={id:uid(),catalogId:catId,groupId,profileId:profId,enrolledAt:new Date().toISOString()};
+  S.enrollments.push(newEnroll);
   save();
+  pushEnrollmentToSupa(newEnroll).catch(()=>{});
   showToast(`✅ "${cat.name}" ${grp.label} (${formatKoreanRange(grp.start,grp.end)}) 추가됐습니다!`);
   if(S.currentPage==='enroll') renderEnroll();
   else if(S.currentPage==='myclasses') renderMyClasses();
@@ -5453,6 +5612,8 @@ function quickCancelEnrollGroup(catId, groupId){
   const grp=(cat?.groups||[]).find(g=>g.id===groupId);
   if(!confirm(`"${cat?.name}" ${grp?.label||''} 수강을 취소하시겠습니까?`)) return;
   const prof=currentProfile();
+  const toDelete=S.enrollments.filter(e=>e.catalogId===catId&&e.groupId===groupId&&(e.profileId===prof?.id||(!e.profileId&&!prof)));
+  toDelete.forEach(e=>deleteEnrollmentFromSupa(e.id).catch(()=>{}));
   S.enrollments=S.enrollments.filter(e=>!(e.catalogId===catId&&e.groupId===groupId&&(e.profileId===prof?.id||(!e.profileId&&!prof))));
   save(); showToast('☑️ 수강이 취소되었습니다');
   if(S.currentPage==='enroll') renderEnroll();
@@ -5795,6 +5956,46 @@ async function deleteFromSupa(catId){
     await supaFetch(`catalog?id=eq.${catId}`, 'DELETE');
     await supaFetch(`notices?catalog_id=eq.${catId}`, 'DELETE');
   } catch(e){ console.warn('Supa delete error:',e); }
+}
+
+
+// ── Enrollment Supabase 동기화 ──
+
+// enrollment 1건 push (추가)
+async function pushEnrollmentToSupa(enrollment){
+  const cfg=getSupaConfig();
+  if(!cfg.ready) return;
+  try{
+    const row={
+      id: enrollment.id,
+      catalog_id: enrollment.catalogId,
+      group_id: enrollment.groupId||null,
+      profile_id: enrollment.profileId||'default',
+      profile_name: S.profiles.find(p=>p.id===enrollment.profileId)?.name||'수강생',
+      enrolled_at: enrollment.enrolledAt||new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    await supaFetch('enrollments','POST',[row]);
+  } catch(e){ console.warn('enrollment push error:',e); }
+}
+
+// enrollment 1건 삭제
+async function deleteEnrollmentFromSupa(enrollmentId){
+  const cfg=getSupaConfig();
+  if(!cfg.ready) return;
+  try{
+    await supaFetch(`enrollments?id=eq.${enrollmentId}`,'DELETE');
+  } catch(e){ console.warn('enrollment delete error:',e); }
+}
+
+// 전체 enrollment pull (관리자용)
+async function pullEnrollmentsFromSupa(){
+  const cfg=getSupaConfig();
+  if(!cfg.ready) return null;
+  try{
+    const rows=await supaFetch('enrollments?select=*&order=enrolled_at.desc');
+    return rows||[];
+  } catch(e){ console.warn('enrollment pull error:',e); return null; }
 }
 
 // Save config and test connection

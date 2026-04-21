@@ -1147,7 +1147,8 @@ create policy "public write notices" on notices for all using (true);</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">수강할 조를 선택하세요. 여러 조 동시 선택도 가능합니다.</div>
     <div id="groupPickList" style="display:flex;flex-direction:column;gap:8px;"></div>
     <div class="form-actions" style="margin-top:16px;">
-      <button class="btn btn-primary" onclick="closeModal('groupPickModal');renderEnroll();">완료</button>
+      <button class="btn btn-ghost" onclick="cancelGroupPick()">취소</button>
+      <button class="btn btn-primary" onclick="closeModal('groupPickModal');renderEnroll();renderMyClasses();">완료</button>
     </div>
   </div>
 </div>
@@ -1554,24 +1555,19 @@ function getGroupForEnroll(e, cat){
   // fallback: first group
   return (cat.groups||[])[0]||null;
 }
-function getEnrolledForDay(dow){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+function getEnrolledForDay(dow, refDate){
+  // refDate: 기준 날짜 (없으면 오늘) — 캘린더 날짜 클릭 시 해당 날짜 기준으로 필터
+  const base=refDate?new Date(refDate):new Date();
+  base.setHours(0,0,0,0);
+  const baseStr=`${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
   return myEnrollments().map(e=>{
     const cat=S.catalog.find(c=>c.id===e.catalogId);
-    if(!cat||!cat.days.map(Number).includes(dow)) return null;
-    // 종료일이 지난 수업 제외 (보강일 포함 실제 종강일 기준)
-    if(cat.dateEnd){
-      let effectiveEnd=cat.dateEnd;
-      const makeups=(S.makeup[cat.id]||[]).filter(m=>m&&m.date&&(!m.groupId||m.groupId===e.groupId));
-      if(makeups.length){
-        const latestMakeup=makeups.map(m=>m.date).filter(Boolean).sort().pop();
-        if(latestMakeup&&latestMakeup>effectiveEnd) effectiveEnd=latestMakeup;
-      }
-      if(effectiveEnd&&effectiveEnd<todayStr) return null;
-    }
-    // 아직 시작 안 된 수업 제외 (오늘 대시보드에 표시 안 함)
-    if(cat.dateStart && cat.dateStart > todayStr) return null;
+    if(!cat) return null;
+    // days 배열 타입 무관하게 비교 (숫자/문자열 모두 대응)
+    if(!(cat.days||[]).map(Number).includes(dow)) return null;
+    // 캘린더 셀과 동일한 기간 체크: 클릭 날짜가 수업 기간 안에 있어야 함
+    if(cat.dateEnd && baseStr > cat.dateEnd) return null;
+    if(cat.dateStart && baseStr < cat.dateStart) return null;
     const grp=getGroupForEnroll(e,cat);
     const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
     const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
@@ -2182,13 +2178,28 @@ function selectDay(year, month, day) {
 function renderDayDetail(date) {
   const dn2 = ['일','월','화','수','목','금','토'];
   const dnIdx = (date.getDay() + 6) % 7;
-  const classes = getEnrolledForDay(dnIdx).sort((a,b) => a.cat.start.localeCompare(b.cat.start));
+  const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const classes = getEnrolledForDay(dnIdx, date).sort((a,b) => a.cat.start.localeCompare(b.cat.start));
+
+  // 보강 수업 추가 (캘린더에 표시되는 것과 동일하게)
+  const makeupClasses = myEnrollments().flatMap(e=>{
+    const cat=S.catalog.find(c=>c.id===e.catalogId);
+    if(!cat) return [];
+    const makeups=getMakeupForDate(cat.id,dateStr);
+    return makeups.filter(m=>!m.groupId||m.groupId===e.groupId).map(()=>{
+      const grp=getGroupForEnroll(e,cat);
+      const startTime=grp?.start||(cat.groups||[])[0]?.start||'00:00';
+      const endTime=grp?.end||(cat.groups||[])[0]?.end||'00:00';
+      return {enroll:e, cat:{...cat,start:startTime,end:endTime}, grp, isMakeup:true};
+    });
+  });
+  const allClasses=[...classes, ...makeupClasses].sort((a,b)=>a.cat.start.localeCompare(b.cat.start));
 
   document.getElementById('dayDetailTitle').textContent =
-    `${date.getMonth()+1}월 ${date.getDate()}일 (${dn2[date.getDay()]}) · ${classes.length}개 수업`;
+    `${date.getMonth()+1}월 ${date.getDate()}일 (${dn2[date.getDay()]}) · ${allClasses.length}개 수업`;
 
   const body = document.getElementById('dayDetailBody');
-  if (!classes.length) {
+  if (!allClasses.length) {
     body.innerHTML = `<div class="empty-state" style="padding:22px 10px;">
       <div class="empty-icon">📭</div>
       <div class="empty-text">이 날 예정된 수업이 없습니다</div>
@@ -2200,9 +2211,8 @@ function renderDayDetail(date) {
   const isToday = date.toDateString() === now.toDateString();
   const nowMin = isToday ? now.getHours()*60 + now.getMinutes() : -1;
 
-  const dateStr=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 
-  body.innerHTML = classes.map(x => {
+  body.innerHTML = allClasses.map(x => {
     const sm = toMin(x.cat.start), em = toMin(x.cat.end);
     const isDone = isToday && nowMin > em;
     const isNow  = isToday && nowMin >= sm && nowMin <= em;
@@ -2212,9 +2222,10 @@ function renderDayDetail(date) {
       <div class="detail-class-dot" style="background:${x.cat.color}22;overflow:hidden;padding:0;width:51px;height:34px;border-radius:6px;">${flagImg(x.cat.subject,34)}</div>
       <div class="detail-class-info">
         <div class="detail-class-name" style="${isVac?'text-decoration:line-through;color:var(--text-muted);':''}">
-          ${x.cat.name}
+          ${x.isMakeup?'🔁 ':''}${x.cat.name}
           ${isNow&&!isVac?' <span style="font-size:9px;color:var(--accent3);font-weight:900;letter-spacing:1px;">LIVE</span>':''}
           ${isVac?' <span style="font-size:9px;color:var(--danger);font-weight:700;">🚫 휴강</span>':''}
+          ${x.isMakeup?' <span style="font-size:9px;color:var(--accent3);font-weight:700;background:rgba(67,232,194,0.12);padding:1px 6px;border-radius:10px;">보강</span>':''}
         </div>
         <div class="detail-class-meta">
           ⏰ ${formatKoreanRange(x.cat.start,x.cat.end)}
@@ -5280,6 +5291,19 @@ function changeGroup(enrollId, newGroupId){
 }
 
 
+function cancelGroupPick(){
+  // 모달 열기 전 상태로 복원
+  if(window._groupPickSnapshot){
+    S.enrollments=window._groupPickSnapshot;
+    save();
+    window._groupPickSnapshot=null;
+  }
+  closeModal('groupPickModal');
+  renderEnroll();
+  renderMyClasses();
+  showToast('↩️ 조 선택이 취소되었습니다');
+}
+
 function toggleEnrollCard(catId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
@@ -5298,6 +5322,9 @@ function openGroupPickModal(catId){
   const cat=S.catalog.find(c=>c.id===catId);
   if(!cat) return;
   const profId=S.currentProfileId||'default';
+  // 모달 열 때 현재 enrollment 스냅샷 저장 (취소 시 복원용)
+  window._groupPickSnapshot=JSON.parse(JSON.stringify(S.enrollments));
+  window._groupPickCatId=catId;
   const groups=cat.groups||[];
   const enrolled=S.enrollments.filter(e=>e.catalogId===catId&&(e.profileId||'default')===profId);
 

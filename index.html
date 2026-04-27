@@ -2814,12 +2814,17 @@ function renderAdminCalendar(){
     if(cat.dateEnd.startsWith(`${year}-${monthStr}`)){
       addEv(cat.dateEnd,{type:'end',name:cat.name,cat});
     }
-    // 휴강일 마킹 (같은 수업 여러 조 중복 제거)
+    // 휴강일 마킹 (날짜 기준 중복 제거 — groupId 무관)
     const vacDates=new Set();
-    (S.vacations[cat.id]||[]).forEach(v=>{
-      if(v.date&&v.date.startsWith(`${year}-${monthStr}`)&&!vacDates.has(v.date)){
-        vacDates.add(v.date);
-        addEv(v.date,{type:'vac',name:cat.name,cat,groupId:v.groupId});
+    (S.vacations[cat.id]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v).forEach(v=>{
+      if(!v.date) return;
+      // 날짜 정규화 (2026-4-6 → 2026-04-06)
+      const parts=v.date.split('-');
+      const normDate=`${parts[0]}-${String(parts[1]).padStart(2,'0')}-${String(parts[2]).padStart(2,'0')}`;
+      const vYear=parseInt(parts[0]), vMonth=parseInt(parts[1])-1;
+      if(vYear===year&&vMonth===month&&!vacDates.has(normDate)){
+        vacDates.add(normDate);
+        addEv(normDate,{type:'vac',name:cat.name,cat});
       }
     });
     // 수업일 마킹
@@ -2829,8 +2834,14 @@ function renderAdminCalendar(){
         if(dateStr<cat.dateStart||dateStr>cat.dateEnd) continue;
         const dow=(new Date(dateStr).getDay()+6)%7;
         if(!cat.days.map(Number).includes(dow)) continue;
-        // 휴강이면 수업일 표시 안 함
-        const isVac=(S.vacations[cat.id]||[]).some(v=>v.date===dateStr&&(!v.groupId));
+        // 휴강이면 수업일 표시 안 함 (날짜 정규화 후 체크)
+        const isVac=(S.vacations[cat.id]||[]).some(v=>{
+          const raw=typeof v==='string'?v:v.date;
+          if(!raw) return false;
+          const p=raw.split('-');
+          const norm=`${p[0]}-${String(p[1]).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`;
+          return norm===dateStr;
+        });
         if(!isVac) addEv(dateStr,{type:'class',name:cat.name,cat});
       }
     }

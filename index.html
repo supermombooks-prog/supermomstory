@@ -2815,7 +2815,7 @@ function renderAdminCalendar(){
       addEv(cat.dateEnd,{type:'end',name:cat.name,cat});
     }
     // 휴강일 마킹
-    (S.vacation[cat.id]||[]).forEach(v=>{
+    (S.vacations[cat.id]||[]).forEach(v=>{
       if(v.date&&v.date.startsWith(`${year}-${monthStr}`)){
         addEv(v.date,{type:'vac',name:cat.name,cat,groupId:v.groupId});
       }
@@ -2828,7 +2828,7 @@ function renderAdminCalendar(){
         const dow=(new Date(dateStr).getDay()+6)%7;
         if(!cat.days.map(Number).includes(dow)) continue;
         // 휴강이면 수업일 표시 안 함
-        const isVac=(S.vacation[cat.id]||[]).some(v=>v.date===dateStr&&(!v.groupId));
+        const isVac=(S.vacations[cat.id]||[]).some(v=>v.date===dateStr&&(!v.groupId));
         if(!isVac) addEv(dateStr,{type:'class',name:cat.name,cat});
       }
     }

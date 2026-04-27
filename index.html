@@ -537,6 +537,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
   <div id="adminNav" style="display:none;">
     <div class="nav-label" style="color:rgba(255,126,179,0.6);">관리자</div>
     <div class="nav-item admin-item" data-page="admin-dashboard" onclick="navigateTo('admin-dashboard')"><span class="nav-icon">📊</span>관리자 대시보드</div>
+    <div class="nav-item admin-item" data-page="admin-calendar" onclick="navigateTo('admin-calendar')"><span class="nav-icon">📅</span>관리자 캘린더</div>
     <div class="nav-item admin-item" data-page="admin-catalog" onclick="navigateTo('admin-catalog')"><span class="nav-icon">📋</span>수업 카탈로그</div>
     <div class="nav-item admin-item" data-page="admin-teachers" onclick="navigateTo('admin-teachers')"><span class="nav-icon">👩‍🏫</span>강사 관리</div>
     <div class="nav-item admin-item" data-page="admin-enrollments" onclick="navigateTo('admin-enrollments')"><span class="nav-icon">📝</span>수강 신청 현황</div>
@@ -769,6 +770,15 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
   </div>
 
   <!-- ADMIN CATALOG -->
+  <div class="page-view" id="page-admin-calendar">
+    <div class="admin-bar">🔑 관리자 모드 · 전체 수업 캘린더</div>
+    <div style="height:22px;"></div>
+    <div class="page-header">
+      <div><div class="page-title" style="color:var(--admin);">관리자 캘린더 📅</div><div class="page-sub">전체 수업 일정 · 휴강일 · 종강일 한눈에 보기</div></div>
+    </div>
+    <div id="adminCalContent"></div>
+  </div>
+
   <div class="page-view" id="page-admin-catalog">
     <div class="admin-bar">🔑 관리자 모드</div><div style="height:22px;"></div>
     <div class="page-header">
@@ -1564,7 +1574,7 @@ function navigateTo(page){
   renderPage(page); renderSidebarKids();
 }
 function renderPage(p){
-  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,history:renderHistory,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-catalog':renderAdminCatalog,'admin-enrollments':renderAdminEnrollments,'admin-notices':renderAdminNotices,'admin-roster':renderAdminRoster,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
+  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,history:renderHistory,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-calendar':renderAdminCalendar,'admin-catalog':renderAdminCatalog,'admin-enrollments':renderAdminEnrollments,'admin-notices':renderAdminNotices,'admin-roster':renderAdminRoster,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
   map[p]?.();
 }
 
@@ -2756,6 +2766,183 @@ function saveZoom(eid){
 }
 
 // ═══ ADMIN RENDER ═══
+
+// ═══ ADMIN CALENDAR ═══
+let _adminCalYear=new Date().getFullYear();
+let _adminCalMonth=new Date().getMonth();
+let _adminCalLangFilter='전체';
+let _adminCalTypeFilter={class:true,vac:true,end:true};
+let _adminCalSelectedDate=null;
+
+function renderAdminCalendar(){
+  const el=document.getElementById('adminCalContent');
+  if(!el) return;
+
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const year=_adminCalYear, month=_adminCalMonth;
+  const monthStr=String(month+1).padStart(2,'0');
+
+  // 과목 목록
+  const FIXED=['영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어'];
+  const allSubjects=[...new Set(S.catalog.map(c=>c.subject).filter(Boolean))];
+  const subjects=['전체',...FIXED.filter(s=>allSubjects.includes(s)),'기타'];
+
+  // 언어 필터 적용
+  let cats=S.catalog.filter(c=>{
+    if(_adminCalLangFilter==='전체') return true;
+    if(_adminCalLangFilter==='기타') return !FIXED.includes(c.subject);
+    return c.subject===_adminCalLangFilter;
+  });
+
+  // 달력 데이터 구성
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  const startDow=firstDay.getDay(); // 0=일
+  const totalDays=lastDay.getDate();
+
+  // 날짜별 이벤트 수집
+  const eventsMap={};
+  const addEv=(dateStr,ev)=>{
+    if(!eventsMap[dateStr]) eventsMap[dateStr]=[];
+    eventsMap[dateStr].push(ev);
+  };
+
+  cats.forEach(cat=>{
+    if(!cat.dateStart||!cat.dateEnd) return;
+    // 종강일 마킹
+    if(cat.dateEnd.startsWith(`${year}-${monthStr}`)){
+      addEv(cat.dateEnd,{type:'end',name:cat.name,cat});
+    }
+    // 휴강일 마킹
+    (S.vacation[cat.id]||[]).forEach(v=>{
+      if(v.date&&v.date.startsWith(`${year}-${monthStr}`)){
+        addEv(v.date,{type:'vac',name:cat.name,cat,groupId:v.groupId});
+      }
+    });
+    // 수업일 마킹
+    if(cat.days&&cat.days.length){
+      for(let d=1;d<=totalDays;d++){
+        const dateStr=`${year}-${monthStr}-${String(d).padStart(2,'0')}`;
+        if(dateStr<cat.dateStart||dateStr>cat.dateEnd) continue;
+        const dow=(new Date(dateStr).getDay()+6)%7;
+        if(!cat.days.map(Number).includes(dow)) continue;
+        // 휴강이면 수업일 표시 안 함
+        const isVac=(S.vacation[cat.id]||[]).some(v=>v.date===dateStr&&(!v.groupId));
+        if(!isVac) addEv(dateStr,{type:'class',name:cat.name,cat});
+      }
+    }
+  });
+
+  // 언어 필터 칩
+  const langChips=subjects.map(s=>`
+    <span onclick="_adminCalLangFilter='${s}';renderAdminCalendar();"
+      style="font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid ${_adminCalLangFilter===s?'#1A2E6B':'var(--border)'};background:${_adminCalLangFilter===s?'#1A2E6B':'var(--surface)'};color:${_adminCalLangFilter===s?'#fff':'var(--text-muted)'};cursor:pointer;">${s}</span>`).join('');
+
+  // 유형 필터 칩
+  const typeChips=[
+    {key:'class',label:'수업일',bg:'#E6F1FB',color:'#0C447C',border:'#185FA5'},
+    {key:'vac',label:'휴강일',bg:'#FCEBEB',color:'#A32D2D',border:'#A32D2D'},
+    {key:'end',label:'종강일',bg:'#FAEEDA',color:'#633806',border:'#854F0B'},
+  ].map(t=>`
+    <span onclick="_adminCalTypeFilter['${t.key}']=!_adminCalTypeFilter['${t.key}'];renderAdminCalendar();"
+      style="font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid ${_adminCalTypeFilter[t.key]?t.border:'var(--border)'};background:${_adminCalTypeFilter[t.key]?t.bg:'var(--surface)'};color:${_adminCalTypeFilter[t.key]?t.color:'var(--text-muted)'};cursor:pointer;">${t.label}</span>`).join('');
+
+  // 캘린더 셀 생성
+  const DOW_LABELS=['일','월','화','수','목','금','토'];
+  const dowRow=DOW_LABELS.map((d,i)=>`<div style="font-size:12px;font-weight:500;color:${i===0?'var(--danger)':i===6?'#378ADD':'var(--text-muted)'};text-align:center;padding:8px 0;border-bottom:0.5px solid var(--border);">${d}</div>`).join('');
+
+  let cells='';
+  // 앞 빈칸
+  for(let i=0;i<startDow;i++){
+    const prevDate=new Date(year,month,1-startDow+i);
+    cells+=`<div style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;background:var(--surface2);">
+      <div style="font-size:11px;color:var(--text-muted);">${prevDate.getDate()}</div></div>`;
+  }
+
+  for(let d=1;d<=totalDays;d++){
+    const dateStr=`${year}-${monthStr}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const isSel=dateStr===_adminCalSelectedDate;
+    const evs=(eventsMap[dateStr]||[]).filter(e=>_adminCalTypeFilter[e.type]);
+    const dow=new Date(dateStr).getDay();
+    const isWeekend=dow===0||dow===6;
+
+    cells+=`<div onclick="_adminCalSelectedDate='${dateStr}';renderAdminCalendar();"
+      style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;cursor:pointer;background:${isSel?'#E6F1FB':isToday?'#EAF3DE':'var(--bg)'};${isWeekend?'opacity:0.85;':''}">
+      <div style="font-size:11px;font-weight:${isToday?'700':'400'};color:${isToday?'#27500A':dow===0?'var(--danger)':dow===6?'#378ADD':'var(--text-muted)'};margin-bottom:3px;">${d}</div>
+      ${evs.slice(0,3).map(e=>{
+        const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'#FAEEDA';
+        const color=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#633806';
+        const label=e.type==='end'?e.name+' 종강':e.type==='vac'?e.name+' 휴강':e.name;
+        return `<div style="font-size:10px;padding:2px 4px;border-radius:3px;background:${bg};color:${color};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div>`;
+      }).join('')}
+      ${evs.length>3?`<div style="font-size:10px;color:var(--text-muted);">+${evs.length-3}개</div>`:''}
+    </div>`;
+  }
+
+  // 뒤 빈칸
+  const endDow=lastDay.getDay();
+  for(let i=1;i<7-endDow;i++){
+    cells+=`<div style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;background:var(--surface2);">
+      <div style="font-size:11px;color:var(--text-muted);">${i}</div></div>`;
+  }
+
+  // 선택 날짜 패널
+  let panelHtml='';
+  if(_adminCalSelectedDate){
+    const selEvs=(eventsMap[_adminCalSelectedDate]||[]).filter(e=>_adminCalTypeFilter[e.type]);
+    const [sy,sm,sd]=_adminCalSelectedDate.split('-');
+    const selDate=new Date(_adminCalSelectedDate);
+    const dowName=['일','월','화','수','목','금','토'][selDate.getDay()];
+    panelHtml=`<div class="section" style="margin-top:14px;">
+      <div class="section-header"><div class="section-title">${parseInt(sm)}월 ${parseInt(sd)}일 (${dowName}) 일정 · ${selEvs.length}건</div></div>
+      <div class="section-body" style="padding:0;">
+        ${selEvs.length?selEvs.map(e=>{
+          const bg=e.type==='class'?'#378ADD':e.type==='vac'?'#E24B4A':'#EF9F27';
+          const tagBg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'#FAEEDA';
+          const tagColor=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#633806';
+          const tagLabel=e.type==='class'?'수업일':e.type==='vac'?'휴강일':'종강일';
+          const grps=e.cat.groups||[];
+          const timeStr=grps.map(g=>`${g.label} ${g.start||''}~${g.end||''}`).join(' / ')||'';
+          const enrollCount=S.enrollments.filter(en=>en.catalogId===e.cat.id).length;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
+            <div style="width:4px;height:40px;border-radius:2px;background:${bg};flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${e.cat.teacher||'미정'}${timeStr?' · '+timeStr:''}${enrollCount?' · 수강 '+enrollCount+'명':''}</div>
+            </div>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${tagBg};color:${tagColor};white-space:nowrap;">${tagLabel}</span>
+          </div>`;
+        }).join(''):`<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">일정이 없습니다</div>`}
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="_adminCalMonth--;if(_adminCalMonth<0){_adminCalMonth=11;_adminCalYear--;}renderAdminCalendar();" class="btn btn-ghost btn-sm">◀</button>
+        <span style="font-size:16px;font-weight:500;color:var(--text);min-width:110px;text-align:center;">${year}년 ${month+1}월</span>
+        <button onclick="_adminCalMonth++;if(_adminCalMonth>11){_adminCalMonth=0;_adminCalYear++;}renderAdminCalendar();" class="btn btn-ghost btn-sm">▶</button>
+        <button onclick="_adminCalYear=new Date().getFullYear();_adminCalMonth=new Date().getMonth();renderAdminCalendar();" class="btn btn-ghost btn-sm" style="margin-left:4px;">오늘</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.05em;margin-bottom:5px;">언어별</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${langChips}</div>
+      <div style="font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.05em;margin-bottom:5px;">일정 유형</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${typeChips}</div>
+    </div>
+
+    <div class="section" style="overflow:hidden;">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface2);">${dowRow}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);">${cells}</div>
+    </div>
+    ${panelHtml}`;
+}
+
 function renderAdminDashboard(){
   const now=new Date();
   const todayStr=`${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${['일','월','화','수','목','금','토'][now.getDay()]})`;
@@ -3603,12 +3790,22 @@ function renderHistory(){
   const hidden=new Set(JSON.parse(localStorage.getItem('zc4_history_hidden')||'[]'));
 
   // 종강된 수업 enrollment 수집
+  const nowMin=today.getHours()*60+today.getMinutes();
   const allEnrolls=myEnrollments().filter(e=>{
     if(hidden.has(e.id)) return false;
     const cat=S.catalog.find(c=>c.id===e.catalogId);
     if(!cat) return false;
     if(!cat.dateEnd) return false;
-    return cat.dateEnd < todayStr;
+    if(cat.dateEnd < todayStr) return true; // 이미 지난 수업
+    if(cat.dateEnd === todayStr){
+      // 오늘 종강 수업은 수업 종료 시간 이후에만 표시
+      const grp=cat.groups&&cat.groups.length?cat.groups[0]:null;
+      const endTime=grp?.end||cat.end||'23:59';
+      const [eh,em]=(endTime||'23:59').split(':').map(Number);
+      const endMin=eh*60+(em||0);
+      return nowMin>=endMin;
+    }
+    return false;
   });
 
   // 프로필 탭 필터

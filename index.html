@@ -2814,9 +2814,11 @@ function renderAdminCalendar(){
     if(cat.dateEnd.startsWith(`${year}-${monthStr}`)){
       addEv(cat.dateEnd,{type:'end',name:cat.name,cat});
     }
-    // 휴강일 마킹
+    // 휴강일 마킹 (같은 수업 여러 조 중복 제거)
+    const vacDates=new Set();
     (S.vacations[cat.id]||[]).forEach(v=>{
-      if(v.date&&v.date.startsWith(`${year}-${monthStr}`)){
+      if(v.date&&v.date.startsWith(`${year}-${monthStr}`)&&!vacDates.has(v.date)){
+        vacDates.add(v.date);
         addEv(v.date,{type:'vac',name:cat.name,cat,groupId:v.groupId});
       }
     });
@@ -2856,8 +2858,8 @@ function renderAdminCalendar(){
   // 앞 빈칸
   for(let i=0;i<startDow;i++){
     const prevDate=new Date(year,month,1-startDow+i);
-    cells+=`<div style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;background:var(--surface2);">
-      <div style="font-size:11px;color:var(--text-muted);">${prevDate.getDate()}</div></div>`;
+    cells+=`<div style="min-height:90px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:6px 5px;background:var(--surface2);">
+      <div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-muted);opacity:0.5;">${prevDate.getDate()}</div></div>`;
   }
 
   for(let d=1;d<=totalDays;d++){
@@ -2868,24 +2870,30 @@ function renderAdminCalendar(){
     const dow=new Date(dateStr).getDay();
     const isWeekend=dow===0||dow===6;
 
+    const dateNumStyle=isToday
+      ?`width:24px;height:24px;border-radius:50%;background:#1A2E6B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;margin-bottom:4px;`
+      :isSel
+        ?`width:24px;height:24px;border-radius:50%;background:#378ADD;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;margin-bottom:4px;`
+        :`width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;color:${dow===0?'var(--danger)':dow===6?'#378ADD':'var(--text-muted)'};margin-bottom:4px;`;
     cells+=`<div onclick="_adminCalSelectedDate='${dateStr}';renderAdminCalendar();"
-      style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;cursor:pointer;background:${isSel?'#E6F1FB':isToday?'#EAF3DE':'var(--bg)'};${isWeekend?'opacity:0.85;':''}">
-      <div style="font-size:11px;font-weight:${isToday?'700':'400'};color:${isToday?'#27500A':dow===0?'var(--danger)':dow===6?'#378ADD':'var(--text-muted)'};margin-bottom:3px;">${d}</div>
+      style="min-height:90px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:6px 5px;cursor:pointer;${isWeekend?'opacity:0.85;':''}">
+      <div style="${dateNumStyle}">${d}</div>
       ${evs.slice(0,3).map(e=>{
-        const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'#FAEEDA';
+        const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'transparent';
         const color=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#633806';
+        const borderLeft=e.type==='end'?'border-left:3px solid #EF9F27;':'';
         const label=e.type==='end'?e.name+' 종강':e.type==='vac'?e.name+' 휴강':e.name;
-        return `<div style="font-size:10px;padding:2px 4px;border-radius:3px;background:${bg};color:${color};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div>`;
+        return `<div style="font-size:10px;padding:2px 5px;border-radius:4px;background:${bg};color:${color};${borderLeft}margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div>`;
       }).join('')}
-      ${evs.length>3?`<div style="font-size:10px;color:var(--text-muted);">+${evs.length-3}개</div>`:''}
+      ${evs.length>3?`<div style="font-size:10px;color:var(--text-muted);padding-left:4px;">+${evs.length-3}개</div>`:''}
     </div>`;
   }
 
   // 뒤 빈칸
   const endDow=lastDay.getDay();
   for(let i=1;i<7-endDow;i++){
-    cells+=`<div style="min-height:80px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;background:var(--surface2);">
-      <div style="font-size:11px;color:var(--text-muted);">${i}</div></div>`;
+    cells+=`<div style="min-height:90px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:6px 5px;background:var(--surface2);">
+      <div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-muted);opacity:0.5;">${i}</div></div>`;
   }
 
   // 선택 날짜 패널
@@ -2920,14 +2928,7 @@ function renderAdminCalendar(){
   }
 
   el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button onclick="_adminCalMonth--;if(_adminCalMonth<0){_adminCalMonth=11;_adminCalYear--;}renderAdminCalendar();" class="btn btn-ghost btn-sm">◀</button>
-        <span style="font-size:16px;font-weight:500;color:var(--text);min-width:110px;text-align:center;">${year}년 ${month+1}월</span>
-        <button onclick="_adminCalMonth++;if(_adminCalMonth>11){_adminCalMonth=0;_adminCalYear++;}renderAdminCalendar();" class="btn btn-ghost btn-sm">▶</button>
-        <button onclick="_adminCalYear=new Date().getFullYear();_adminCalMonth=new Date().getMonth();renderAdminCalendar();" class="btn btn-ghost btn-sm" style="margin-left:4px;">오늘</button>
-      </div>
-    </div>
+
 
     <div style="margin-bottom:8px;">
       <div style="font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.05em;margin-bottom:5px;">언어별</div>
@@ -2937,6 +2938,12 @@ function renderAdminCalendar(){
     </div>
 
     <div class="section" style="overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:center;padding:12px 16px;border-bottom:0.5px solid var(--border);position:relative;">
+        <button onclick="_adminCalMonth--;if(_adminCalMonth<0){_adminCalMonth=11;_adminCalYear--;}renderAdminCalendar();" class="btn btn-ghost btn-sm">◀</button>
+        <span style="font-size:16px;font-weight:500;color:var(--text);min-width:120px;text-align:center;">${year}년 ${month+1}월</span>
+        <button onclick="_adminCalMonth++;if(_adminCalMonth>11){_adminCalMonth=0;_adminCalYear++;}renderAdminCalendar();" class="btn btn-ghost btn-sm">▶</button>
+        <button onclick="_adminCalYear=new Date().getFullYear();_adminCalMonth=new Date().getMonth();renderAdminCalendar();" style="position:absolute;right:16px;font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">오늘</button>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface2);">${dowRow}</div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);">${cells}</div>
     </div>

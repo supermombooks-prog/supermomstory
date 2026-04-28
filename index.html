@@ -1075,10 +1075,11 @@ create policy "public write notices" on notices for all using (true);</div>
     </div>
     <div class="form-row">
       <label class="form-label">🚫 휴강 날짜 <span style="font-size:11px;color:var(--text-muted);">과거/미래 모두 등록 가능</span></label>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
         <input type="date" id="cat-vac-date" class="form-input" style="flex:1;">
         <button type="button" class="btn btn-admin btn-sm" onclick="addVacationFromModal()" style="white-space:nowrap;flex-shrink:0;">+ 추가</button>
       </div>
+      <input type="text" id="cat-vac-reason" class="form-input" placeholder="휴강 이유 (선택) 예) 설날 연휴, 공휴일" style="margin-bottom:8px;">
       <div style="margin-bottom:8px;">
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <button type="button" id="vac-mode-all" class="btn btn-sm btn-danger" onclick="setVacMode('all')" style="font-size:12px;">전체 조 휴강</button>
@@ -1720,7 +1721,10 @@ function renderDashboard(){
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               <div class="class-subject">${flagInline(x.cat.subject)} ${x.cat.name}</div>
               ${sessionBadge}
-              ${isVacation?`<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>`:''}
+              ${isVacation?(()=>{
+                const reason=getTodayVacationReason(x.cat.id,x.enroll?.groupId||x.grp?.id);
+                return `<span style="font-size:11px;font-weight:700;background:rgba(255,92,92,0.15);color:var(--danger);padding:2px 8px;border-radius:20px;">🚫 휴강</span>${reason?`<span style="font-size:11px;color:var(--text-muted);">· ${reason}</span>`:''}`;
+              })():''}
             ${(()=>{const mu=getTodayMakeup(x.cat.id,x.enroll.groupId);return mu.length?`<span style="font-size:11px;font-weight:700;background:rgba(67,232,194,0.15);color:var(--accent3);padding:2px 10px;border-radius:20px;border:1px solid rgba(67,232,194,0.3);">🔁 보강수업${mu[0].reason?' · '+mu[0].reason:''}</span>`:'';})()}
             </div>
             <div class="class-meta">
@@ -2824,7 +2828,7 @@ function renderAdminCalendar(){
       const vYear=parseInt(parts[0]), vMonth=parseInt(parts[1])-1;
       if(vYear===year&&vMonth===month&&!vacDates.has(normDate)){
         vacDates.add(normDate);
-        addEv(normDate,{type:'vac',name:cat.name,cat});
+        addEv(normDate,{type:'vac',name:cat.name,cat,reason:v.reason||''});
       }
     });
     // 수업일 마킹
@@ -2930,6 +2934,7 @@ function renderAdminCalendar(){
             <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.name}</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${e.cat.teacher||'미정'}${timeStr?' · '+timeStr:''}${enrollCount?' · 수강 '+enrollCount+'명':''}</div>
+            ${e.type==='vac'&&e.reason?`<div style="font-size:11px;color:var(--text-muted);margin-top:3px;">💬 ${e.reason}</div>`:''}
             </div>
             <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${tagBg};color:${tagColor};white-space:nowrap;">${tagLabel}</span>
           </div>`;
@@ -3562,18 +3567,21 @@ function addVacationFromModal(){
   const input=document.getElementById('cat-vac-date');
   if(!input||!input.value){showToast('⚠️ 날짜를 선택해주세요');return;}
   if(_vacMode==='some'&&!_vacGroupIds.length){showToast('⚠️ 조를 한 개 이상 선택해주세요');return;}
+  const reasonInput=document.getElementById('cat-vac-reason');
+  const reason=(reasonInput?.value||'').trim();
   if(_vacMode==='all'){
     if(!_modalVacDates.find(v=>v.date===input.value&&v.groupId===null)){
-      _modalVacDates.push({date:input.value,groupId:null});
+      _modalVacDates.push({date:input.value,groupId:null,reason});
     }
   } else {
     _vacGroupIds.forEach(gid=>{
       if(!_modalVacDates.find(v=>v.date===input.value&&v.groupId===gid)){
-        _modalVacDates.push({date:input.value,groupId:gid});
+        _modalVacDates.push({date:input.value,groupId:gid,reason});
       }
     });
   }
   input.value='';
+  if(reasonInput) reasonInput.value='';
   renderModalVacList();
 }
 
@@ -5514,6 +5522,7 @@ function renderAdminNotices(){
             </div>
           </div>
           <input type="date" id="vac-date-${cat.id}" class="form-input" style="font-size:12px;padding:6px 10px;flex:1;min-width:130px;">
+          <input type="text" id="vac-reason-${cat.id}" class="form-input" placeholder="이유(선택)" style="font-size:12px;padding:6px 10px;flex:1;min-width:100px;">
           <button class="btn btn-admin btn-sm" onclick="addVacation('${cat.id}')">+ 추가</button>
         </div>
         ${upcoming.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">
@@ -6804,6 +6813,19 @@ function calcSessionNumber(cat, targetDate, groupId){
   return count>0?count:null;
 }
 
+function getTodayVacationReason(catId, groupId){
+  const d=new Date();
+  const today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const vac=(S.vacations[catId]||[]).find(v=>{
+    const vObj=typeof v==='string'?{date:v,groupId:null,reason:''}:v;
+    if(vObj.date!==today) return false;
+    if(vObj.groupId===null||vObj.groupId===undefined) return true;
+    if(groupId&&vObj.groupId===groupId) return true;
+    return false;
+  });
+  return vac?.reason||'';
+}
+
 function isTodayVacation(catId, groupId){
   const d=new Date();
   const today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -6816,13 +6838,13 @@ function isTodayVacation(catId, groupId){
   });
 }
 
-function addVacationDate(catId, dateStr, groupId=null){
+function addVacationDate(catId, dateStr, groupId=null, reason=''){
   if(!S.vacations[catId]) S.vacations[catId]=[];
   // 마이그레이션: 기존 문자열 배열 변환
-  S.vacations[catId]=S.vacations[catId].map(v=>typeof v==='string'?{date:v,groupId:null}:v);
+  S.vacations[catId]=S.vacations[catId].map(v=>typeof v==='string'?{date:v,groupId:null,reason:''}:v);
   const exists=S.vacations[catId].find(v=>v.date===dateStr&&(v.groupId||null)===(groupId||null));
   if(!exists){
-    S.vacations[catId].push({date:dateStr,groupId:groupId||null});
+    S.vacations[catId].push({date:dateStr,groupId:groupId||null,reason:reason||''});
     S.vacations[catId].sort((a,b)=>a.date.localeCompare(b.date));
   }
   save();
@@ -6923,11 +6945,14 @@ function addVacation(catId){
   const allCb=document.getElementById(`vac-all-${catId}`);
   const grpCbs=[...document.querySelectorAll(`.vac-grp-cb-${catId}:checked`)];
   if(!allCb?.checked && !grpCbs.length){showToast('⚠️ 전체 조 또는 특정 조를 선택해주세요');return;}
+  const reasonEl=document.getElementById(`vac-reason-${catId}`);
+  const reason=(reasonEl?.value||'').trim();
   if(allCb?.checked){
-    addVacationDate(catId,dateStr,null);
+    addVacationDate(catId,dateStr,null,reason);
   } else {
-    grpCbs.forEach(cb=>addVacationDate(catId,dateStr,cb.value));
+    grpCbs.forEach(cb=>addVacationDate(catId,dateStr,cb.value,reason));
   }
+  if(reasonEl) reasonEl.value='';
   input.value='';
   renderAdminNotices();
   showToast(`🚫 ${dateStr} 휴강 등록됐습니다`);

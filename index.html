@@ -2894,9 +2894,9 @@ function renderAdminCalendar(){
       style="min-height:90px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:6px 5px;cursor:pointer;${isWeekend?'opacity:0.85;':''}">
       <div style="${dateNumStyle}">${d}</div>
       ${evs.slice(0,3).map(e=>{
-        const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'transparent';
-        const color=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#633806';
-        const borderLeft=e.type==='end'?'border-left:3px solid #EF9F27;':'';
+        const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'#FFF3CD';
+        const color=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#7A4400';
+        const borderLeft='';
         const label=e.type==='end'?e.name+' 종강':e.type==='vac'?e.name+' 휴강':e.name;
         return `<div style="font-size:10px;padding:2px 5px;border-radius:4px;background:${bg};color:${color};${borderLeft}margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div>`;
       }).join('')}

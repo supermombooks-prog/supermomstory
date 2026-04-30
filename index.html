@@ -1593,6 +1593,7 @@ function checkAdminPw(){
 function cancelAdminLogin(){document.getElementById('adminLogin').style.display='none';}
 function enterAdmin(){
   S.isAdmin=true;
+  sessionStorage.setItem('adminMode','1');
   document.getElementById('adminLogin').style.display='none';
   document.getElementById('modeBadge').className='mode-badge admin';
   document.getElementById('modeBadge').textContent='🔑 관리자 모드';
@@ -1603,6 +1604,7 @@ function enterAdmin(){
 }
 function exitAdmin(){
   S.isAdmin=false;
+  sessionStorage.removeItem('adminMode');
   document.getElementById('modeBadge').className='mode-badge user';
   document.getElementById('modeBadge').textContent='👤 일반 모드';
   document.getElementById('adminNav').style.display='none';
@@ -2137,7 +2139,7 @@ function quickDeleteEnroll(catId){
 // ═══ MONTHLY CALENDAR ═══
 let selectedDate = null;
 
-// 한국 공휴일 데이터 (고정 공휴일 + 설/추석은 연도별)
+// 한국 공휴일 데이터 (고정 공휴일 + 설/추석 + 대체휴무)
 function getKoreanHolidays(year){
   const fixed={
     '01-01':'신정',
@@ -2149,17 +2151,26 @@ function getKoreanHolidays(year){
     '10-09':'한글날',
     '12-25':'크리스마스',
   };
-  // 음력 공휴일 (양력 환산 - 주요 연도)
+  // 음력 공휴일 (양력 환산)
   const lunar={
-    2024:{'02-09':'설날전날','02-10':'설날','02-11':'설날다음날','05-15':'부처님오신날','09-16':'추석전날','09-17':'추석','09-18':'추석다음날'},
-    2025:{'01-28':'설날전날','01-29':'설날','01-30':'설날다음날','05-05':'부처님오신날','10-05':'추석전날','10-06':'추석','10-07':'추석다음날'},
-    2026:{'02-16':'설날전날','02-17':'설날','02-18':'설날다음날','05-24':'부처님오신날','09-24':'추석전날','09-25':'추석','09-26':'추석다음날'},
-    2027:{'02-05':'설날전날','02-06':'설날','02-07':'설날다음날','05-13':'부처님오신날','09-14':'추석전날','09-15':'추석','09-16':'추석다음날'},
+    2024:{'02-09':'설날 전날','02-10':'설날','02-11':'설날 다음날','05-15':'부처님오신날','09-16':'추석 전날','09-17':'추석','09-18':'추석 다음날'},
+    2025:{'01-28':'설날 전날','01-29':'설날','01-30':'설날 다음날','05-05':'부처님오신날','10-05':'추석 전날','10-06':'추석','10-07':'추석 다음날'},
+    2026:{'02-16':'설날 전날','02-17':'설날','02-18':'설날 다음날','05-24':'부처님오신날','09-24':'추석 전날','09-25':'추석','09-26':'추석 다음날'},
+    2027:{'02-05':'설날 전날','02-06':'설날','02-07':'설날 다음날','05-13':'부처님오신날','09-14':'추석 전날','09-15':'추석','09-16':'추석 다음날'},
+  };
+  // 연도별 대체휴무 (공휴일이 일요일/토요일 겹칠 때)
+  const substitute={
+    2024:{'01-01':'대체휴무(신정)','04-22':'대체휴무(과학의날)'},
+    2025:{'03-03':'대체휴무(삼일절)','05-06':'대체휴무(어린이날)','10-08':'대체휴무(추석)'},
+    2026:{'02-19':'대체휴무(설날)','03-02':'대체휴무(삼일절)','08-17':'대체휴무(광복절)','10-05':'대체휴무(개천절)'},
+    2027:{'03-01':'대체휴무','05-03':'대체휴무(어린이날)'},
   };
   const result={};
   Object.entries(fixed).forEach(([md,name])=>result[`${year}-${md}`]=name);
   const ly=lunar[year]||{};
   Object.entries(ly).forEach(([md,name])=>result[`${year}-${md}`]=name);
+  const sub=substitute[year]||{};
+  Object.entries(sub).forEach(([md,name])=>result[`${year}-${md}`]=name);
   return result;
 }
 
@@ -2804,6 +2815,7 @@ function renderAdminCalendar(){
   const lastDay=new Date(year,month+1,0);
   const startDow=firstDay.getDay(); // 0=일
   const totalDays=lastDay.getDate();
+  const holidays=getKoreanHolidays(year);
 
   // 날짜별 이벤트 수집
   const eventsMap={};
@@ -2893,6 +2905,7 @@ function renderAdminCalendar(){
     cells+=`<div onclick="_adminCalSelectedDate='${dateStr}';renderAdminCalendar();"
       style="min-height:115px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:6px 5px;cursor:pointer;${isWeekend?'opacity:0.85;':''}">
       <div style="${dateNumStyle}">${d}</div>
+      ${holidays[dateStr]?`<div style="font-size:9px;color:#ef4444;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 1px;margin-bottom:2px;">${holidays[dateStr]}</div>`:''}
       ${evs.slice(0,5).map(e=>{
         const bg=e.type==='class'?'#E6F1FB':e.type==='vac'?'#FCEBEB':'#FFF3CD';
         const color=e.type==='class'?'#0C447C':e.type==='vac'?'#A32D2D':'#7A4400';
@@ -7764,6 +7777,17 @@ navigateTo=function(page){
 };
 load();
 cleanOldHomework();
+
+// 새로고침 후 관리자 모드 복원
+if(sessionStorage.getItem('adminMode')==='1'){
+  S.isAdmin=true;
+  document.getElementById('adminLogin').style.display='none';
+  document.getElementById('modeBadge').className='mode-badge admin';
+  document.getElementById('modeBadge').textContent='🔑 관리자 모드';
+  document.getElementById('adminNav').style.display='block';
+  document.getElementById('userNav').style.display='none';
+  navigateTo('admin-dashboard');
+}
 
 // ── 테마 전환 ──
 function toggleTheme(){

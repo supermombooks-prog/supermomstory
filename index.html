@@ -2072,7 +2072,7 @@ function toggleRecruitStatus(catId){
   if(!cat) return;
   cat.closed=!cat.closed;
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast(cat.closed?'🔒 모집완료로 변경됐습니다':'🟢 모집중으로 변경됐습니다');
   renderAdminCatalog();
 }
@@ -3006,7 +3006,7 @@ function saveAdminCalVacReason(catId, dateStr){
     return vObj;
   });
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast('✅ 휴강 이유가 저장됐습니다');
   renderAdminCalendar();
 }
@@ -3019,7 +3019,7 @@ function deleteAdminCalVac(catId, dateStr){
     return vObj.date!==dateStr;
   });
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast('🗑️ 휴강이 삭제됐습니다');
   renderAdminCalendar();
 }
@@ -3056,16 +3056,35 @@ function renderAdminDashboard(){
     if(!todayCats.length){
       todayListEl.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">오늘 진행 수업이 없습니다</div>`;
     } else {
+      const todayStr2=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
       todayListEl.innerHTML=todayCats.map(cat=>{
-        const cnt=S.enrollments.filter(e=>e.catalogId===cat.id).length;
-        const timeStr=(cat.groups||[]).map(g=>formatKoreanRange(g.start,g.end)).join(' / ');
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);">
-          <div style="width:32px;height:32px;border-radius:6px;background:${cat.color}22;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,32)}</div>
+        const sessionNum=calcSessionNumber(cat,new Date())||'?';
+        const isVac=(S.vacations[cat.id]||[]).some(v=>{
+          const raw=typeof v==='string'?v:v.date;
+          if(!raw) return false;
+          const p=raw.split('-');
+          return `${p[0]}-${String(p[1]).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`===todayStr2;
+        });
+        const isEnd=cat.dateEnd===todayStr2;
+        const nameColor=isVac?'var(--danger)':isEnd?'#7A4400':'var(--text)';
+        const rowBg=isVac?'background:#fff8f8;':isEnd?'background:#FFFBF0;':'';
+        const statusTag=isVac
+          ?`<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;white-space:nowrap;">🚫 휴강</span>`
+          :isEnd
+            ?`<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:#FFF3CD;color:#7A4400;font-weight:500;white-space:nowrap;">🏁 종강일</span>`
+            :'';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:0.5px solid var(--border);${rowBg}">
+          <div style="width:36px;height:24px;border-radius:4px;background:${cat.color}22;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,24)}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${cat.teacher||'미정'} · ${timeStr} · 수강 ${cnt}명</div>
+            <div style="font-size:13px;font-weight:500;color:${nameColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span>👩‍🏫 ${cat.teacher||'미정'}</span>
+              <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:#E6F1FB;color:#0C447C;white-space:nowrap;">${cat.subject}</span>
+              <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--surface2);color:var(--text-muted);white-space:nowrap;">${sessionNum}회차</span>
+              ${statusTag}
+            </div>
           </div>
-          ${cat.zoom?`<a href="${cat.zoom}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.zoom}','_blank')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(24,95,165,0.25);background:#E6F1FB;color:#0C447C;text-decoration:none;white-space:nowrap;flex-shrink:0;">🎥 줌 입장</a>`:''}
+          ${!isVac&&cat.zoom?`<a href="${cat.zoom}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.zoom}','_blank')" style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(24,95,165,0.25);background:#E6F1FB;color:#0C447C;text-decoration:none;white-space:nowrap;flex-shrink:0;">🎥 줌 입장</a>`:''}
         </div>`;
       }).join('');
     }
@@ -3287,7 +3306,7 @@ function bulkCloseAll(){
     if(!cat.closed&&!(cat.dateStart&&new Date(cat.dateStart)<=today2)) cat.closed=true;
   });
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast('🔒 전체 마감 처리됐습니다');
   renderAdminCatalog();
 }
@@ -3709,7 +3728,7 @@ function addMakeup(catId){
   if(!addedCount){showToast('⚠️ 선택한 조는 이미 모두 등록됐습니다');return;}
   S.makeup[catId].sort((a,b)=>a.date.localeCompare(b.date));
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   dateEl.value=''; if(reasonEl) reasonEl.value='';
   // 체크박스 초기화
   document.getElementById(`makeup-grp-all-${catId}`)&&(document.getElementById(`makeup-grp-all-${catId}`).checked=false);
@@ -3726,7 +3745,7 @@ function removeMakeup(catId, idx){
   if(!S.makeup[catId]) return;
   S.makeup[catId].splice(idx,1);
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   renderAdminNotices();
   showToast('✅ 보강이 삭제됐습니다');
 }
@@ -3824,10 +3843,8 @@ function saveCatalog(){
     showToast('✅ 수업이 등록되었습니다');
   }
   save();
-  // Push to Supabase if connected
-  if(getSupaConfig().ready){
-    pushCatalogToSupa().catch(()=>{});
-  }
+  // Push to Supabase if connected (디바운싱)
+  debouncedPushCatalog();
   closeModal('catalogModal'); renderPage(S.currentPage);
 }
 function deleteCatalog(id){
@@ -5665,14 +5682,14 @@ function saveAdminHw(catId){
   if(val) S.adminHomework[catId]={text:val,expiresAt:exp};
   else delete S.adminHomework[catId];
   localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast(val?`📝 숙제가 등록됐습니다${exp?' ('+exp+' 만료)':''}`:'🗑️ 숙제가 삭제됐습니다');
   renderAdminNotices();
 }
 function clearAdminHw(catId){
   delete S.adminHomework[catId];
   localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast('🗑️ 숙제가 삭제됐습니다');
   renderAdminNotices();
 }
@@ -6485,6 +6502,17 @@ async function pullEnrollmentsFromSupa(){
   } catch(e){ console.warn('enrollment pull error:',e); return null; }
 }
 
+// ── Supabase 디바운싱 ──
+// 연속 호출을 3초로 묶어서 IO 부하 감소
+let _supaDebounceTimer=null;
+function debouncedPushCatalog(){
+  if(_supaDebounceTimer) clearTimeout(_supaDebounceTimer);
+  _supaDebounceTimer=setTimeout(()=>{
+    _supaDebounceTimer=null;
+    debouncedPushCatalog();
+  },3000);
+}
+
 // Save config and test connection
 async function saveSupaConfig(){
   const url=document.getElementById('supa-url').value.trim().replace(/\/$/,'');
@@ -6814,7 +6842,7 @@ function copyCatalog(id){
   };
   S.catalog.push(newCat);
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   showToast(`📋 "${newName}"으로 복사됐습니다! 날짜를 수정해주세요.`);
   renderPage(S.currentPage);
 }
@@ -6906,14 +6934,14 @@ function addVacationDate(catId, dateStr, groupId=null, reason=''){
     S.vacations[catId].sort((a,b)=>a.date.localeCompare(b.date));
   }
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
 }
 function removeVacationDate(catId, dateStr, groupId=null){
   if(!S.vacations[catId]) return;
   S.vacations[catId]=S.vacations[catId].map(v=>typeof v==='string'?{date:v,groupId:null}:v);
   S.vacations[catId]=S.vacations[catId].filter(v=>!(v.date===dateStr&&(v.groupId||null)===(groupId||null)));
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
 }
 // 조 선택 상태 저장 (렌더링 후 복원용)
 const _grpDdState={};  // {catId: {vac:{all,groups}, mk:{all,groups}}}
@@ -7108,7 +7136,7 @@ function saveEndDate(catId){
   if(!cat) return;
   cat.dateEnd=input.value;
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   input.style.borderColor='';
   renderAdminNotices();
   showToast(`✅ 종강일이 ${input.value}로 저장됐습니다`);
@@ -7747,7 +7775,7 @@ function saveTeacher(){
     showToast(`✅ ${name} 강사가 등록됐습니다!`);
   }
   save();
-  if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+  debouncedPushCatalog();
   closeModal('teacherModal');
   renderPage(S.currentPage);
 }

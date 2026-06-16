@@ -6509,7 +6509,7 @@ function debouncedPushCatalog(){
   if(_supaDebounceTimer) clearTimeout(_supaDebounceTimer);
   _supaDebounceTimer=setTimeout(()=>{
     _supaDebounceTimer=null;
-    debouncedPushCatalog();
+    if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
   },3000);
 }
 

@@ -219,8 +219,10 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 
 /* TABLE */
 .data-table{width:100%;border-collapse:collapse;}
-.data-table th{text-align:left;padding:10px 16px;font-size:13px;font-weight:700;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);}
-.data-table td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.data-table th{text-align:left;padding:10px 16px;font-size:13px;font-weight:700;letter-spacing:0.5px;color:var(--text-muted);text-transform:uppercase;border-bottom:1px solid var(--border);border-right:0.5px solid var(--border);}
+.data-table th:last-child{border-right:none;}
+.data-table td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--border);border-right:0.5px solid var(--border);vertical-align:middle;}
+.data-table td:last-child{border-right:none;}
 .data-table tr:last-child td{border-bottom:none;}
 .data-table tr:hover td{background:rgba(255,255,255,0.02);}
 
@@ -6507,9 +6509,17 @@ async function pullEnrollmentsFromSupa(){
 let _supaDebounceTimer=null;
 function debouncedPushCatalog(){
   if(_supaDebounceTimer) clearTimeout(_supaDebounceTimer);
-  _supaDebounceTimer=setTimeout(()=>{
+  _supaDebounceTimer=setTimeout(async ()=>{
     _supaDebounceTimer=null;
-    if(getSupaConfig().ready) pushCatalogToSupa().catch(()=>{});
+    const cfg=getSupaConfig();
+    if(!cfg.ready) return;
+    try{
+      const rows=S.catalog.map(cat=>({id:cat.id,data:cat,updated_at:new Date().toISOString()}));
+      if(S.teachers.length) rows.push({id:'__teachers__',data:{teachers:S.teachers,vacations:S.vacations,makeup:S.makeup,adminHomework:S.adminHomework},updated_at:new Date().toISOString()});
+      await supaFetch('catalog','POST',rows);
+      const noticeRows=Object.entries(S.notices).map(([k,v])=>({catalog_id:k,content:v,updated_at:new Date().toISOString()}));
+      if(noticeRows.length) await supaFetch('notices','POST',noticeRows);
+    } catch(e){ console.warn('auto-push error:',e); }
   },3000);
 }
 

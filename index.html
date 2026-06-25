@@ -542,9 +542,9 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
     <div class="nav-item admin-item" data-page="admin-calendar" onclick="navigateTo('admin-calendar')"><span class="nav-icon">📅</span>관리자 캘린더</div>
     <div class="nav-item admin-item" data-page="admin-catalog" onclick="navigateTo('admin-catalog')"><span class="nav-icon">📋</span>수업 카탈로그</div>
     <div class="nav-item admin-item" data-page="admin-teachers" onclick="navigateTo('admin-teachers')"><span class="nav-icon">👩‍🏫</span>강사 관리</div>
-
+    <div class="nav-item admin-item" data-page="admin-enrollments" onclick="navigateTo('admin-enrollments')"><span class="nav-icon">📝</span>수강 신청 현황</div>
     <div class="nav-item admin-item" data-page="admin-notices" onclick="navigateTo('admin-notices')"><span class="nav-icon">📢</span>수업별 공지사항</div>
-
+    <div class="nav-item admin-item" data-page="admin-roster" onclick="navigateTo('admin-roster')"><span class="nav-icon">👥</span>수강생 명단</div>
     <div class="nav-item admin-item" data-page="admin-settings" onclick="navigateTo('admin-settings')"><span class="nav-icon">⚙️</span>Supabase 연동</div>
   </div>
 
@@ -732,8 +732,12 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
           <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-notices')">
             <span style="font-size:22px;">📢</span><span style="font-size:12px;">공지 등록</span>
           </button>
-
-
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-enrollments')">
+            <span style="font-size:22px;">👥</span><span style="font-size:12px;">수강 현황</span>
+          </button>
+          <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-roster')">
+            <span style="font-size:22px;">📝</span><span style="font-size:12px;">수강생 명단</span>
+          </button>
           <button class="btn btn-ghost" style="flex-direction:column;gap:6px;padding:14px 10px;height:auto;" onclick="navigateTo('admin-teachers')">
             <span style="font-size:22px;">👩‍🏫</span><span style="font-size:12px;">강사 관리</span>
           </button>
@@ -1573,7 +1577,7 @@ function navigateTo(page){
   renderPage(page); renderSidebarKids();
 }
 function renderPage(p){
-  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,history:renderHistory,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-calendar':renderAdminCalendar,'admin-catalog':renderAdminCatalog,'admin-notices':renderAdminNotices,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
+  const map={dashboard:renderDashboard,enroll:renderEnroll,schedule:renderMonthlyCal,myclasses:renderMyClasses,history:renderHistory,print:renderPrint,'admin-dashboard':renderAdminDashboard,'admin-calendar':renderAdminCalendar,'admin-catalog':renderAdminCatalog,'admin-enrollments':renderAdminEnrollments,'admin-notices':renderAdminNotices,'admin-roster':renderAdminRoster,'admin-settings':renderAdminSettings,'teachers':renderTeachers,'admin-teachers':renderAdminTeachers};
   map[p]?.();
 }
 
@@ -3030,7 +3034,7 @@ function renderAdminDashboard(){
 
   const td=(now.getDay()+6)%7;
   const todayStr2=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const activeCats=S.catalog.filter(c=>(!c.dateEnd||c.dateEnd>=todayStr2));
+  const activeCats=S.catalog.filter(c=>(!c.dateEnd||c.dateEnd>=todayStr2)&&(!c.dateStart||c.dateStart<=todayStr2));
 
   // 종강 임박 (14일 이내)
   const endingSoon=activeCats.filter(c=>{

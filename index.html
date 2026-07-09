@@ -2832,18 +2832,30 @@ function renderAdminCalendar(){
     if(cat.dateEnd.startsWith(`${year}-${monthStr}`)){
       addEv(cat.dateEnd,{type:'end',name:cat.name,cat});
     }
-    // 휴강일 마킹 (날짜 기준 중복 제거 — groupId 무관)
+    // 휴강일 마킹 — 전체조/특정조 구분
     const vacDates=new Set();
+    const vacDateGroups={}; // 날짜별 휴강 조 목록
     (S.vacations[cat.id]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v).forEach(v=>{
       if(!v.date) return;
-      // 날짜 정규화 (2026-4-6 → 2026-04-06)
       const parts=v.date.split('-');
       const normDate=`${parts[0]}-${String(parts[1]).padStart(2,'0')}-${String(parts[2]).padStart(2,'0')}`;
       const vYear=parseInt(parts[0]), vMonth=parseInt(parts[1])-1;
-      if(vYear===year&&vMonth===month&&!vacDates.has(normDate)){
-        vacDates.add(normDate);
-        addEv(normDate,{type:'vac',name:cat.name,cat,reason:v.reason||''});
+      if(vYear===year&&vMonth===month){
+        if(!vacDateGroups[normDate]) vacDateGroups[normDate]=[];
+        vacDateGroups[normDate].push(v.groupId);
       }
+    });
+    Object.entries(vacDateGroups).forEach(([normDate, groupIds])=>{
+      if(vacDates.has(normDate)) return;
+      vacDates.add(normDate);
+      const totalGroups=(cat.groups||[]).length;
+      const isAllVac=groupIds.includes(null)||groupIds.length===0||(totalGroups>0&&groupIds.length>=totalGroups);
+      const vacGroups=isAllVac?null:groupIds.map(gid=>{
+        const g=(cat.groups||[]).find(g=>g.id===gid);
+        return g?g.label:gid;
+      }).filter(Boolean);
+      const vacLabel=isAllVac?cat.name:cat.name+(vacGroups&&vacGroups.length?` (${vacGroups.join('·')}조)`:'');
+      addEv(normDate,{type:'vac',name:vacLabel,cat,reason:''});
     });
     // 수업일 마킹
     if(cat.days&&cat.days.length){

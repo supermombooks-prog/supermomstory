@@ -604,6 +604,8 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
           style="padding:7px 16px;font-size:13px;cursor:pointer;background:var(--accent);color:#fff;transition:all .15s;">🌐 언어별</span>
         <span id="enrollModeBtn-day" onclick="setEnrollMode('day')"
           style="padding:7px 16px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--text-muted);border-left:0.5px solid var(--border);transition:all .15s;">📅 요일별</span>
+        <span id="enrollModeBtn-cal" onclick="setEnrollMode('cal')"
+          style="padding:7px 16px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--text-muted);border-left:0.5px solid var(--border);transition:all .15s;">🗓 캘린더</span>
       </div>
     </div>
     <div class="filter-bar" id="enrollFilterBar">
@@ -1841,13 +1843,188 @@ function setEnrollMode(mode){
   // 세그먼트 버튼 스타일 업데이트
   const langBtn=document.getElementById('enrollModeBtn-lang');
   const dayBtn=document.getElementById('enrollModeBtn-day');
+  const calBtn=document.getElementById('enrollModeBtn-cal');
   if(langBtn&&dayBtn){
     langBtn.style.background=mode==='lang'?'var(--accent)':'var(--surface)';
     langBtn.style.color=mode==='lang'?'#fff':'var(--text-muted)';
     dayBtn.style.background=mode==='day'?'var(--accent)':'var(--surface)';
     dayBtn.style.color=mode==='day'?'#fff':'var(--text-muted)';
+    if(calBtn){
+      calBtn.style.background=mode==='cal'?'var(--accent)':'var(--surface)';
+      calBtn.style.color=mode==='cal'?'#fff':'var(--text-muted)';
+    }
   }
   renderEnroll();
+}
+
+let _enrollCalYear=new Date().getFullYear();
+let _enrollCalMonth=new Date().getMonth();
+let _enrollCalSelDate=null;
+let _enrollCalLang='전체';
+
+function goToCatFromCal(catId){
+  const cat=S.catalog.find(c=>c.id===catId);
+  if(!cat) return;
+  setEnrollMode('lang');
+  setTimeout(()=>{
+    const search=document.getElementById('enrollSearch');
+    if(search){search.value=cat.name;renderEnroll();}
+  },50);
+}
+
+function renderEnrollCalendar(){
+  const grid=document.getElementById('enrollCatalogGrid');
+  if(!grid) return;
+  const today=new Date();
+  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const year=_enrollCalYear, month=_enrollCalMonth;
+  const monthStr=String(month+1).padStart(2,'0');
+  const FIXED=['영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어'];
+  const isEndedCal=(cat)=>cat.dateEnd&&cat.dateEnd<todayStr;
+
+  // 언어 필터
+  let cats=S.catalog.filter(c=>!isEndedCal(c));
+  if(_enrollCalLang==='기타') cats=cats.filter(c=>!FIXED.includes(c.subject));
+  else if(_enrollCalLang!=='전체') cats=cats.filter(c=>c.subject===_enrollCalLang);
+
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  const startDow=firstDay.getDay();
+  const totalDays=lastDay.getDate();
+  const holidays=getKoreanHolidays(year);
+
+  // 날짜별 수업 수집 (수업일/휴강일/보강일 구분)
+  const evMap={};
+  const addEvt=(dateStr,cat,type)=>{
+    if(!evMap[dateStr]) evMap[dateStr]=[];
+    evMap[dateStr].push({cat,type});
+  };
+  cats.forEach(cat=>{
+    if(!cat.dateStart||!cat.dateEnd) return;
+    // 수업일 + 휴강일
+    if(cat.days&&cat.days.length){
+      for(let d=1;d<=totalDays;d++){
+        const dateStr=`${year}-${monthStr}-${String(d).padStart(2,'0')}`;
+        if(dateStr<cat.dateStart||dateStr>cat.dateEnd) continue;
+        const dow=(new Date(dateStr).getDay()+6)%7;
+        if(!cat.days.map(Number).includes(dow)) continue;
+        const isVac=(S.vacations[cat.id]||[]).some(v=>{
+          const raw=typeof v==='string'?v:v.date;
+          if(!raw) return false;
+          const p=raw.split('-');
+          return `${p[0]}-${String(p[1]).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`===dateStr;
+        });
+        addEvt(dateStr,cat,isVac?'vac':'class');
+      }
+    }
+    // 보강일
+    (S.makeup[cat.id]||[]).forEach(m=>{
+      if(!m.date) return;
+      const p=m.date.split('-');
+      const norm=`${p[0]}-${String(p[1]).padStart(2,'0')}-${String(p[2]).padStart(2,'0')}`;
+      if(norm.startsWith(`${year}-${monthStr}`)&&!(evMap[norm]||[]).some(e=>e.cat.id===cat.id&&e.type==='makeup')){
+        addEvt(norm,cat,'makeup');
+      }
+    });
+  });
+  // 시간순 정렬
+  Object.values(evMap).forEach(l=>l.sort((a,b)=>((a.cat.groups?.[0]?.start)||'').localeCompare((b.cat.groups?.[0]?.start)||'')));
+
+  // 언어 필터 칩
+  const langs=['전체',...FIXED.filter(s=>S.catalog.some(c=>!isEndedCal(c)&&c.subject===s)),'기타'];
+  const langChips=langs.map(s=>`
+    <span onclick="_enrollCalLang='${s}';renderEnrollCalendar();"
+      style="font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid ${_enrollCalLang===s?'var(--accent)':'var(--border)'};background:${_enrollCalLang===s?'var(--accent)':'var(--surface)'};color:${_enrollCalLang===s?'#fff':'var(--text-muted)'};cursor:pointer;">${s}</span>`).join('');
+
+  const DOW=['일','월','화','수','목','금','토'];
+  const dowRow=DOW.map((d,i)=>`<div style="font-size:11px;font-weight:500;color:${i===0?'var(--danger)':i===6?'#378ADD':'var(--text-muted)'};text-align:center;padding:8px 0;">${d}</div>`).join('');
+
+  let cells='';
+  for(let i=0;i<startDow;i++){
+    cells+=`<div style="min-height:92px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);background:var(--surface2);"></div>`;
+  }
+  for(let d=1;d<=totalDays;d++){
+    const dateStr=`${year}-${monthStr}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const isSel=dateStr===_enrollCalSelDate;
+    const evs=evMap[dateStr]||[];
+    const dow=new Date(dateStr).getDay();
+    const dateNumStyle=isToday
+      ?'width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;margin-bottom:3px;'
+      :isSel
+        ?'width:22px;height:22px;border-radius:50%;background:#378ADD;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:3px;'
+        :`width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;color:${dow===0?'var(--danger)':dow===6?'#378ADD':'var(--text-muted)'};margin-bottom:3px;`;
+    cells+=`<div onclick="_enrollCalSelDate='${dateStr}';renderEnrollCalendar();" style="min-height:92px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);padding:5px 4px;cursor:pointer;${isSel?'background:rgba(55,138,221,0.06);':''}">
+      <div style="${dateNumStyle}">${d}</div>
+      ${holidays[dateStr]?`<div style="font-size:8px;color:#ef4444;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:2px;">${holidays[dateStr]}</div>`:''}
+      ${evs.slice(0,4).map(ev=>{
+        const cat=ev.cat;
+        const t=(cat.groups?.[0]?.start)||'';
+        const isVacEv=ev.type==='vac';
+        const isMakeup=ev.type==='makeup';
+        const bg=isVacEv?'#FCEBEB':isMakeup?'#EAF3DE':cat.color+'22';
+        const badge=isVacEv?`<span style="font-size:7px;padding:1px 3px;border-radius:2px;background:#A32D2D;color:#fff;font-weight:500;flex-shrink:0;">휴강</span>`
+          :isMakeup?`<span style="font-size:7px;padding:1px 3px;border-radius:2px;background:#639922;color:#fff;font-weight:500;flex-shrink:0;">보강</span>`:'';
+        return `<div style="font-size:9px;padding:2px 4px;border-radius:3px;background:${bg};color:${isVacEv?'#A32D2D':'var(--text)'};margin-bottom:2px;display:flex;align-items:center;gap:2px;overflow:hidden;">
+          <span style="font-size:8px;opacity:0.7;flex-shrink:0;">${t}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${cat.name}</span>${badge}
+        </div>`;
+      }).join('')}
+      ${evs.length>4?`<div style="font-size:9px;color:var(--text-muted);padding-left:3px;">+${evs.length-4}개</div>`:''}
+    </div>`;
+  }
+  const endDow=lastDay.getDay();
+  for(let i=endDow;i<6;i++){
+    cells+=`<div style="min-height:92px;border-right:0.5px solid var(--border);border-bottom:0.5px solid var(--border);background:var(--surface2);"></div>`;
+  }
+
+  // 선택 날짜 패널
+  let panelHtml='';
+  if(_enrollCalSelDate&&_enrollCalSelDate.startsWith(`${year}-${monthStr}`)){
+    const selEvs=evMap[_enrollCalSelDate]||[];
+    const [sy,sm,sd]=_enrollCalSelDate.split('-');
+    const dowName=DOW[new Date(_enrollCalSelDate).getDay()];
+    panelHtml=`<div class="section" style="margin-top:12px;">
+      <div class="section-header"><div class="section-title">${parseInt(sm)}월 ${parseInt(sd)}일 (${dowName}) 수업 · ${selEvs.length}개</div></div>
+      <div class="section-body" style="padding:0;">
+        ${selEvs.length?selEvs.map(ev=>{
+          const cat=ev.cat;
+          const grps=cat.groups||[];
+          const timeStr=grps.map(g=>formatKoreanRange(g.start,g.end)).join(' / ');
+          const closed=cat.closed;
+          const isVacEv=ev.type==='vac';
+          const isMakeup=ev.type==='makeup';
+          const statusTag=isVacEv?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;white-space:nowrap;flex-shrink:0;">🚫 휴강</span>`
+            :isMakeup?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#EAF3DE;color:#27500A;font-weight:500;white-space:nowrap;flex-shrink:0;">📝 보강</span>`:'';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);${isVacEv?'background:#fff8f8;':isMakeup?'background:#f8fcf4;':''}">
+            <div style="width:4px;height:40px;border-radius:2px;background:${isVacEv?'#E24B4A':isMakeup?'#639922':cat.color};flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:${isVacEv?'#A32D2D':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${cat.teacher||'미정'} · ${cat.subject}${timeStr?' · '+timeStr:''} · ${closed?'모집완료':'모집중'}</div>
+            </div>
+            ${statusTag}
+            <button class="btn btn-ghost btn-sm" onclick="goToCatFromCal('${cat.id}')" style="white-space:nowrap;flex-shrink:0;">수업 보기</button>
+          </div>`;
+        }).join(''):`<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">수업이 없습니다</div>`}
+      </div>
+    </div>`;
+  }
+
+  grid.innerHTML=`
+    <div style="grid-column:1/-1;">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${langChips}</div>
+      <div class="section" style="overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:center;padding:12px 16px;border-bottom:0.5px solid var(--border);position:relative;">
+          <button onclick="_enrollCalMonth--;if(_enrollCalMonth<0){_enrollCalMonth=11;_enrollCalYear--;}renderEnrollCalendar();" class="btn btn-ghost btn-sm">◀</button>
+          <span style="font-size:15px;font-weight:500;color:var(--text);min-width:110px;text-align:center;">${year}년 ${month+1}월</span>
+          <button onclick="_enrollCalMonth++;if(_enrollCalMonth>11){_enrollCalMonth=0;_enrollCalYear++;}renderEnrollCalendar();" class="btn btn-ghost btn-sm">▶</button>
+          <button onclick="_enrollCalYear=new Date().getFullYear();_enrollCalMonth=new Date().getMonth();renderEnrollCalendar();" style="position:absolute;right:14px;font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">오늘</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface2);border-bottom:0.5px solid var(--border);">${dowRow}</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);">${cells}</div>
+      </div>
+      ${panelHtml}
+    </div>`;
 }
 
 function renderEnroll(){
@@ -1856,6 +2033,16 @@ function renderEnroll(){
   const bar=document.getElementById('enrollFilterBar');
   bar.querySelectorAll('.filter-chip').forEach(c=>c.remove());
   const search=document.getElementById('enrollSearch');
+
+  // 캘린더 모드
+  if(_enrollMode==='cal'){
+    if(search) search.style.display='none';
+    const teacherBar=document.getElementById('enrollTeacherFilterBar');
+    if(teacherBar){teacherBar.style.display='none';teacherBar.innerHTML='';}
+    renderEnrollCalendar();
+    return;
+  }
+  if(search) search.style.display='';
 
   if(_enrollMode==='lang'){
     const subjects=['전체','영어','일본어','중국어','스페인어','프랑스어','독일어','이탈리아어','러시아어','기타'];

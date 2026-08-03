@@ -1955,10 +1955,12 @@ function renderEnrollCalendar(){
         const cat=ev.cat;
         const isVacEv=ev.type==='vac';
         const isMakeup=ev.type==='makeup';
-        const bg=isVacEv?'rgba(255,92,92,0.12)':isMakeup?'rgba(67,232,194,0.15)':cat.color+'22';
-        const fg=isVacEv?'var(--danger)':isMakeup?'var(--accent3)':cat.color;
+        const fg=isVacEv?'var(--danger)':isMakeup?'var(--accent3)':'var(--text)';
         const prefix=isVacEv?'🚫 ':isMakeup?'🔁 ':'';
-        return `<div class="mcal-pill" style="background:${bg};color:${fg};${isVacEv?'text-decoration:line-through;opacity:0.8;':''}" title="${cat.name}${isVacEv?' 휴강':isMakeup?' 보강':''}">${prefix}${cat.teacher?cat.teacher+' · ':''}${cat.name}</div>`;
+        return `<div class="mcal-pill" style="background:var(--surface);border:0.5px solid var(--border);color:${fg};display:flex;align-items:center;gap:3px;${isVacEv?'text-decoration:line-through;opacity:0.8;':''}" title="${cat.name}${isVacEv?' 휴강':isMakeup?' 보강':''}">
+          <span style="display:inline-flex;flex-shrink:0;">${flagInline(cat.subject)}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${prefix}${cat.teacher?cat.teacher+' · ':''}${cat.name}</span>
+        </div>`;
       }).join('')}
       ${evs.length>4?`<div class="mcal-more">+${evs.length-4}개 더</div>`:''}
     </div>`;
@@ -1969,60 +1971,76 @@ function renderEnrollCalendar(){
   }
 
   // 선택 날짜 패널
-  let panelHtml='';
+  // 오른쪽 고정 사이드 패널
+  let sideHtml='';
   if(_enrollCalSelDate&&_enrollCalSelDate.startsWith(`${year}-${monthStr}`)){
     const selEvs=evMap[_enrollCalSelDate]||[];
     const [sy,sm,sd]=_enrollCalSelDate.split('-');
     const dowName=DOW[new Date(_enrollCalSelDate).getDay()];
-    panelHtml=`<div class="section" style="margin-top:12px;">
-      <div class="section-header"><div class="section-title">${parseInt(sm)}월 ${parseInt(sd)}일 (${dowName}) 수업 · ${selEvs.length}개</div></div>
-      <div class="section-body" style="padding:0;">
+    sideHtml=`<div class="section" style="height:fit-content;">
+      <div class="section-header"><div class="section-title">📌 ${parseInt(sm)}월 ${parseInt(sd)}일 (${dowName}) · 수업 ${selEvs.length}개</div></div>
+      <div class="section-body" style="padding:12px;">
         ${selEvs.length?selEvs.map(ev=>{
           const cat=ev.cat;
           const closed=cat.closed;
           const isVacEv=ev.type==='vac';
           const isMakeup=ev.type==='makeup';
-          const statusTag=isVacEv?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;white-space:nowrap;flex-shrink:0;">🚫 휴강</span>`
-            :isMakeup?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#EAF3DE;color:#27500A;font-weight:500;white-space:nowrap;flex-shrink:0;">📝 보강</span>`:'';
+          const statusTag=isVacEv?`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;white-space:nowrap;">🚫 휴강</span>`
+            :isMakeup?`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:rgba(67,232,194,0.2);color:#27500A;font-weight:500;white-space:nowrap;">🔁 보강</span>`:'';
           const recruitTag=closed
-            ?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#FCEBEB;color:#A32D2D;white-space:nowrap;flex-shrink:0;">모집완료</span>`
-            :`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#EAF3DE;color:#27500A;white-space:nowrap;flex-shrink:0;">모집중</span>`;
-          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);${isVacEv?'background:#fff8f8;':isMakeup?'background:#f8fcf4;':''}">
-            <div style="width:4px;height:36px;border-radius:2px;background:${isVacEv?'#E24B4A':isMakeup?'#639922':cat.color};flex-shrink:0;"></div>
+            ?`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:#FCEBEB;color:#A32D2D;white-space:nowrap;">모집완료</span>`
+            :`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:#EAF3DE;color:#27500A;white-space:nowrap;">모집중</span>`;
+          return `<div style="display:flex;align-items:flex-start;gap:8px;padding:10px;border:0.5px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--surface2);${isVacEv?'background:rgba(255,92,92,0.05);':isMakeup?'background:rgba(67,232,194,0.05);':''}">
+            <span style="display:inline-flex;flex-shrink:0;margin-top:2px;transform:scale(1.3);transform-origin:left top;">${flagInline(cat.subject)}</span>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:700;color:${isVacEv?'#A32D2D':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cat.name}</div>
+              <div style="font-size:12px;font-weight:700;color:${isVacEv?'#A32D2D':'var(--text)'};line-height:1.3;">${cat.name}</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${cat.teacher||'미정'}</div>
+              <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center;">
+                ${statusTag}${recruitTag}
+                <button class="btn btn-ghost btn-sm" onclick="goToCatFromCal('${cat.id}')" style="font-size:10px;padding:3px 10px;white-space:nowrap;">수업 보기</button>
+              </div>
             </div>
-            ${statusTag}${recruitTag}
-            <button class="btn btn-ghost btn-sm" onclick="goToCatFromCal('${cat.id}')" style="white-space:nowrap;flex-shrink:0;">수업 보기</button>
           </div>`;
         }).join(''):`<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">수업이 없습니다</div>`}
       </div>
     </div>`;
+  } else {
+    sideHtml=`<div class="section" style="height:fit-content;">
+      <div class="section-header"><div class="section-title">📌 날짜를 클릭하세요</div></div>
+      <div class="section-body">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;color:var(--text-muted);font-size:12px;gap:8px;text-align:center;">
+          <div style="font-size:28px;">📅</div>
+          <div>캘린더에서 날짜를 클릭하면<br>그날의 수업 정보가 여기에 표시돼요</div>
+        </div>
+      </div>
+    </div>`;
   }
 
+  const isWideCal=window.innerWidth>768;
   grid.innerHTML=`
     <div style="grid-column:1/-1;">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${langChips}</div>
-      <div class="section">
-        <div class="section-header">
-          <button class="week-btn" onclick="_enrollCalMonth--;if(_enrollCalMonth<0){_enrollCalMonth=11;_enrollCalYear--;}renderEnrollCalendar();">◀</button>
-          <div class="week-label" style="font-size:17px;">${year}년 ${month+1}월</div>
-          <button class="week-btn" onclick="_enrollCalMonth++;if(_enrollCalMonth>11){_enrollCalMonth=0;_enrollCalYear++;}renderEnrollCalendar();">▶</button>
-          <button onclick="_enrollCalYear=new Date().getFullYear();_enrollCalMonth=new Date().getMonth();renderEnrollCalendar();" style="position:absolute;right:14px;font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">오늘</button>
-        </div>
-        <div class="section-body" style="padding:16px;">
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
-            <div class="mcal-dow" style="color:var(--accent2);">일</div>
-            <div class="mcal-dow">월</div><div class="mcal-dow">화</div>
-            <div class="mcal-dow">수</div><div class="mcal-dow">목</div>
-            <div class="mcal-dow">금</div>
-            <div class="mcal-dow" style="color:var(--accent2);">토</div>
+      <div style="display:grid;grid-template-columns:${isWideCal?'1fr 300px':'1fr'};gap:12px;align-items:start;">
+        <div class="section">
+          <div class="section-header">
+            <button class="week-btn" onclick="_enrollCalMonth--;if(_enrollCalMonth<0){_enrollCalMonth=11;_enrollCalYear--;}renderEnrollCalendar();">◀</button>
+            <div class="week-label" style="font-size:17px;">${year}년 ${month+1}월</div>
+            <button class="week-btn" onclick="_enrollCalMonth++;if(_enrollCalMonth>11){_enrollCalMonth=0;_enrollCalYear++;}renderEnrollCalendar();">▶</button>
+            <button onclick="_enrollCalYear=new Date().getFullYear();_enrollCalMonth=new Date().getMonth();renderEnrollCalendar();" style="position:absolute;right:14px;font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;">오늘</button>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;">${cells}</div>
+          <div class="section-body" style="padding:16px;">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">
+              <div class="mcal-dow" style="color:var(--accent2);">일</div>
+              <div class="mcal-dow">월</div><div class="mcal-dow">화</div>
+              <div class="mcal-dow">수</div><div class="mcal-dow">목</div>
+              <div class="mcal-dow">금</div>
+              <div class="mcal-dow" style="color:var(--accent2);">토</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;">${cells}</div>
+          </div>
         </div>
+        ${sideHtml}
       </div>
-      ${panelHtml}
     </div>`;
 }
 

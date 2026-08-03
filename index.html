@@ -1982,7 +1982,7 @@ function renderEnrollCalendar(){
       <div class="section-body" style="padding:12px;">
         ${selEvs.length?selEvs.map(ev=>{
           const cat=ev.cat;
-          const closed=cat.closed;
+          const closed=cat.closed||(cat.dateStart&&cat.dateStart<=todayStr);
           const isVacEv=ev.type==='vac';
           const isMakeup=ev.type==='makeup';
           const statusTag=isVacEv?`<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:#FCEBEB;color:#A32D2D;font-weight:500;white-space:nowrap;">🚫 휴강</span>`

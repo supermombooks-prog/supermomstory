@@ -505,7 +505,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       <button class="btn btn-ghost" onclick="cancelAdminLogin()">취소</button>
       <button class="btn btn-admin" onclick="checkAdminPw()">로그인</button>
     </div>
-    <div style="margin-top:14px;font-size:11px;color:var(--text-muted);">기본 비밀번호: admin1234</div>
+
   </div>
 </div>
 
@@ -2631,6 +2631,11 @@ function renderAddClassPanel(){
         <span class="tag" style="color:${cat.color};border-color:${cat.color}44;font-size:10px;">${cat.subject}</span>
         <span class="tag" style="font-size:10px;">📅 ${daysStr}요일</span>
         ${period?`<span class="tag" style="font-size:10px;color:var(--accent4);">🗓 ${period}</span>`:''}
+        ${cat.curriculumUrl
+          ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="tag" style="cursor:pointer;text-decoration:none;font-size:10px;">📚 커리큘럼</a>`
+          :(cat.curriculum||[]).length
+            ?`<button onclick="event.stopPropagation();openCurriculumModal('${cat.id}','')" class="tag" style="cursor:pointer;border-radius:20px;font-size:10px;padding:3px 9px;">📚 커리큘럼</button>`
+            :''}
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;">
         ${groupBadges}

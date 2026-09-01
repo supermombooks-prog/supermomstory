@@ -1461,8 +1461,8 @@ const SC={영어:'#6c8aff',일본어:'#ff7eb3',중국어:'#ef5350',프랑스어:
 function save(){
   // Always save personal data locally
   localStorage.setItem('zc4_personal',JSON.stringify({enrollments:S.enrollments,roster:S.roster,profiles:S.profiles,currentProfileId:S.currentProfileId,homework:S.homework}));
-  // Save catalog+notices locally as fallback cache
-  localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
+  // Save catalog+notices locally as fallback cache (예시 데이터는 저장 안 함 → 다음 접속 시 다시 동기화 시도)
+  if(!S._isSeed) localStorage.setItem('zc4_catalog',JSON.stringify({catalog:S.catalog,notices:S.notices,teachers:S.teachers,vacations:S.vacations,adminHomework:S.adminHomework,makeup:S.makeup}));
 }
 function load(){
   // Migrate old key
@@ -1485,6 +1485,11 @@ function load(){
     Object.keys(S.vacations).forEach(catId=>{
       S.vacations[catId]=(S.vacations[catId]||[]).map(v=>typeof v==='string'?{date:v,groupId:null}:v);
     });
+  }
+  // 이전 버전에서 예시 데이터가 캐시된 경우 감지 → 예시로 취급해 재동기화 유도
+  if(S.catalog.length&&S.catalog.some(c=>c.name==='원어민 영어 회화 A반'&&c.teacher==='박선생님')){
+    S._isSeed=true;
+    localStorage.removeItem('zc4_catalog');
   }
   if(!S.catalog.length) seed();
   normalizeCatalog();
@@ -1551,6 +1556,7 @@ function formatAmPmRange(start,end){
 
 function seed(){
   S.kids=[];
+  S._isSeed=true; // 예시 데이터 상태 표시 (Supabase 동기화 전)
   S.catalog=[
     {id:uid(),name:'원어민 영어 회화 A반',subject:'영어',teacher:'박선생님',days:[0,2,4],groups:[{id:uid(),label:'1조',start:'10:00',end:'10:20'},{id:uid(),label:'2조',start:'10:30',end:'10:50'},{id:uid(),label:'3조',start:'11:00',end:'11:20'}],zoom:'',enrollUrl:'',detailUrl:'',capacity:0,age:'7~10세',icon:'🇬🇧',color:'#6c8aff',desc:'원어민 강사와 함께하는 실전 영어 회화 수업입니다.'},
     {id:uid(),name:'일본어 기초 히라가나',subject:'일본어',teacher:'이선생님',days:[1,3],groups:[{id:uid(),label:'1조',start:'16:00',end:'16:20'},{id:uid(),label:'2조',start:'16:30',end:'16:50'}],zoom:'',enrollUrl:'',detailUrl:'',capacity:0,age:'8~13세',icon:'🇯🇵',color:'#ff7eb3',desc:'히라가나·가타카나부터 시작하는 일본어 입문 수업.'},
@@ -6616,6 +6622,7 @@ async function pullCatalogFromSupa(){
       supaFetch('notices?select=*')
     ]);
     if(rows&&rows.length){
+      S._isSeed=false;
       const teacherRow=rows.find(r=>r.id==='__teachers__');
       if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; S.makeup=teacherRow.data.makeup||{}; }
       S.catalog=rows.filter(r=>r.id!=='__teachers__').map(r=>r.data);
@@ -6793,20 +6800,57 @@ function renderAdminSettings(){
 async function initSupabase(){
   const cfg=getSupaConfig();
   if(!cfg.ready) return;
-  // 백그라운드 동기화 - UI 블로킹 없이
-  try {
+  // 백그라운드 동기화 - 실패 시 자동 재시도 (2초 → 5초 → 10초)
+  const delays=[0,2000,5000,10000];
+  let pulled=false;
+  for(let i=0;i<delays.length;i++){
+    if(delays[i]) await new Promise(r=>setTimeout(r,delays[i]));
+    try {
+      pulled=await pullCatalogFromSupa();
+      if(pulled) break;
+    } catch(e){
+      console.warn('Supabase sync attempt',i+1,'failed:',e);
+    }
+  }
+  if(pulled){
+    hideSyncBanner();
+    requestAnimationFrame(()=>{
+      renderPage(S.currentPage);
+      renderSidebarKids();
+    });
+  } else if(S._isSeed){
+    // 예시 데이터 상태로 남으면 사용자에게 안내
+    showSyncBanner();
+  }
+}
+
+function showSyncBanner(){
+  if(document.getElementById('syncBanner')) return;
+  const b=document.createElement('div');
+  b.id='syncBanner';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#FFF3CD;color:#7A4400;border-bottom:1px solid #EF9F27;padding:10px 14px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;';
+  b.innerHTML=`<span>⚠️ 수업 목록을 불러오지 못했어요. 인터넷 연결을 확인해주세요.</span>
+    <button onclick="retrySync()" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #EF9F27;background:#fff;color:#7A4400;cursor:pointer;font-weight:700;">🔄 다시 시도</button>`;
+  document.body.prepend(b);
+}
+function hideSyncBanner(){
+  const b=document.getElementById('syncBanner');
+  if(b) b.remove();
+}
+async function retrySync(){
+  const b=document.getElementById('syncBanner');
+  if(b) b.querySelector('span').textContent='⏳ 불러오는 중...';
+  try{
     const pulled=await pullCatalogFromSupa();
     if(pulled){
-      // 현재 페이지만 조용히 갱신 (첫 렌더를 방해하지 않음)
-      requestAnimationFrame(()=>{
-        renderPage(S.currentPage);
-        renderSidebarKids();
-      });
+      hideSyncBanner();
+      renderPage(S.currentPage);
+      renderSidebarKids();
+      showToast('✅ 수업 목록을 불러왔습니다');
+      return;
     }
-  } catch(e){
-    // 실패해도 로컬 데이터로 정상 작동
-    console.warn('Supabase sync skipped:', e);
-  }
+  }catch(e){}
+  if(b) b.querySelector('span').textContent='⚠️ 여전히 불러오지 못했어요. 잠시 후 다시 시도해주세요.';
 }
 
 

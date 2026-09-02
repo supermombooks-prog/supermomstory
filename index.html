@@ -6364,13 +6364,13 @@ function buildTimePairs(type='20min'){
   };
   const pairs=[];
   if(type==='20min'){
-    for(let h=9;h<=22;h++){
+    for(let h=8;h<=22;h++){
       const hh=String(h).padStart(2,'0');
       pairs.push({start:`${hh}:00`,end:`${hh}:20`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(hh,'20')}`});
       pairs.push({start:`${hh}:30`,end:`${hh}:50`,label:`${toAmPm(hh,'30')} ~ ${toAmPm(hh,'50')}`});
     }
   } else if(type==='90min'){
-    for(let h=9;h<=21;h++){
+    for(let h=8;h<=21;h++){
       const hh=String(h).padStart(2,'0');
       const endMin=h*60+90;
       const eh=String(Math.floor(endMin/60)).padStart(2,'0');
@@ -6384,7 +6384,7 @@ function buildTimePairs(type='20min'){
       }
     }
   } else {
-    for(let h=9;h<=22;h++){
+    for(let h=8;h<=22;h++){
       const hh=String(h).padStart(2,'0');
       const eh=String(h+1).padStart(2,'0');
       pairs.push({start:`${hh}:00`,end:`${eh}:00`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(eh,'00')}`});
@@ -6621,13 +6621,16 @@ async function pullCatalogFromSupa(){
       supaFetch('catalog?select=*&order=updated_at.asc'),
       supaFetch('notices?select=*')
     ]);
-    if(rows&&rows.length){
-      S._isSeed=false;
-      const teacherRow=rows.find(r=>r.id==='__teachers__');
-      if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; S.makeup=teacherRow.data.makeup||{}; }
-      S.catalog=rows.filter(r=>r.id!=='__teachers__').map(r=>r.data);
-      normalizeCatalog();
+    if(!rows||!rows.length){
+      // 서버에서 0건 → 실패로 간주 (예시 데이터를 캐시에 굳히지 않음)
+      console.warn('Supabase pull: catalog rows empty');
+      return false;
     }
+    S._isSeed=false;
+    const teacherRow=rows.find(r=>r.id==='__teachers__');
+    if(teacherRow) { S.teachers=teacherRow.data.teachers||[]; S.vacations=teacherRow.data.vacations||{}; S.makeup=teacherRow.data.makeup||{}; }
+    S.catalog=rows.filter(r=>r.id!=='__teachers__').map(r=>r.data);
+    normalizeCatalog();
     if(noticeRows){
       S.notices={};
       noticeRows.forEach(r=>{

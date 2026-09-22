@@ -1003,6 +1003,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <label class="form-label">⏰ 수업 조 (시간대) *</label>
       <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
         <button type="button" id="tab-20min" class="btn btn-primary btn-sm" onclick="switchGroupTab('20min')" style="font-size:12px;">⏱ 20분 수업</button>
+        <button type="button" id="tab-40min" class="btn btn-ghost btn-sm" onclick="switchGroupTab('40min')" style="font-size:12px;">⏲ 40분 수업</button>
         <button type="button" id="tab-1hour" class="btn btn-ghost btn-sm" onclick="switchGroupTab('1hour')" style="font-size:12px;">🕐 1시간 수업</button>
         <button type="button" id="tab-90min" class="btn btn-ghost btn-sm" onclick="switchGroupTab('90min')" style="font-size:12px;">⏰ 90분 수업</button>
         <button type="button" id="tab-custom" class="btn btn-ghost btn-sm" onclick="switchGroupTab('custom')" style="font-size:12px;">✏️ 커스텀</button>
@@ -3764,13 +3765,16 @@ function editCatalog(id){
   const firstGrp=groups[0];
   if(firstGrp){
     const pairs20=buildTimePairs('20min');
+    const pairs40=buildTimePairs('40min');
     const pairs1h=buildTimePairs('1hour');
     const pairs90=buildTimePairs('90min');
     const allKeys90=new Set(pairs90.map(p=>`${p.start}_${p.end}`));
     const allKeys20=new Set(pairs20.map(p=>`${p.start}_${p.end}`));
+    const allKeys40=new Set(pairs40.map(p=>`${p.start}_${p.end}`));
     const allKeys1h=new Set(pairs1h.map(p=>`${p.start}_${p.end}`));
     // 모든 조가 해당 슬롯에 있어야 해당 탭으로 인식
     if(groups.every(g=>allKeys20.has(`${g.start}_${g.end}`))) _groupTabType='20min';
+    else if(groups.every(g=>allKeys40.has(`${g.start}_${g.end}`))) _groupTabType='40min';
     else if(groups.every(g=>allKeys1h.has(`${g.start}_${g.end}`))) _groupTabType='1hour';
     else if(groups.every(g=>allKeys90.has(`${g.start}_${g.end}`))) _groupTabType='90min';
     else _groupTabType='custom'; // 하나라도 비표준이면 커스텀
@@ -3780,7 +3784,7 @@ function editCatalog(id){
   (cat.groups||[{label:'1조',start:cat.start||'09:00',end:cat.end||'09:20'}]).forEach(g=>addGroupRow(g));
   if(!document.getElementById('cat-groups-list').children.length) addGroupRow({label:'1조',start:'09:00',end:'09:20'});
   // 탭 버튼 스타일 동기화 (커스텀 포함)
-  ['20min','1hour','90min','custom'].forEach(t=>{
+  ['20min','40min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary',_groupTabType===t);
@@ -6369,6 +6373,20 @@ function buildTimePairs(type='20min'){
       pairs.push({start:`${hh}:00`,end:`${hh}:20`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(hh,'20')}`});
       pairs.push({start:`${hh}:30`,end:`${hh}:50`,label:`${toAmPm(hh,'30')} ~ ${toAmPm(hh,'50')}`});
     }
+  } else if(type==='40min'){
+    for(let h=8;h<=22;h++){
+      const hh=String(h).padStart(2,'0');
+      const endMin=h*60+40;
+      const eh=String(Math.floor(endMin/60)).padStart(2,'0');
+      const em=String(endMin%60).padStart(2,'0');
+      pairs.push({start:`${hh}:00`,end:`${eh}:${em}`,label:`${toAmPm(hh,'00')} ~ ${toAmPm(eh,em)}`});
+      if(h<22){
+        const endMin2=h*60+30+40;
+        const eh2=String(Math.floor(endMin2/60)).padStart(2,'0');
+        const em2=String(endMin2%60).padStart(2,'0');
+        pairs.push({start:`${hh}:30`,end:`${eh2}:${em2}`,label:`${toAmPm(hh,'30')} ~ ${toAmPm(eh2,em2)}`});
+      }
+    }
   } else if(type==='90min'){
     for(let h=8;h<=21;h++){
       const hh=String(h).padStart(2,'0');
@@ -6400,7 +6418,7 @@ let _groupTabType='20min'; // 현재 선택된 탭
 
 function switchGroupTab(type){
   _groupTabType=type;
-  ['20min','1hour','90min','custom'].forEach(t=>{
+  ['20min','40min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary', type===t);
@@ -6453,7 +6471,20 @@ function addGroupRow(grp){
 
 function addNextGroupRow(){
   if(_groupTabType==='custom'){
-    addGroupRow();
+    // 마지막 조의 종료 시간 + 휴식(분)을 다음 조 시작으로, 수업 길이는 유지
+    const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
+    const rows=[...document.querySelectorAll('#cat-groups-list .group-row')];
+    const lastTimes=rows.length?[...rows[rows.length-1].querySelectorAll('.group-custom-time')]:[];
+    if(lastTimes.length===2&&lastTimes[0].value&&lastTimes[1].value){
+      const toMin=t=>{const[h,m]=t.split(':');return parseInt(h)*60+parseInt(m);};
+      const toHHMM=v=>`${String(Math.floor(v/60)%24).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`;
+      const s=toMin(lastTimes[0].value), e=toMin(lastTimes[1].value);
+      const dur=Math.max(e-s,5);
+      const ns=e+breakMin;
+      addGroupRow({start:toHHMM(ns),end:toHHMM(ns+dur)});
+    } else {
+      addGroupRow();
+    }
     return;
   }
   const breakMin=parseInt(document.getElementById('cat-break-min')?.value)||0;
@@ -6488,6 +6519,8 @@ function relabelGroupRows(){
 function initAllGroupRows(){
   const list=document.getElementById('cat-groups-list');
   if(!list) return;
+  // 커스텀 모드: 직접 입력한 시간을 초기화하지 않음 (휴식 값은 다음 조 추가 시 반영)
+  if(_groupTabType==='custom') return;
   // 현재 첫 번째 조 시간을 기준으로 저장
   const firstStartMin=getFirstGroupStartMin();
   list.innerHTML='';
@@ -6496,7 +6529,7 @@ function initAllGroupRows(){
   pairs.forEach((p,i)=>{
     addGroupRow({label:(i+1)+'조', start:p.start, end:p.end});
   });
-  ['20min','1hour','90min','custom'].forEach(t=>{
+  ['20min','40min','1hour','90min','custom'].forEach(t=>{
     const el=document.getElementById(`tab-${t}`);
     if(!el) return;
     el.classList.toggle('btn-primary',_groupTabType===t);
@@ -6507,7 +6540,7 @@ function initAllGroupRows(){
 // 휴식 시간을 반영한 시간 페어 생성
 function buildTimePairsWithBreak(type, breakMin, baseStartMin){
   if(!breakMin) return buildTimePairs(type);
-  const durationMap={'20min':20,'1hour':60,'90min':90};
+  const durationMap={'20min':20,'40min':40,'1hour':60,'90min':90};
   const duration=durationMap[type];
   if(!duration) return buildTimePairs(type);
   const step=duration+breakMin;

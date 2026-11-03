@@ -157,11 +157,30 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .catalog-card.enrolled{border-color:var(--accent3);background:rgba(67,232,194,0.04);}
 .my-classes-cards{display:none;}
 .my-classes-table-wrap{display:block;}
+.data-table th.col-fit{width:1%;white-space:nowrap;}
+.row-x{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;border:none;background:transparent;color:var(--text-muted);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:.7;transition:all .15s;}
+.row-x:hover{background:rgba(255,92,92,0.14);color:var(--danger);opacity:1;}
+.hw-cell{min-width:150px;}
+.hw-lines{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;}
+.hw-line{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.55;min-width:0;}
+.hw-t{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;color:var(--text);}
+.hw-line.hw-open .hw-t{white-space:normal;word-break:break-word;}
+.hw-done .hw-t{text-decoration:line-through;opacity:.5;}
+.hw-ck{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text-muted);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;}
+.hw-ck.on{background:#639922;border-color:#639922;}
+.hw-dot{width:16px;display:inline-flex;justify-content:center;flex-shrink:0;}
+.hw-dot:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--admin);}
+.hw-link{font-size:11px;color:var(--accent)!important;flex-shrink:0;text-decoration:none!important;white-space:nowrap;font-weight:600;}
+.hw-due{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.hw-act{font-size:11px;color:var(--text-muted);cursor:pointer;opacity:.4;flex-shrink:0;}
+.hw-line:hover .hw-act{opacity:1;color:var(--accent);}
+.hw-add{color:var(--text-muted);cursor:pointer;padding-left:23px;}
+.hw-add:hover{color:var(--accent);}
 .myclasses-grid{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:20px;align-items:start;}
 #myDayDistSection{position:sticky;top:20px;}
 .my-classes-table-wrap{overflow-x:auto;}
 .dist-chips{display:none;}
-@media(max-width:1400px){
+@media(max-width:1500px){
   .myclasses-grid{grid-template-columns:1fr;gap:14px;}
   #myDayDistSection{order:-1;position:static;}
   #myDayDistSection .section-header{display:none;}
@@ -704,7 +723,7 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
       <div class="section-body" style="padding:0;">
         <div id="myClassesBanner" style="padding:0 16px;"></div>
         <div class="my-classes-table-wrap">
-        <table class="data-table"><thead><tr><th>수업 · 기간</th><th>요일 · 시간</th><th>진도</th><th>공지 · 숙제</th><th>바로가기</th></tr></thead>
+        <table class="data-table"><thead><tr><th style="width:24%;">수업 · 기간</th><th style="width:15%;">요일 · 시간</th><th style="width:12%;">진도</th><th style="width:25%;">공지 · 숙제</th><th style="width:11%;">커리큘럼</th><th style="width:13%;">바로가기</th></tr></thead>
         <tbody id="myClassesBody"></tbody></table>
         </div>
         <div class="my-classes-cards" id="myClassesCards"></div>
@@ -1322,6 +1341,16 @@ create policy "public write notices" on notices for all using (true);</div>
   </div>
 </div>
 
+<div class="modal-overlay" id="cancelConfirmModal">
+  <div class="modal" style="width:380px;">
+    <div class="modal-title">내 수업 목록에서 뺄까요?</div>
+    <div id="cancelConfirmBody"></div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center;" onclick="closeModal('cancelConfirmModal')">취소</button>
+      <button class="btn" id="cancelConfirmBtn" style="flex:1;justify-content:center;background:var(--danger);color:#fff;border:none;">목록에서 빼기</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="transferModal">
   <div class="modal" style="width:400px;text-align:center;">
     <div class="modal-title">📲 다른 기기로 옮기기</div>
@@ -2830,14 +2859,14 @@ function renderMyClasses(){
   }
 
   if(_myClassesSort==='ending'&&!endingSoon.length){
-    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</td></tr>`;
     const cardsEl=document.getElementById('myClassesCards');
     if(cardsEl) cardsEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--text-muted);">14일 이내 종강 예정 수업이 없습니다</div>`;
     return;
   }
 
   if(!count){
-    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
       수강 중인 수업이 없습니다.<br>
       <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="toggleAddClassPanel()">+ 수업 추가하기</button>
     </td></tr>`;
@@ -2853,16 +2882,15 @@ function renderMyClasses(){
     const grpLabel=grp?.label||'';
     const myZoom = e.myZoom||'';
     const zoomCell = myZoom
-      ? `<div style="display:flex;align-items:center;gap:6px;">
-           <a href="${myZoom}" target="_blank" class="btn btn-zoom btn-sm">줌 입장 🎥</a>
-           <button class="btn btn-ghost btn-sm" style="padding:5px 8px;" title="링크 수정" onclick="editZoom('${e.id}')">✏️</button>
-         </div>`
-      : `<button class="btn btn-ghost btn-sm" onclick="editZoom('${e.id}')">🔗 링크 입력</button>`;
+      ? `<div style="display:flex;gap:4px;align-items:center;"><a href="${myZoom}" target="_blank" class="btn btn-zoom btn-sm" style="white-space:nowrap;">🎥 입장</a><button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px;" title="줌 링크 수정" onclick="editZoom('${e.id}')">✏️</button></div>`
+      : `<button class="btn btn-ghost btn-sm" style="white-space:nowrap;" title="줌 링크 입력" onclick="editZoom('${e.id}')">🔗 줌링크</button>`;
 
     // 기간 + D-day
     const effEnd=getEffectiveEnd(cat,grp?.id);
     const dLeft=getDaysLeft(cat,grp?.id);
-    const periodStr=formatDateRange(cat.dateStart,effEnd)||'기간 미정';
+    const periodStr=(cat.dateStart&&effEnd&&cat.dateStart.slice(0,4)===effEnd.slice(0,4))
+      ?`${cat.dateStart.replace(/-/g,'.')} ~ ${effEnd.slice(5).replace('-','.')}`
+      :(formatDateRange(cat.dateStart,effEnd)||'기간 미정');
     const ddayBadge=(dLeft!==null&&dLeft>=0&&dLeft<=14)
       ?`<span style="display:inline-block;margin-left:6px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;background:${dLeft<=7?'var(--danger)':'var(--accent4)'};color:#fff;">D-${dLeft}</span>`:'';
     // 진도
@@ -2880,13 +2908,13 @@ function renderMyClasses(){
         :`<span style="color:var(--text-muted);font-size:12px;">—</span>`);
     // 공지 · 숙제 (공지사항 + 선생님 숙제 + 내 숙제)
     const noticeTxt=getNoticeForCat(cat.id);
-    const adminHwHtml=(()=>{const raw=S.adminHomework?.[cat.id];if(!raw)return'';const hw=typeof raw==='object'?raw:{text:raw,expiresAt:''};if(!hw.text)return'';if(hw.expiresAt&&hw.expiresAt<todayYmd)return'';return`<div style="font-size:12px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;word-break:break-word;"><span style="font-weight:700;color:var(--accent4);">📝 선생님 숙제</span><br>${linkify(hw.text)}</div>`;})();
     const curBtn=cat.curriculumUrl
-      ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;">📚 커리큘럼</a>`
-      :((cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:'');
+      ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;">📚 커리큘럼</a>`
+      :((cat.curriculum||[]).length?`<button class="btn btn-ghost btn-sm" style="font-size:12px;white-space:nowrap;" onclick="openCurriculumModal('${cat.id}','${e.id}')">📚 커리큘럼</button>`:`<span style="color:var(--text-muted);font-size:12px;">—</span>`);
 
     return `<tr id="row-${e.id}">
-      <td>
+      <td style="position:relative;padding-right:34px;">
+        <button class="row-x" title="내 목록에서 빼기" onclick="cancelById('${e.id}')">✕</button>
         <div style="display:flex;align-items:flex-start;gap:8px;">
           <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;margin-top:5px;"></div>
           <div style="padding-top:2px;flex-shrink:0;">${flagInline(cat.subject)}</div>
@@ -2899,28 +2927,20 @@ function renderMyClasses(){
       </td>
       <td id="time-cell-${e.id}">
         <div style="display:flex;flex-direction:column;gap:3px;">
-          <span style="font-size:14px;font-weight:600;color:var(--text);">${cat.days.map(d=>DN[d]).join('·')}요일</span>
-          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+            <span style="font-size:14px;font-weight:600;color:var(--text);">${cat.days.map(d=>DN[d]).join('·')}요일</span>
             ${grpLabel?`<span class="group-badge enrolled" style="cursor:default;font-size:12px;">${grpLabel}</span>`:''}
-            <span style="font-family:'Gmarket Sans';font-weight:600;font-size:13px;color:var(--accent4);white-space:nowrap;">${formatAmPmRange(dispStart,dispEnd)}</span>
+            ${(cat.groups||[]).length>1?`<button onclick="openChangeGroupModal('${e.id}','${cat.id}')" title="조·시간 변경" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center;padding:0;">🔄</button>`:''}
           </div>
+          <span style="font-family:'Gmarket Sans';font-weight:600;font-size:13px;color:var(--accent4);white-space:nowrap;">${formatAmPmRange(dispStart,dispEnd)}</span>
         </div>
       </td>
-      <td style="min-width:90px;">${progressCell}</td>
-      <td style="min-width:180px;">
-        <div style="display:flex;flex-direction:column;gap:5px;max-width:280px;">
-          ${noticeTxt?`<div style="font-size:12px;background:rgba(255,126,179,0.1);border-left:3px solid var(--admin);padding:4px 8px;border-radius:0 6px 6px 0;color:var(--text);white-space:pre-wrap;word-break:break-word;">${linkify(noticeTxt)}</div>`:''}
-          ${adminHwHtml}
-          <div id="hw-cell-${e.id}">${getHomeworkCell(e.id, e.catalogId)}</div>
-        </div>
-      </td>
+      <td style="min-width:96px;white-space:nowrap;">${progressCell}</td>
+      <td id="hw-cell-${e.id}" class="hw-cell">${renderHwLines(e,cat,noticeTxt)}</td>
+      <td>${curBtn}</td>
       <td>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
+        <div style="display:flex;gap:6px;align-items:center;white-space:nowrap;">
           <div id="zoom-cell-${e.id}">${zoomCell}</div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            ${curBtn}
-            <button class="btn btn-ghost btn-sm" style="font-size:14px;padding:3px 10px;line-height:1;" title="더보기" onclick="openMyClassMenu(event,'${e.id}','${cat.id}',${(cat.groups||[]).length>1})">⋯</button>
-          </div>
         </div>
       </td>
     </tr>`;
@@ -3168,10 +3188,7 @@ function openMyClassMenu(ev, eid, catId, canChangeGroup){
   const m=document.createElement('div');
   m.id='myClassMenu';
   const item=(icon,label,fn,color)=>`<div onclick="closeMyClassMenu();${fn}" style="display:flex;align-items:center;gap:8px;padding:9px 14px;font-size:13px;cursor:pointer;border-radius:8px;color:${color||'var(--text)'};" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">${icon} ${label}</div>`;
-  m.innerHTML=(canChangeGroup?item('🔄','조변경',`openChangeGroupModal('${eid}','${catId}')`):'')
-    +item('🔗','줌 링크 수정',`editZoom('${eid}')`)
-    +`<div style="height:1px;background:var(--border);margin:4px 6px;"></div>`
-    +item('✕','수강 취소',`cancelById('${eid}')`,'var(--danger)');
+  m.innerHTML=item('✕','수강 취소',`cancelById('${eid}')`,'var(--danger)');
   m.style.cssText=`position:fixed;z-index:9999;min-width:150px;padding:5px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);`;
   document.body.appendChild(m);
   const mh=m.offsetHeight, mw=m.offsetWidth;
@@ -3185,12 +3202,50 @@ function closeMyClassMenu(){ document.getElementById('myClassMenu')?.remove(); }
 function cancelById(eid){
   const e=S.enrollments.find(x=>x.id===eid);
   const cat=S.catalog.find(c=>c.id===e?.catalogId);
-  if(!confirm(`"${cat?.name}" 수업을 취소하시겠습니까?`)) return;
-  S.enrollments=S.enrollments.filter(x=>x.id!==eid);
-  save();
-  deleteEnrollmentFromSupa(eid).catch(()=>{});
-  showToast('🗑️ 수강 취소 완료'); renderMyClasses(); renderSidebarKids();
+  if(!e) return;
+  const grp=getGroupForEnroll(e,cat);
+  document.getElementById('cancelConfirmBody').innerHTML=`
+    <div style="font-size:15px;font-weight:700;margin-bottom:6px;">${cat?flagInline(cat.subject):''} ${cat?.name||'수업'}</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">${cat?(cat.days||[]).map(d=>DN[d]).join('·')+'요일':''}${grp?.label?' · '+grp.label:''}</div>
+    <div style="font-size:12px;color:var(--text-muted);background:var(--surface2);border-radius:10px;padding:10px 12px;line-height:1.6;">학원 수강 신청이 취소되는 건 아니에요.<br>이 기기의 내 수업 목록에서만 빠져요.</div>`;
+  document.getElementById('cancelConfirmBtn').onclick=()=>doCancelEnroll(eid);
+  openModal('cancelConfirmModal');
 }
+
+function doCancelEnroll(eid){
+  const idx=S.enrollments.findIndex(x=>x.id===eid);
+  if(idx<0) return;
+  const removed=S.enrollments[idx];
+  const cat=S.catalog.find(c=>c.id===removed.catalogId);
+  S.enrollments.splice(idx,1);
+  save();
+  closeModal('cancelConfirmModal');
+  renderMyClasses(); renderSidebarKids();
+  if(S.currentPage==='dashboard') renderDashboard();
+  showUndoToast(`🗑 '${cat?.name||'수업'}' 수업을 목록에서 뺐어요`,
+    ()=>{ // 되돌리기
+      if(!S.enrollments.some(x=>x.id===removed.id)) S.enrollments.splice(Math.min(idx,S.enrollments.length),0,removed);
+      save(); renderMyClasses(); renderSidebarKids();
+      if(S.currentPage==='dashboard') renderDashboard();
+      showToast('↩️ 되돌렸어요');
+    },
+    ()=>{ deleteEnrollmentFromSupa(eid).catch(()=>{}); } // 5초 지나면 확정
+  );
+}
+
+let _undoState=null;
+function showUndoToast(msg,onUndo,onCommit){
+  if(_undoState){ clearTimeout(_undoState.timer); _undoState.onCommit(); _undoState.el.remove(); _undoState=null; }
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:10001;display:flex;align-items:center;gap:16px;background:#1f2937;color:#fff;padding:12px 18px;border-radius:26px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,0.25);max-width:92vw;';
+  el.innerHTML=`<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${msg}</span><button style="background:none;border:none;color:#85B7EB;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;padding:0;">되돌리기</button>`;
+  document.body.appendChild(el);
+  const st={el,onCommit,timer:setTimeout(()=>{ el.remove(); _undoState=null; onCommit(); },5000)};
+  el.querySelector('button').onclick=()=>{ clearTimeout(st.timer); el.remove(); _undoState=null; onUndo(); };
+  _undoState=st;
+}
+// 5초 안에 창을 닫아도 삭제는 확정
+window.addEventListener('pagehide',()=>{ if(_undoState){ clearTimeout(_undoState.timer); const f=_undoState.onCommit; _undoState=null; f(); } });
 
 function editTime(eid){
   const cell=document.getElementById(`time-cell-${eid}`);
@@ -3250,7 +3305,7 @@ function editZoom(eid){
   }
   cell.innerHTML=`
     <div style="display:flex;align-items:center;gap:6px;">
-      <input id="zoom-input-${eid}" class="form-input" style="padding:6px 10px;font-size:12px;height:32px;"
+      <input id="zoom-input-${eid}" class="form-input" style="padding:6px 10px;font-size:12px;height:32px;width:170px;"
         placeholder="https://zoom.us/j/..." value="${e.myZoom||''}"
         onkeydown="if(event.key==='Enter')saveZoom('${eid}');if(event.key==='Escape')renderMyClasses();"
         onclick="event.stopPropagation()">
@@ -7788,7 +7843,7 @@ function collectWeeklyHomework(){
     const nk=`${e.profileId||''}|${cat.id}`;
     if(ahw&&ahw.text&&(!ahw.expiresAt||ahw.expiresAt>=todayStr)&&!seenNotice.has(nk)){
       seenNotice.add(nk);
-      const ck=`${nk}|${_hwHash(ahw.text+'|'+(ahw.expiresAt||''))}`;
+      const ck=getTeacherHwCheckKey(e,cat,ahw);
       const st=S.hwChecks[ck]||{};
       const urlRe=/https?:\/\/[^\s<>"']+/g;
       items.push({type:'notice',ck,cat,e,prof,
@@ -7993,6 +8048,60 @@ function getHomeworkForEnroll(enrollId, catId){
     </div>
     <div style="font-size:12px;color:var(--text);${isDone?'text-decoration:line-through;opacity:0.6;':''};white-space:pre-wrap;line-height:1.5;">${linkify(hw.text)}</div>
   </div>`;
+}
+
+// 내 수업목록 '공지·숙제' 칸: 한 줄 체크리스트
+function getTeacherHwCheckKey(e,cat,ahw){ return `${e.profileId||''}|${cat.id}|${_hwHash(ahw.text+'|'+(ahw.expiresAt||''))}`; }
+function _mdShort(ds){ return ds?`${parseInt(ds.slice(5,7))}/${parseInt(ds.slice(8,10))}`:''; }
+function renderHwLines(e,cat,noticeTxt){
+  const todayStr=_hwYmd(new Date());
+  const lines=[];
+  if(noticeTxt){
+    lines.push(`<div class="hw-line" title="${_hwEsc(noticeTxt)}"><span class="hw-dot"></span><span class="hw-t" onclick="this.parentElement.classList.toggle('hw-open')">📢 ${_hwEsc(noticeTxt)}</span></div>`);
+  }
+  const raw=S.adminHomework?.[cat.id];
+  const ahw=raw?(typeof raw==='object'?raw:{text:raw,expiresAt:''}):null;
+  if(ahw&&ahw.text&&(!ahw.expiresAt||ahw.expiresAt>=todayStr)){
+    const st=S.hwChecks[getTeacherHwCheckKey(e,cat,ahw)]||{};
+    const urlRe=/https?:\/\/[^\s<>"']+/g;
+    const url=(ahw.text.match(urlRe)||[])[0]||'';
+    const desc=st.memo?('📌 '+st.memo):(ahw.text.replace(urlRe,'').trim()||'링크에서 숙제를 확인하세요');
+    lines.push(`<div class="hw-line${st.done?' hw-done':''}">
+      <span class="hw-ck${st.done?' on':''}" title="${st.done?'미완료로 되돌리기':'완료 체크'}" onclick="toggleTableTeacherHw('${e.id}','${cat.id}')">${st.done?'✓':''}</span>
+      <span class="hw-t" title="${_hwEsc(ahw.text)}" onclick="this.parentElement.classList.toggle('hw-open')">📝 ${_hwEsc(desc)}</span>
+      ${url?`<a href="${url}" target="_blank" rel="noopener" class="hw-link" onclick="event.preventDefault();window.open('${url}','_blank')||(window.location.href='${url}')">🔗보기</a>`:''}
+      ${ahw.expiresAt?`<span class="hw-due">${_mdShort(ahw.expiresAt)}</span>`:''}
+    </div>`);
+  }
+  const key=hwKey(e.id,cat.id);
+  const hw=S.homework[key];
+  if(hw?.dueDate&&hw.dueDate<todayStr&&!hw.done){ delete S.homework[key]; save(); }
+  const h=S.homework[key];
+  if(h&&h.text&&!(h.dueDate&&h.dueDate<todayStr)){
+    lines.push(`<div class="hw-line${h.done?' hw-done':''}">
+      <span class="hw-ck${h.done?' on':''}" title="${h.done?'미완료로 되돌리기':'완료 체크'}" onclick="toggleHomeworkDone('${e.id}','${cat.id}')">${h.done?'✓':''}</span>
+      <span class="hw-t" title="${_hwEsc(h.text)}" onclick="this.parentElement.classList.toggle('hw-open')">✏️ ${_hwEsc(h.text)}</span>
+      ${h.dueDate?`<span class="hw-due">${_mdShort(h.dueDate)}</span>`:''}
+      <span class="hw-act" title="수정·삭제" onclick="openHomeworkModal('${e.id}','${cat.id}')">수정</span>
+    </div>`);
+  } else {
+    lines.push(`<div class="hw-line hw-add" onclick="openHomeworkModal('${e.id}','${cat.id}')">+ 숙제 적기</div>`);
+  }
+  return `<div class="hw-lines">${lines.join('')}</div>`;
+}
+function toggleTableTeacherHw(eid,catId){
+  const e=S.enrollments.find(x=>x.id===eid);
+  const cat=S.catalog.find(c=>c.id===catId);
+  const raw=S.adminHomework?.[catId];
+  const ahw=raw?(typeof raw==='object'?raw:{text:raw,expiresAt:''}):null;
+  if(!e||!cat||!ahw) return;
+  const ck=getTeacherHwCheckKey(e,cat,ahw);
+  const cur=S.hwChecks[ck]||{};
+  S.hwChecks[ck]={...cur,done:!cur.done,updatedAt:new Date().toISOString()};
+  save();
+  renderMyClasses();
+  if(S.currentPage==='dashboard') renderDashboard();
+  showToast(cur.done?'↩️ 미완료로 변경됐습니다':'✅ 숙제 완료!');
 }
 
 function getHomeworkCell(enrollId, catId){

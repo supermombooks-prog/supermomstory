@@ -131,7 +131,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .section-body{padding:18px 20px;}
 
 /* LAYOUT */
-.content-grid{display:grid;grid-template-columns:1fr 310px;gap:20px;}
+.content-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(310px,28vw,420px);gap:20px;}
 .page-view{display:none;}
 .page-view.active{display:block;}
 
@@ -7896,7 +7896,7 @@ function renderWeeklyHomework(){
         <div style="font-size:13px;font-weight:700;color:var(--text);${x.done?'text-decoration:line-through;':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${x.cat.name}</div>
         ${descHtml?`<div style="font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.5;white-space:pre-wrap;word-break:break-word;${x.done?'text-decoration:line-through;':''}">${descHtml}</div>`:''}
         <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;align-items:center;">
-          ${x.type==='notice'?tag('📢 공지','rgba(55,138,221,0.14)','#378ADD'):tag('✏️ 내가 추가','var(--surface2)','var(--text-muted)')}
+          ${x.type==='notice'?'':tag('✏️ 내가 추가','var(--surface2)','var(--text-muted)')}
           ${tag(due.t,due.urgent&&!x.done?'rgba(255,92,92,0.12)':'var(--surface2)',due.urgent&&!x.done?'var(--danger)':'var(--text-muted)')}
           ${x.prof?tag(`${x.prof.emoji||'👤'} ${_hwEsc(x.prof.name)}`,'var(--surface2)','var(--text-muted)'):''}
           ${x.url&&!x.done?`<a href="${x.url}" target="_blank" rel="noopener" onclick="event.preventDefault();window.open('${x.url}','_blank')||(window.location.href='${x.url}')" style="font-size:11px;padding:2px 9px;border-radius:6px;border:1px solid rgba(55,138,221,0.35);background:rgba(55,138,221,0.1);color:#378ADD;text-decoration:none;white-space:nowrap;">🔗 숙제 보기</a>`:''}
@@ -8019,7 +8019,7 @@ function getAdminHwForDashboard(catId){
     }
   }
   return `<div style="margin-top:6px;padding:7px 10px;border-radius:6px;background:rgba(255,181,71,0.1);border-left:3px solid var(--accent4);">
-    <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제${hw.expiresAt?` <span style="font-weight:400;font-size:10px;opacity:0.7;">(${hw.expiresAt} 만료)</span>`:''}</div>
+    <div style="font-size:11px;font-weight:700;color:var(--accent4);margin-bottom:3px;">📝 선생님 숙제${hw.expiresAt?` <span style="font-weight:400;font-size:10px;opacity:0.7;">(${_mdShort(hw.expiresAt)}까지)</span>`:''}</div>
     <div style="font-size:12px;color:var(--text);white-space:pre-wrap;line-height:1.5;">${linkify(hw.text)}</div>
   </div>`;
 }
@@ -8039,7 +8039,7 @@ function getHomeworkForEnroll(enrollId, catId){
   const daysDiff=Math.floor((now-updated)/(1000*60*60*24));
   const isDone=hw.done;
   const isOld=daysDiff>=7;
-  const dueDateStr=hw.dueDate?` · 마감 ${hw.dueDate.slice(5).replace('-','월')+'일'}`:'';
+  const dueDateStr=hw.dueDate?` · ${_mdShort(hw.dueDate)}까지`:'';
   return `<div style="margin-top:6px;padding:6px 10px;border-radius:6px;background:${isDone?'rgba(67,232,194,0.08)':'rgba(255,181,71,0.1)'};border-left:3px solid ${isDone?'var(--accent3)':'var(--accent4)'};opacity:${isOld?0.45:1};">
     <div style="font-size:11px;font-weight:700;color:${isDone?'var(--accent3)':'var(--accent4)'};margin-bottom:2px;">
       ${isDone?'✅ 숙제 완료':'📝 학생 숙제 기록'}${dueDateStr}${isOld?' <span style="font-size:10px;opacity:0.6;">(오래됨)</span>':''}
@@ -8126,7 +8126,7 @@ function getHomeworkCell(enrollId, catId){
     const now=new Date();
     const daysDiff=Math.floor((now-new Date(hw.updatedAt||0))/(1000*60*60*24));
     const isOld=daysDiff>=7;
-    const dueDateStr=hw.dueDate?`<span style="font-size:10px;color:var(--accent4);"> · 마감 ${hw.dueDate.slice(5).replace('-','월')+'일'}</span>`:'';
+    const dueDateStr=hw.dueDate?`<span style="font-size:10px;color:var(--accent4);"> · ${_mdShort(hw.dueDate)}까지</span>`:'';
     return `<div style="display:flex;flex-direction:column;gap:4px;">
       <div style="font-size:11px;color:${isDone?'var(--accent3)':'var(--accent4)'};font-weight:600;${isDone?'text-decoration:line-through;':''};opacity:${isOld?0.45:1};max-width:160px;white-space:pre-wrap;line-height:1.4;">${hw.text.slice(0,50)}${hw.text.length>50?'…':''}</div>
       ${dueDateStr}

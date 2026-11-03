@@ -171,7 +171,8 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .hw-dot{width:16px;display:inline-flex;justify-content:center;flex-shrink:0;}
 .hw-dot:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--admin);}
 .hw-link{font-size:11px;color:var(--accent)!important;flex-shrink:0;text-decoration:none!important;white-space:nowrap;font-weight:600;}
-.hw-due{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.hw-due{font-size:11px;color:var(--text-muted);flex-shrink:0;white-space:nowrap;}
+.hw-due-urgent{color:var(--danger);font-weight:700;}
 .hw-act{font-size:11px;color:var(--text-muted);cursor:pointer;opacity:.4;flex-shrink:0;}
 .hw-line:hover .hw-act{opacity:1;color:var(--accent);}
 .hw-add{color:var(--text-muted);cursor:pointer;padding-left:23px;}
@@ -7821,10 +7822,7 @@ function hwDueLabel(ds){
   const diff=Math.round((d-today)/86400000);
   const dn=['일','월','화','수','목','금','토'][d.getDay()];
   if(diff<0) return {t:'마감 지남',urgent:true};
-  if(diff===0) return {t:'오늘 수업 전',urgent:true};
-  if(diff===1) return {t:'내일 수업 전',urgent:true};
-  if(diff<7) return {t:`${dn}요일`,urgent:false};
-  return {t:`${m}/${dd}(${dn})`,urgent:false};
+  return {t:`${m}/${dd}(${dn})까지`,urgent:diff<=1};
 }
 
 function collectWeeklyHomework(){
@@ -8053,6 +8051,14 @@ function getHomeworkForEnroll(enrollId, catId){
 // 내 수업목록 '공지·숙제' 칸: 한 줄 체크리스트
 function getTeacherHwCheckKey(e,cat,ahw){ return `${e.profileId||''}|${cat.id}|${_hwHash(ahw.text+'|'+(ahw.expiresAt||''))}`; }
 function _mdShort(ds){ return ds?`${parseInt(ds.slice(5,7))}/${parseInt(ds.slice(8,10))}`:''; }
+function _hwDueSpan(ds,done){
+  if(!ds) return '';
+  const t=new Date(); t.setHours(0,0,0,0);
+  const [y,m,d]=ds.split('-').map(Number);
+  const diff=Math.round((new Date(y,m-1,d)-t)/86400000);
+  const urgent=!done&&diff>=0&&diff<=1;
+  return `<span class="hw-due${urgent?' hw-due-urgent':''}">${_mdShort(ds)}까지</span>`;
+}
 function renderHwLines(e,cat,noticeTxt){
   const todayStr=_hwYmd(new Date());
   const lines=[];
@@ -8070,7 +8076,7 @@ function renderHwLines(e,cat,noticeTxt){
       <span class="hw-ck${st.done?' on':''}" title="${st.done?'미완료로 되돌리기':'완료 체크'}" onclick="toggleTableTeacherHw('${e.id}','${cat.id}')">${st.done?'✓':''}</span>
       <span class="hw-t" title="${_hwEsc(ahw.text)}" onclick="this.parentElement.classList.toggle('hw-open')">📝 ${_hwEsc(desc)}</span>
       ${url?`<a href="${url}" target="_blank" rel="noopener" class="hw-link" onclick="event.preventDefault();window.open('${url}','_blank')||(window.location.href='${url}')">🔗보기</a>`:''}
-      ${ahw.expiresAt?`<span class="hw-due">${_mdShort(ahw.expiresAt)}</span>`:''}
+      ${_hwDueSpan(ahw.expiresAt,st.done)}
     </div>`);
   }
   const key=hwKey(e.id,cat.id);
@@ -8081,7 +8087,7 @@ function renderHwLines(e,cat,noticeTxt){
     lines.push(`<div class="hw-line${h.done?' hw-done':''}">
       <span class="hw-ck${h.done?' on':''}" title="${h.done?'미완료로 되돌리기':'완료 체크'}" onclick="toggleHomeworkDone('${e.id}','${cat.id}')">${h.done?'✓':''}</span>
       <span class="hw-t" title="${_hwEsc(h.text)}" onclick="this.parentElement.classList.toggle('hw-open')">✏️ ${_hwEsc(h.text)}</span>
-      ${h.dueDate?`<span class="hw-due">${_mdShort(h.dueDate)}</span>`:''}
+      ${_hwDueSpan(h.dueDate,h.done)}
       <span class="hw-act" title="수정·삭제" onclick="openHomeworkModal('${e.id}','${cat.id}')">수정</span>
     </div>`);
   } else {

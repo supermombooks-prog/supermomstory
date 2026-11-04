@@ -2279,6 +2279,7 @@ function renderEnroll(){
         <span class="tag">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${(()=>{const n=getTotalSessions(cat);return n?`<span class="tag">🔢 총 ${n}회</span>`:'';})()}
+        ${(()=>{const d=getClassDurationLabel(cat);return d?`<span class="tag">⏱ ${d} 수업</span>`:'';})()}
         ${period?`<span class="tag">🗓 ${period}</span>`:''}
         ${cat.curriculumUrl
           ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="tag" style="cursor:pointer;text-decoration:none;">📚 커리큘럼</a>`
@@ -3804,11 +3805,12 @@ function renderAdminCatalog(){
         <span class="tag">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${(()=>{const n=getTotalSessions(cat);return n?`<span class="tag">🔢 총 ${n}회</span>`:'';})()}
+        ${(()=>{const d=getClassDurationLabel(cat);return d?`<span class="tag">⏱ ${d} 수업</span>`:'';})()}
+        ${formatDateRange(cat.dateStart,cat.dateEnd)?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${formatDateRange(cat.dateStart,cat.dateEnd)}</span>`:''}
         ${cat.curriculumUrl
           ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')"
               class="tag" style="color:#16a34a;border-color:rgba(22,163,74,0.3);cursor:pointer;text-decoration:none;">📚 커리큘럼 ✓</a>`
           :`<span class="tag" style="color:var(--text-muted);border-color:var(--border);opacity:0.5;">📚 미등록</span>`}
-        ${formatDateRange(cat.dateStart,cat.dateEnd)?`<span class="tag" style="color:var(--accent4);border-color:rgba(255,181,71,0.3);">🗓 ${formatDateRange(cat.dateStart,cat.dateEnd)}</span>`:''}
         ${cat.capacity>0&&cnt>=cat.capacity?`<span class="tag" style="color:var(--danger);border-color:rgba(255,92,92,0.3);">정원마감</span>`:''}
       </div>
       ${cat.desc?`<div class="admin-cat-body">${cat.desc}</div>`:''}
@@ -7502,6 +7504,15 @@ function copyCatalog(id){
 // ═══════════════════════════════════════
 // VACATION & SESSION SYSTEM
 // ═══════════════════════════════════════
+// 수업 시간(분): 조의 시작~끝 시간으로 계산. 조마다 다르면 "20분·40분"
+function getClassDurationLabel(cat){
+  const toM=t=>{const[h,m]=String(t||'').split(':').map(Number);return (h||0)*60+(m||0);};
+  const mins=[...new Set((cat?.groups||[]).map(g=>toM(g.end)-toM(g.start)).filter(x=>x>0))].sort((a,b)=>a-b);
+  if(!mins.length) return '';
+  const f=m=>m<60?`${m}분`:(m%60?`${Math.floor(m/60)}시간 ${m%60}분`:`${m/60}시간`);
+  return mins.map(f).join('·');
+}
+
 // 총 회차: 시작일~종료일(보강으로 늘어난 날 포함)·수업 요일·휴강으로 계산
 // 시작일·종료일·요일이 다 있으면 날짜 기준, 없으면 직접 입력한 값
 function getTotalSessions(cat, groupId){

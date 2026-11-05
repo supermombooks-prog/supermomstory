@@ -8347,6 +8347,15 @@ function renderTeachers(){
   grid.innerHTML=teachers.map(t=>teacherCardVertical(t)).join('');
 }
 
+// 강사 카드용 언어 알약 (이름 옆, 조금 크게)
+function teacherLangPills(t){
+  return (t.subjects||[t.subject]).filter(Boolean).map(s=>{
+    const src=getFlagUrl(s);
+    const fl=src?`<img src="${src}" alt="${s}" style="width:24px;height:16px;object-fit:fill;border-radius:2px;display:inline-block;">`:'🌐';
+    return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:14px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:3px 10px;border-radius:20px;white-space:nowrap;">${fl} ${s}</span>`;
+  }).join('');
+}
+
 // 일반 모드 강사 카드: 사진 위 · 이름/언어/소개는 사진 밑 (수업은 상세보기 팝업에서만)
 function teacherCardVertical(t){
   const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
@@ -8357,8 +8366,7 @@ function teacherCardVertical(t){
   return `<div class="tch-v">
     <div style="position:relative;">${photo}<div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:${color};"></div></div>
     <div class="bd">
-      <div class="nm">${t.name}</div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div class="nm">${t.name}</div>${teacherLangPills(t)}</div>
       <div class="tg">${t.tagline||''}</div>
       <button onclick="selectTeacher('${t.id}')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:10px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">📋 상세보기</button>
     </div>
@@ -8384,8 +8392,7 @@ function teacherCardHtml(t, admin){
       ${isHidden?`<span style="position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;color:#fff;background:#64748b;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;">${ICON_EYE_OFF} 숨김 중</span>`:''}
     </div>
     <div class="bd">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;"><div class="nm">${t.name}</div><span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">모집 중 ${openCnt}개</span></div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div class="nm">${t.name}</div>${teacherLangPills(t)}<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:auto;">모집 중 ${openCnt}개</span></div>
       <div class="tg">${t.tagline||''}</div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-edit btn-sm" style="flex:1;justify-content:center;" onclick="openEditTeacher('${t.id}')">✏️ 수정</button>

@@ -513,27 +513,34 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
 .teacher-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .teacher-card:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.15);}
 .teacher-card.active-card{border-color:var(--accent);box-shadow:0 0 0 2px rgba(108,138,255,0.3);}
-.tch-a{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s,border-color .2s;}
-.tch-a:hover{box-shadow:0 8px 28px rgba(0,0,0,0.08);}
-.tch-a .ph{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:top center;display:block;}
-.tch-a .bd{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1;}
-.tch-a .nm{font-size:21px;font-weight:900;}
+.tch-card{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;transition:box-shadow .2s,border-color .2s;}
+.tch-card:hover{box-shadow:0 8px 28px rgba(0,0,0,0.08);}
+.tch-card.active-card{border-color:var(--accent);box-shadow:0 0 0 2px rgba(108,138,255,0.3);}
+.tch-photo{width:180px;flex-shrink:0;object-fit:cover;object-position:top center;align-self:stretch;min-height:200px;}
+.tch-body{flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+.tch-cls{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;min-width:0;transition:border-color .15s;}
+.tch-cls:hover{border-color:var(--accent);}
+.tch-cls b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.tch-cls span.t{color:var(--text-muted);margin-left:auto;flex-shrink:0;white-space:nowrap;}
+#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}
+@media(max-width:1500px){#teacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:1000px){#teacherGrid{grid-template-columns:1fr;}}
+@media(max-width:560px){.tch-photo{width:120px;min-height:170px;}.tch-body{padding:12px;}}
 .tch-c{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:3/4;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,0.08);transition:transform .2s,box-shadow .2s;}
 .tch-c:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,0.16);}
 .tch-c .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
 .tch-c .ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(15,20,40,0.88) 0%,rgba(15,20,40,0.5) 32%,rgba(15,20,40,0) 58%);}
 .tch-c .bd{position:absolute;left:0;right:0;bottom:0;padding:16px 16px 14px;color:#fff;display:flex;flex-direction:column;gap:7px;}
 .tch-c .nm{font-size:24px;font-weight:900;text-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.tch-a.active-card,.tch-c.active-card{outline:3px solid var(--accent);outline-offset:2px;}
-.tch-tag{font-size:12px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.tch-style-btn{font-size:12px;font-weight:700;padding:6px 12px;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer;}
-.tch-style-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
-#teacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));}
-@media(max-width:1500px){#teacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
-@media(max-width:1200px){#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-@media(max-width:768px){#teacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
-  .tch-a .bd{padding:10px 10px 12px;gap:6px;} .tch-a .nm{font-size:17px;} .tch-c .nm{font-size:18px;} .tch-c .bd{padding:10px 10px 10px;gap:5px;}
-  .tch-tag{font-size:11px;-webkit-line-clamp:2;} .tch-c .tch-tag{display:none;}}
+.tch-c .tg{font-size:12px;line-height:1.55;opacity:.92;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tch-c .acts{position:absolute;top:10px;right:10px;display:flex;gap:6px;}
+.tch-c .acts button{width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.92);box-shadow:0 2px 8px rgba(0,0,0,0.15);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .15s;}
+.tch-c .acts button:hover{transform:scale(1.12);}
+#adminTeacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));}
+@media(max-width:1500px){#adminTeacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:1200px){#adminTeacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:768px){#adminTeacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
+  .tch-c .nm{font-size:18px;} .tch-c .bd{padding:10px;gap:5px;} .tch-c .tg{display:none;} .tch-c .acts button{width:28px;height:28px;font-size:12px;}}
 .teacher-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);background:var(--surface);}
 .teacher-avatar-placeholder{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;border:3px solid var(--border);background:var(--surface);}
 .teacher-name{font-size:16px;font-weight:700;}
@@ -997,14 +1004,6 @@ create policy "public write notices" on notices for all using (true);</div>
   <div class="page-view" id="page-teachers">
     <div class="page-header">
       <div><div class="page-title">강사 소개 👩‍🏫</div><div class="page-sub">강사를 클릭하면 상세 소개와 수업 목록을 볼 수 있어요</div></div>
-      <!-- 카드 스타일 비교용 (하나 고르면 삭제 예정) -->
-      <div id="teacherStyleSwitch" style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:12px;color:var(--text-muted);">카드 스타일</span>
-        <div style="display:flex;border-radius:10px;overflow:hidden;">
-          <button class="tch-style-btn" data-st="A" onclick="setTeacherCardStyle('A')" style="border-radius:10px 0 0 10px;">A 세로 프로필</button>
-          <button class="tch-style-btn" data-st="C" onclick="setTeacherCardStyle('C')" style="border-radius:0 10px 10px 0;border-left:none;">C 사진 꽉 채움</button>
-        </div>
-      </div>
     </div>
     <div id="teacherFilterBar" class="filter-bar" style="margin-bottom:18px;"></div>
     <div id="teacherGrid" style="display:grid;gap:16px;align-items:stretch;"></div>
@@ -1027,7 +1026,7 @@ create policy "public write notices" on notices for all using (true);</div>
       <div><div class="page-title" style="color:var(--admin);">강사 관리 👩‍🏫</div><div class="page-sub">강사 프로필을 등록하고 관리하세요</div></div>
       <button class="btn btn-admin" onclick="openAddTeacher()">+ 강사 등록</button>
     </div>
-    <div id="adminTeacherGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+    <div id="adminTeacherGrid" style="display:grid;gap:16px;"></div>
   </div>
 
 
@@ -8311,12 +8310,6 @@ function cleanOldHomework(){
 
 let _teacherFilter='전체';
 let _selectedTeacherId=null;
-let _teacherCardStyle=(()=>{ try{ return localStorage.getItem('zc4_teacher_style')||'A'; }catch(e){ return 'A'; } })();
-function setTeacherCardStyle(st){
-  _teacherCardStyle=st;
-  try{ localStorage.setItem('zc4_teacher_style',st); }catch(e){}
-  renderTeachers();
-}
 let _editingTeacherId=null;
 
 // ── USER: 강사 소개 페이지 ──
@@ -8353,38 +8346,42 @@ function renderTeachers(){
     return;
   }
 
-  document.querySelectorAll('.tch-style-btn').forEach(b=>b.classList.toggle('on',b.dataset.st===_teacherCardStyle));
-  const styleC=_teacherCardStyle==='C';
+  const _today=_hwYmd(new Date());
   grid.innerHTML=teachers.map(t=>{
     const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
     const isActive=_selectedTeacherId===t.id;
-    const subs=t.subjects||[t.subject];
-    const photoEl=t.photo
-      ?`<img class="ph" src="${t.photo}" alt="${t.name}">`
-      :`<div class="ph" style="display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:${color};background:${color}1f;">${(t.name||'?').slice(0,1)}</div>`;
-    if(styleC){
-      const pills=subs.map(s=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,0.22);padding:3px 9px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
-      return `<div class="tch-c ${isActive?'active-card':''}" onclick="selectTeacher('${t.id}')" title="상세보기">
-        ${photoEl}<div class="ov"></div>
-        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${color};"></div>
-        <div class="bd">
-          <div class="nm">${t.name}</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
-          ${t.tagline?`<div class="tch-tag" style="opacity:.92;">${t.tagline}</div>`:''}
-          <div style="font-size:12px;font-weight:700;margin-top:2px;">${isActive?'▲ 접기':'상세보기 →'}</div>
+    const avatarEl=t.photo
+      ?`<img src="${t.photo}" class="tch-photo" style="border-right:4px solid ${color};" alt="${t.name}">`
+      :`<div class="tch-photo" style="display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:900;color:${color};background:${color}14;border-right:4px solid ${color};">${(t.name||'?').slice(0,1)}</div>`;
+    // 끝나지 않은 수업 (진행 중 + 개강 예정)
+    const cls=S.catalog.filter(c=>c.teacher===t.name&&!(c.dateEnd&&c.dateEnd<_today))
+      .sort((a,b)=>(a.dateStart||'').localeCompare(b.dateStart||''));
+    const clsRow=c=>{
+      const g=(c.groups||[])[0];
+      const upcoming=c.dateStart&&c.dateStart>_today;
+      const when=upcoming
+        ?`<span class="t" style="color:var(--accent);font-weight:700;">${parseInt(c.dateStart.slice(5,7))}/${parseInt(c.dateStart.slice(8,10))} 개강</span>`
+        :`<span class="t">${(c.days||[]).map(d=>DN[d]).join('·')} ${g?formatKoreanTime(g.start):''}${(c.groups||[]).length>1?' 외':''}</span>`;
+      return `<div class="tch-cls" onclick="navigateTo('enroll');goToCatFromCal('${c.id}')" title="줌수업 목록에서 보기"><span style="width:6px;height:6px;border-radius:50%;background:${c.color||color};flex-shrink:0;"></span><b>${c.name}</b>${when}</div>`;
+    };
+    const subjPills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
+    return `<div class="tch-card ${isActive?'active-card':''}">
+      ${avatarEl}
+      <div class="tch-body">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:21px;font-weight:900;">${t.name}</span>${subjPills}
         </div>
-      </div>`;
-    }
-    const pills=subs.map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
-    return `<div class="tch-a ${isActive?'active-card':''}">
-      <div style="position:relative;">${photoEl}<div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:${color};"></div></div>
-      <div class="bd">
-        <div class="nm">${t.name}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
-        <div class="tch-tag" style="color:var(--text-muted);flex:1;">${t.tagline||''}</div>
-        <button onclick="selectTeacher('${t.id}')" style="width:100%;background:${isActive?color+'22':'transparent'};border:1px solid ${isActive?color:'var(--border)'};color:${isActive?color:'var(--text-muted)'};border-radius:10px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">
-          ${isActive?'▲ 접기':'📋 상세보기'}
-        </button>
+        ${t.tagline?`<div style="font-size:12px;color:var(--text-muted);line-height:1.55;">${t.tagline}</div>`:''}
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-top:2px;">📚 수업 ${cls.length}개</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          ${cls.slice(0,3).map(clsRow).join('')||`<div style="font-size:12px;color:var(--text-muted);">곧 새 수업이 열려요</div>`}
+          ${cls.length>3?`<div style="font-size:11px;color:var(--text-muted);padding-left:4px;">외 ${cls.length-3}개 수업은 상세보기에서</div>`:''}
+        </div>
+        <div style="margin-top:auto;padding-top:4px;">
+          <button onclick="selectTeacher('${t.id}')" style="width:100%;background:${isActive?color+'22':'transparent'};border:1px solid ${isActive?color:'var(--border)'};color:${isActive?color:'var(--text-muted)'};border-radius:10px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">
+            ${isActive?'▲ 접기':'📋 상세보기'}
+          </button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -8529,33 +8526,26 @@ function renderAdminTeachers(){
   grid.innerHTML=S.teachers.map(t=>{
     const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
     const myCats=S.catalog.filter(c=>c.teacher===t.name);
-    const avatar=t.photo
-      ?`<img src="${t.photo}" style="width:110px;height:110px;object-fit:cover;object-position:top center;border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;border-right:3px solid ${color};" onerror="this.style.display='none'">`
-      :`<div style="width:110px;height:110px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--surface);border-right:3px solid ${color};border-radius:var(--radius-sm) 0 0 0;flex-shrink:0;">${flagInline(t.subjects?.[0]||t.subject)}</div>`;
-    const subjectRow=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:600;background:${SC[s]||'var(--accent)'}18;padding:2px 8px;border-radius:20px;">${flagInline(s)} ${s}</span>`).join('');
     const isHidden=!!t.hidden;
-    return `<div class="notice-card animate-in" style="border-top:3px solid ${color};padding:0;overflow:hidden;${isHidden?'opacity:0.45;':''}">
-      <!-- 상단: 사진 + 이름/언어/수정삭제 -->
-      <div style="display:flex;align-items:stretch;">
-        ${avatar}
-        <div style="flex:1;min-width:0;padding:12px 14px;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
-            <div style="font-size:20px;font-weight:800;">${t.name}${isHidden?' <span style="font-size:11px;font-weight:500;color:var(--text-muted);background:var(--surface2);padding:2px 8px;border-radius:20px;vertical-align:middle;">숨김 중</span>':''}</div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-              <button class="btn btn-edit btn-sm" onclick="openEditTeacher('${t.id}')">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">🗑️</button>
-              <button class="btn btn-sm" onclick="toggleTeacherHidden('${t.id}')" title="${isHidden?'강사소개에 표시':'강사소개에서 숨김'}" style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid ${isHidden?'var(--border)':'rgba(99,153,34,0.4)'};background:${isHidden?'var(--surface2)':'rgba(99,153,34,0.12)'};color:${isHidden?'var(--text-muted)':'#639922'};">${isHidden?'OFF':'ON'}</button>
-            </div>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">${subjectRow}</div>
-          <div style="font-size:11px;color:var(--text-muted);">수업 ${myCats.length}개</div>
-        </div>
+    const photo=t.photo
+      ?`<img class="ph" src="${t.photo}" alt="${t.name}" onerror="this.style.display='none'">`
+      :`<div class="ph" style="display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:${color};background:${color}1f;">${(t.name||'?').slice(0,1)}</div>`;
+    const pills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,0.22);padding:3px 9px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
+    return `<div class="tch-c" onclick="openEditTeacher('${t.id}')" title="눌러서 수정">
+      ${photo}<div class="ov"></div>
+      ${isHidden?'<div style="position:absolute;inset:0;background:rgba(255,255,255,0.55);"></div>':''}
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${color};"></div>
+      ${isHidden?'<span style="position:absolute;top:12px;left:12px;font-size:11px;font-weight:700;color:#fff;background:#64748b;padding:4px 10px;border-radius:20px;">🙈 숨김 중</span>':''}
+      <div class="acts" onclick="event.stopPropagation()">
+        <button onclick="openEditTeacher('${t.id}')" title="수정">✏️</button>
+        <button onclick="toggleTeacherHidden('${t.id}')" title="${isHidden?'강사소개에 다시 표시':'강사소개에서 숨김'}">${isHidden?'👁':'🙈'}</button>
+        <button onclick="deleteTeacher('${t.id}')" title="삭제">🗑️</button>
       </div>
-      <!-- 하단: 한 줄 소개 + 경력 미리보기 -->
-      ${(t.tagline||t.career||t.bio)?`<div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);">
-        ${t.tagline?`<div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:${(t.career||t.bio)?'4px':'0'};">${t.tagline}</div>`:''}
-        ${(t.career||t.bio)?`<div style="font-size:11px;color:var(--text-muted);line-height:1.6;">📌 ${(t.career||t.bio||'').slice(0,100)}${(t.career||t.bio||'').length>100?'...':''}</div>`:''}
-      </div>`:''}
+      <div class="bd">
+        <div class="nm">${t.name}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">${pills}<span style="font-size:11px;opacity:.85;margin-left:2px;">수업 ${myCats.length}개</span></div>
+        ${t.tagline?`<div class="tg">${t.tagline}</div>`:''}
+      </div>
     </div>`;
   }).join('');
 }

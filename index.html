@@ -2298,6 +2298,7 @@ function renderEnroll(){
             ${statusBadge}
           </div>
           <div class="catalog-teacher">👩‍🏫 ${cat.teacher||'선생님 미정'}</div>
+          ${period?`<div style="font-size:12px;color:var(--accent4);font-weight:600;margin-top:3px;">🗓 ${period}</div>`:''}
         </div>
         ${isEnded(cat)?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`:''}
       </div>
@@ -2305,13 +2306,12 @@ function renderEnroll(){
         <span class="tag">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${(()=>{const n=getTotalSessions(cat);return n?`<span class="tag">🔢 총 ${n}회</span>`:'';})()}
-        ${(()=>{const d=getClassDurationLabel(cat);return d?`<span class="tag">⏱ ${d} 수업</span>`:'';})()}
-        ${period?`<span class="tag">🗓 ${period}</span>`:''}
         ${cat.curriculumUrl
           ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="tag" style="cursor:pointer;text-decoration:none;">📚 커리큘럼</a>`
           :(cat.curriculum||[]).length
             ?`<button onclick="event.stopPropagation();openCurriculumModal('${cat.id}','')" class="tag" style="cursor:pointer;border-radius:20px;font-size:11px;padding:3px 9px;">📚 커리큘럼</button>`
             :''}
+        ${(()=>{const d=getClassDurationLabel(cat);return d?`<span class="tag">⏱ ${d} 수업</span>`:'';})()}
       </div>
       ${isEnrolled?`<div style="display:flex;flex-wrap:wrap;gap:5px;">
         ${groups.filter(g=>enrollsForCat.find(e=>e.groupId===g.id)).map(g=>`

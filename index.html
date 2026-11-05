@@ -513,34 +513,27 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
 .teacher-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .teacher-card:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,0.3);border-color:rgba(255,255,255,0.15);}
 .teacher-card.active-card{border-color:var(--accent);box-shadow:0 0 0 2px rgba(108,138,255,0.3);}
-.tch-card{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;transition:box-shadow .2s,border-color .2s;}
-.tch-card:hover{box-shadow:0 8px 28px rgba(0,0,0,0.08);}
-.tch-card.active-card{border-color:var(--accent);box-shadow:0 0 0 2px rgba(108,138,255,0.3);}
-.tch-photo{width:180px;flex-shrink:0;object-fit:cover;object-position:top center;align-self:stretch;min-height:200px;}
-.tch-body{flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
-.tch-cls{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;min-width:0;transition:border-color .15s;}
-.tch-cls:hover{border-color:var(--accent);}
-.tch-cls b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-.tch-cls span.t{color:var(--text-muted);margin-left:auto;flex-shrink:0;white-space:nowrap;}
-#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}
-@media(max-width:1500px){#teacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:1000px){#teacherGrid{grid-template-columns:1fr;}}
-@media(max-width:560px){.tch-photo{width:120px;min-height:170px;}.tch-body{padding:12px;}}
-.tch-c{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:3/4;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,0.08);transition:transform .2s,box-shadow .2s;}
-.tch-c:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,0.16);}
-.tch-c .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;}
-.tch-c .ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(15,20,40,0.88) 0%,rgba(15,20,40,0.5) 32%,rgba(15,20,40,0) 58%);}
-.tch-c .bd{position:absolute;left:0;right:0;bottom:0;padding:16px 16px 14px;color:#fff;display:flex;flex-direction:column;gap:7px;}
-.tch-c .nm{font-size:24px;font-weight:900;text-shadow:0 1px 6px rgba(0,0,0,0.3);}
-.tch-c .tg{font-size:12px;line-height:1.55;opacity:.92;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.tch-c .acts{position:absolute;top:10px;right:10px;display:flex;gap:6px;}
-.tch-c .acts button{width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.92);box-shadow:0 2px 8px rgba(0,0,0,0.15);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .15s;}
-.tch-c .acts button:hover{transform:scale(1.12);}
-#adminTeacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));}
+.tch-v{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s;}
+.tch-v:hover{box-shadow:0 8px 28px rgba(0,0,0,0.08);}
+.tch-v .ph{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:top center;display:block;cursor:pointer;}
+.tch-v .bd{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.tch-v .nm{font-size:21px;font-weight:900;}
+.tch-v .tg{font-size:12px;color:var(--text-muted);line-height:1.6;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+#teacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));}
+@media(max-width:1500px){#teacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:1200px){#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:768px){#teacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
+  .tch-v .bd{padding:10px 10px 12px;gap:6px;} .tch-v .nm{font-size:17px;} .tch-v .tg{font-size:11px;}}
+
+.hid-seg{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
+.hid-seg .sw{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);}
+.hid-seg button{border:none;background:transparent;padding:7px 12px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.hid-seg button.on{background:var(--admin);color:#fff;}
+#adminTeacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch;}
 @media(max-width:1500px){#adminTeacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
 @media(max-width:1200px){#adminTeacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
-@media(max-width:768px){#adminTeacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
-  .tch-c .nm{font-size:18px;} .tch-c .bd{padding:10px;gap:5px;} .tch-c .tg{display:none;} .tch-c .acts button{width:28px;height:28px;font-size:12px;}}
+@media(max-width:768px){#adminTeacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}}
+#teacherDetailPanel .teacher-detail{border:none;border-radius:0;animation:none;background:var(--surface);}
 .teacher-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);background:var(--surface);}
 .teacher-avatar-placeholder{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;border:3px solid var(--border);background:var(--surface);}
 .teacher-name{font-size:16px;font-weight:700;}
@@ -1008,7 +1001,6 @@ create policy "public write notices" on notices for all using (true);</div>
     <div id="teacherFilterBar" class="filter-bar" style="margin-bottom:18px;"></div>
     <div id="teacherGrid" style="display:grid;gap:16px;align-items:stretch;"></div>
     <!-- 강사 상세 패널 -->
-    <div id="teacherDetailPanel" style="display:none;margin-top:24px;"></div>
   </div>
 
   <!-- 플로팅 맨 위로 버튼 (모바일 강사소개용) -->
@@ -1024,7 +1016,10 @@ create policy "public write notices" on notices for all using (true);</div>
     <div class="admin-bar">🔑 관리자 모드</div><div style="height:22px;"></div>
     <div class="page-header">
       <div><div class="page-title" style="color:var(--admin);">강사 관리 👩‍🏫</div><div class="page-sub">강사 프로필을 등록하고 관리하세요</div></div>
-      <button class="btn btn-admin" onclick="openAddTeacher()">+ 강사 등록</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div id="adminHiddenToggle"></div>
+        <button class="btn btn-admin" onclick="openAddTeacher()">+ 강사 등록</button>
+      </div>
     </div>
     <div id="adminTeacherGrid" style="display:grid;gap:16px;"></div>
   </div>
@@ -1369,6 +1364,9 @@ create policy "public write notices" on notices for all using (true);</div>
   </div>
 </div>
 
+<div class="modal-overlay" id="teacherDetailModal">
+  <div class="modal" id="teacherDetailPanel" style="width:760px;padding:0;"></div>
+</div>
 <div class="modal-overlay" id="cancelConfirmModal">
   <div class="modal" style="width:380px;">
     <div class="modal-title">내 수업 목록에서 뺄까요?</div>
@@ -8346,57 +8344,65 @@ function renderTeachers(){
     return;
   }
 
-  const _today=_hwYmd(new Date());
-  grid.innerHTML=teachers.map(t=>{
-    const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
-    const isActive=_selectedTeacherId===t.id;
-    const avatarEl=t.photo
-      ?`<img src="${t.photo}" class="tch-photo" style="border-right:4px solid ${color};" alt="${t.name}">`
-      :`<div class="tch-photo" style="display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:900;color:${color};background:${color}14;border-right:4px solid ${color};">${(t.name||'?').slice(0,1)}</div>`;
-    // 끝나지 않은 수업 (진행 중 + 개강 예정)
-    const cls=S.catalog.filter(c=>c.teacher===t.name&&!(c.dateEnd&&c.dateEnd<_today))
-      .sort((a,b)=>(a.dateStart||'').localeCompare(b.dateStart||''));
-    const clsRow=c=>{
-      const g=(c.groups||[])[0];
-      const upcoming=c.dateStart&&c.dateStart>_today;
-      const when=upcoming
-        ?`<span class="t" style="color:var(--accent);font-weight:700;">${parseInt(c.dateStart.slice(5,7))}/${parseInt(c.dateStart.slice(8,10))} 개강</span>`
-        :`<span class="t">${(c.days||[]).map(d=>DN[d]).join('·')} ${g?formatKoreanTime(g.start):''}${(c.groups||[]).length>1?' 외':''}</span>`;
-      return `<div class="tch-cls" onclick="navigateTo('enroll');goToCatFromCal('${c.id}')" title="줌수업 목록에서 보기"><span style="width:6px;height:6px;border-radius:50%;background:${c.color||color};flex-shrink:0;"></span><b>${c.name}</b>${when}</div>`;
-    };
-    const subjPills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
-    return `<div class="tch-card ${isActive?'active-card':''}">
-      ${avatarEl}
-      <div class="tch-body">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:21px;font-weight:900;">${t.name}</span>${subjPills}
-        </div>
-        ${t.tagline?`<div style="font-size:12px;color:var(--text-muted);line-height:1.55;">${t.tagline}</div>`:''}
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-top:2px;">📚 수업 ${cls.length}개</div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          ${cls.slice(0,3).map(clsRow).join('')||`<div style="font-size:12px;color:var(--text-muted);">곧 새 수업이 열려요</div>`}
-          ${cls.length>3?`<div style="font-size:11px;color:var(--text-muted);padding-left:4px;">외 ${cls.length-3}개 수업은 상세보기에서</div>`:''}
-        </div>
-        <div style="margin-top:auto;padding-top:4px;">
-          <button onclick="selectTeacher('${t.id}')" style="width:100%;background:${isActive?color+'22':'transparent'};border:1px solid ${isActive?color:'var(--border)'};color:${isActive?color:'var(--text-muted)'};border-radius:10px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">
-            ${isActive?'▲ 접기':'📋 상세보기'}
-          </button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  grid.innerHTML=teachers.map(t=>teacherCardVertical(t)).join('');
+}
 
-  // 선택된 강사 상세
-  if(_selectedTeacherId) showTeacherDetail(_selectedTeacherId);
-  else if(detail) detail.style.display='none';
+// 일반 모드 강사 카드: 사진 위 · 이름/언어/소개는 사진 밑 (수업은 상세보기 팝업에서만)
+function teacherCardVertical(t){
+  const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
+  const photo=t.photo
+    ?`<img class="ph" src="${t.photo}" alt="${t.name}" onclick="selectTeacher('${t.id}')" onerror="this.style.visibility='hidden'">`
+    :`<div class="ph" onclick="selectTeacher('${t.id}')" style="display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:${color};background:${color}1f;">${(t.name||'?').slice(0,1)}</div>`;
+  const pills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
+  return `<div class="tch-v">
+    <div style="position:relative;">${photo}<div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:${color};"></div></div>
+    <div class="bd">
+      <div class="nm">${t.name}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
+      <div class="tg">${t.tagline||''}</div>
+      <button onclick="selectTeacher('${t.id}')" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:10px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;">📋 상세보기</button>
+    </div>
+  </div>`;
+}
+
+// 숨김/표시 아이콘 (눈 가림 / 눈)
+const ICON_EYE_OFF='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const ICON_EYE='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+// 관리자 모드 강사 카드: 일반 모드와 같은 세로형 + 수정·숨김·미리보기·삭제 버튼
+function teacherCardHtml(t, admin){
+  const today=_hwYmd(new Date());
+  const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
+  const isHidden=!!t.hidden;
+  const openCnt=S.catalog.filter(c=>c.teacher===t.name&&!c.closed&&!(c.dateStart&&c.dateStart<=today)&&!(c.dateEnd&&c.dateEnd<today)).length;
+  const photo=t.photo
+    ?`<img class="ph" src="${t.photo}" alt="${t.name}" onclick="openEditTeacher('${t.id}')" title="눌러서 수정" onerror="this.style.visibility='hidden'">`
+    :`<div class="ph" onclick="openEditTeacher('${t.id}')" title="눌러서 수정" style="display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:${color};background:${color}1f;">${(t.name||'?').slice(0,1)}</div>`;
+  const pills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:${SC[s]||'var(--accent)'};font-weight:700;background:${SC[s]||'#6c8aff'}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
+  return `<div class="tch-v" style="${isHidden?'opacity:.5;':''}">
+    <div style="position:relative;">${photo}<div style="position:absolute;left:0;right:0;bottom:0;height:4px;background:${color};"></div>
+      ${isHidden?`<span style="position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;color:#fff;background:#64748b;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;">${ICON_EYE_OFF} 숨김 중</span>`:''}
+    </div>
+    <div class="bd">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;"><div class="nm">${t.name}</div><span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">모집 중 ${openCnt}개</span></div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${pills}</div>
+      <div class="tg">${t.tagline||''}</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-edit btn-sm" style="flex:1;justify-content:center;" onclick="openEditTeacher('${t.id}')">✏️ 수정</button>
+        <button class="btn btn-sm" style="flex:1;justify-content:center;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);" onclick="toggleTeacherHidden('${t.id}')" title="${isHidden?'강사소개에 다시 표시':'강사소개에서 숨김'}"><span class="hid-ic">${isHidden?ICON_EYE:ICON_EYE_OFF}</span> ${isHidden?'표시':'숨김'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="selectTeacher('${t.id}')" title="상세보기 미리보기">📋</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')" title="삭제">🗑️</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 function selectTeacher(id){
-  _selectedTeacherId=_selectedTeacherId===id?null:id;
-  renderTeachers();
-  if(_selectedTeacherId){
-    setTimeout(()=>document.getElementById('teacherDetailPanel')?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
-  }
+  _selectedTeacherId=id;
+  showTeacherDetail(id);
+  const panel=document.getElementById('teacherDetailPanel');
+  if(panel) panel.scrollTop=0;
+  openModal('teacherDetailModal');
 }
 
 function getYoutubeEmbedUrl(url){
@@ -8422,7 +8428,10 @@ function showTeacherDetail(id){
   if(!t||!detail) return;
   detail.style.display='block';
 
-  const myCats=S.catalog.filter(c=>c.teacher===t.name);
+  const _td=_hwYmd(new Date());
+  const _isOpen=c=>!c.closed&&!(c.dateStart&&c.dateStart<=_td);
+  const myCats=S.catalog.filter(c=>c.teacher===t.name&&!(c.dateEnd&&c.dateEnd<_td))
+    .sort((a,b)=>(_isOpen(b)-_isOpen(a))||(a.dateStart||'').localeCompare(b.dateStart||''));
   const color=SC[t.subject]||'var(--accent)';
 
   const avatarEl=t.photo
@@ -8437,7 +8446,7 @@ function showTeacherDetail(id){
         return `<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${cat.color};border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 14px;display:flex;gap:12px;align-items:center;">
           <div style="width:40px;height:27px;border-radius:4px;overflow:hidden;flex-shrink:0;">${flagImg(cat.subject,27)}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:700;margin-bottom:3px;">${cat.name}</div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${cat.name}${_isOpen(cat)?'<span style="font-size:10px;font-weight:700;color:#27500A;background:#EAF3DE;padding:1px 8px;border-radius:20px;">🟢 모집중</span>':'<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:var(--surface2);padding:1px 8px;border-radius:20px;">진행 중</span>'}</div>
             <div style="font-size:11px;color:var(--text-muted);">📅 ${daysStr}${period?' &nbsp;🗓 '+period:''}</div>
             ${grps?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${grps}${(cat.groups||[]).length>3?`<span style="font-size:10px;color:var(--text-muted);">+${(cat.groups||[]).length-3}개 조</span>`:''}</div>`:''}
           </div>
@@ -8459,7 +8468,7 @@ function showTeacherDetail(id){
           ${t.tagline?`<div style="font-size:13px;color:var(--text-muted);line-height:1.6;max-width:400px;">${t.tagline}</div>`:''}
           ${t.link?`<a href="${t.link}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--accent);text-decoration:none;margin-top:8px;background:rgba(108,138,255,0.1);padding:4px 12px;border-radius:20px;border:1px solid rgba(108,138,255,0.3);">🔗 프로필 링크</a>`:''}
         </div>
-        <button onclick="_selectedTeacherId=null;renderTeachers()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;padding:4px;align-self:flex-start;">✕</button>
+        <button onclick="closeModal('teacherDetailModal')" title="닫기" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:22px;padding:4px;align-self:flex-start;">✕</button>
       </div>
       <!-- 소개 -->
       ${(t.career||t.specialty||t.style)?`<div style="padding:4px 20px 8px;border-bottom:1px solid var(--border);">
@@ -8499,7 +8508,7 @@ function showTeacherDetail(id){
       </div>`:''}
       <!-- 수업 목록 -->
       <div style="padding:20px;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;">진행 중인 수업 <span style="color:${color};">${myCats.length}</span></div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;">현재 수업 <span style="color:${color};">${myCats.length}</span></div>
         <div style="display:flex;flex-direction:column;gap:8px;">${classCards}</div>
       </div>
       ${t.suggestion?`
@@ -8517,37 +8526,32 @@ function showTeacherDetail(id){
 }
 
 // ── ADMIN: 강사 관리 ──
+let _adminShowHidden=(()=>{ try{ return localStorage.getItem('zc4_admin_show_hidden')!=='0'; }catch(e){ return true; } })();
+function setAdminShowHidden(v){
+  _adminShowHidden=v;
+  try{ localStorage.setItem('zc4_admin_show_hidden',v?'1':'0'); }catch(e){}
+  renderAdminTeachers();
+}
 function renderAdminTeachers(){
   const grid=document.getElementById('adminTeacherGrid');
+  // 숨긴 강사 보이기/안 보이기 버튼
+  const hiddenCnt=S.teachers.filter(t=>t.hidden).length;
+  const tg=document.getElementById('adminHiddenToggle');
+  if(tg) tg.innerHTML=S.teachers.length?`<div class="hid-seg">숨긴 강사 ${hiddenCnt}명
+    <div class="sw">
+      <button class="${_adminShowHidden?'on':''}" onclick="setAdminShowHidden(true)">${ICON_EYE} 보이기</button>
+      <button class="${_adminShowHidden?'':'on'}" onclick="setAdminShowHidden(false)">${ICON_EYE_OFF} 안 보이기</button>
+    </div></div>`:'';
   if(!S.teachers.length){
     grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">👩‍🏫</div><div class="empty-text">등록된 강사가 없습니다<br><button class="btn btn-admin" style="margin-top:12px;" onclick="openAddTeacher()">+ 첫 강사 등록하기</button></div></div>`;
     return;
   }
-  grid.innerHTML=S.teachers.map(t=>{
-    const color=(t.subjects||[t.subject]).map(s=>SC[s]).find(Boolean)||'var(--accent)';
-    const myCats=S.catalog.filter(c=>c.teacher===t.name);
-    const isHidden=!!t.hidden;
-    const photo=t.photo
-      ?`<img class="ph" src="${t.photo}" alt="${t.name}" onerror="this.style.display='none'">`
-      :`<div class="ph" style="display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:${color};background:${color}1f;">${(t.name||'?').slice(0,1)}</div>`;
-    const pills=(t.subjects||[t.subject]).map(s=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#fff;background:rgba(255,255,255,0.22);padding:3px 9px;border-radius:20px;white-space:nowrap;">${flagInline(s)} ${s}</span>`).join('');
-    return `<div class="tch-c" onclick="openEditTeacher('${t.id}')" title="눌러서 수정">
-      ${photo}<div class="ov"></div>
-      ${isHidden?'<div style="position:absolute;inset:0;background:rgba(255,255,255,0.55);"></div>':''}
-      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:${color};"></div>
-      ${isHidden?'<span style="position:absolute;top:12px;left:12px;font-size:11px;font-weight:700;color:#fff;background:#64748b;padding:4px 10px;border-radius:20px;">🙈 숨김 중</span>':''}
-      <div class="acts" onclick="event.stopPropagation()">
-        <button onclick="openEditTeacher('${t.id}')" title="수정">✏️</button>
-        <button onclick="toggleTeacherHidden('${t.id}')" title="${isHidden?'강사소개에 다시 표시':'강사소개에서 숨김'}">${isHidden?'👁':'🙈'}</button>
-        <button onclick="deleteTeacher('${t.id}')" title="삭제">🗑️</button>
-      </div>
-      <div class="bd">
-        <div class="nm">${t.name}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">${pills}<span style="font-size:11px;opacity:.85;margin-left:2px;">수업 ${myCats.length}개</span></div>
-        ${t.tagline?`<div class="tg">${t.tagline}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  const list=_adminShowHidden?S.teachers:S.teachers.filter(t=>!t.hidden);
+  if(!list.length){
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">🙈</div><div class="empty-text">모든 강사가 숨김 상태예요<br><button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="setAdminShowHidden(true)">숨긴 강사 보이기</button></div></div>`;
+    return;
+  }
+  grid.innerHTML=list.map(t=>teacherCardHtml(t,true)).join('');
 }
 
 // ── 사진 편집 (드래그 위치 조정 + 줌) ──

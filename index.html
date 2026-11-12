@@ -61,7 +61,10 @@
   --accent3:#10b981;--accent4:#f59e0b;--danger:#ef4444;--admin:#e85d9a;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background 0.3s,color 0.3s;}
+/* 컴퓨터 화면: 전체 115% 크게 (글씨·버튼·사진 같은 비율) */
+:root{--zf:1;}
+@media(min-width:1100px){:root{--zf:1.15;} body{zoom:1.15;}}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:calc(100vh / var(--zf));overflow-x:hidden;transition:background 0.3s,color 0.3s;}
 body::before{content:'';position:fixed;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(108,138,255,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
 body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(255,126,179,0.05) 0%,transparent 70%);pointer-events:none;z-index:0;}
 
@@ -85,7 +88,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .kid-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 
 /* MAIN */
-.main{margin-left:250px;flex:1;padding:32px 38px;max-width:calc(100vw - 250px);position:relative;z-index:1;}
+.main{margin-left:250px;flex:1;padding:32px 38px;max-width:calc(100vw / var(--zf) - 250px);position:relative;z-index:1;}
 
 /* HEADER */
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
@@ -160,7 +163,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .data-table th.col-fit{width:1%;white-space:nowrap;}
 .row-x{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;border:none;background:transparent;color:var(--text-muted);font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:.7;transition:all .15s;}
 .row-x:hover{background:rgba(255,92,92,0.14);color:var(--danger);opacity:1;}
-.hw-cell{min-width:150px;}
+.hw-cell{min-width:120px;}
 .hw-lines{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;}
 .hw-line{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.55;min-width:0;}
 .hw-t{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;color:var(--text);}
@@ -181,7 +184,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 #myDayDistSection{position:sticky;top:20px;}
 .my-classes-table-wrap{overflow-x:auto;}
 .dist-chips{display:none;}
-@media(max-width:1500px){
+@media(max-width:1750px){
   .myclasses-grid{grid-template-columns:1fr;gap:14px;}
   #myDayDistSection{order:-1;position:static;}
   #myDayDistSection .section-header{display:none;}
@@ -320,10 +323,17 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 .search-input::placeholder{color:var(--text-muted);}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
-.modal-overlay.open{opacity:1;pointer-events:all;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:500px;max-width:95vw;max-height:92vh;overflow-y:auto;transform:translateY(18px);transition:transform 0.3s;box-shadow:0 24px 80px rgba(0,0,0,0.55);}
-.modal-overlay.open .modal{transform:translateY(0);}
+/* 닫힌 팝업은 완전히 숨김 — 투명한 채로 화면에 깔려 있으면 휴대폰이 스크롤마다 계산해서 화면이 깜빡여요 */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:ovIn 0.25s ease;}
+.modal-overlay.open .modal{animation:modalIn 0.3s ease;}
+@keyframes ovIn{from{opacity:0;}to{opacity:1;}}
+@keyframes modalIn{from{transform:translateY(18px);}to{transform:translateY(0);}}
+@media(max-width:768px){
+  .modal-overlay.open{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(0,0,0,0.6);}
+  body::before,body::after{display:none;}
+}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:500px;max-width:calc(95vw / var(--zf));max-height:calc(92vh / var(--zf));overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.55);}
 .modal-title{font-family:'Gmarket Sans',sans-serif;font-size:19px;font-weight:700;margin-bottom:20px;letter-spacing:-0.5px;}
 .form-row{margin-bottom:14px;}
 .form-label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;letter-spacing:0.3px;text-transform:uppercase;}
@@ -385,7 +395,7 @@ body::after{content:'';position:fixed;bottom:-200px;right:-200px;width:600px;hei
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px;}
 
-@media(max-width:1100px){.content-grid{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr 1fr;}}
+@media(max-width:1250px){.content-grid{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr 1fr;}}
 @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:18px;}.catalog-grid{grid-template-columns:1fr;}}
 
 /* ── MOBILE ── */
@@ -520,8 +530,8 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
 .tch-v .nm{font-size:21px;font-weight:900;}
 .tch-v .tg{font-size:12px;color:var(--text-muted);line-height:1.6;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 #teacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));}
-@media(max-width:1500px){#teacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
-@media(max-width:1200px){#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:1750px){#teacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:1400px){#teacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media(max-width:768px){#teacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}
   .tch-v .bd{padding:10px 10px 12px;gap:6px;} .tch-v .nm{font-size:17px;} .tch-v .tg{font-size:11px;}}
 
@@ -530,8 +540,8 @@ border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:p
 .hid-seg button{border:none;background:transparent;padding:7px 12px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
 .hid-seg button.on{background:var(--admin);color:#fff;}
 #adminTeacherGrid{grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch;}
-@media(max-width:1500px){#adminTeacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
-@media(max-width:1200px){#adminTeacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:1750px){#adminTeacherGrid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:1400px){#adminTeacherGrid{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media(max-width:768px){#adminTeacherGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;}}
 #teacherDetailPanel .teacher-detail{border:none;border-radius:0;animation:none;background:var(--surface);}
 .teacher-avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--border);background:var(--surface);}
@@ -1227,7 +1237,7 @@ create policy "public write notices" on notices for all using (true);</div>
 
 <!-- CURRICULUM MODAL -->
 <div class="modal-overlay" id="curriculumModal">
-  <div class="modal" style="width:520px;max-height:80vh;overflow-y:auto;">
+  <div class="modal" style="width:520px;max-height:calc(80vh / var(--zf));overflow-y:auto;">
     <div class="modal-title" id="curriculumModalTitle">📚 커리큘럼</div>
     <div id="curriculumModalBody" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;"></div>
     <div class="form-actions" style="margin-top:16px;">
@@ -1263,7 +1273,7 @@ create policy "public write notices" on notices for all using (true);</div>
 
 <!-- PROFILE ASSIGN MODAL -->
 <div class="modal-overlay" id="profileAssignModal">
-  <div class="modal" style="width:480px;max-height:85vh;display:flex;flex-direction:column;">
+  <div class="modal" style="width:480px;max-height:calc(85vh / var(--zf));display:flex;flex-direction:column;">
     <div class="modal-title">👤 수업 수강생 배정</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;" id="profileAssignSubtitle"></div>
     <div id="profileAssignList" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;margin-bottom:16px;max-height:320px;"></div>
@@ -1432,7 +1442,7 @@ create policy "public write notices" on notices for all using (true);</div>
 
 
 <div class="modal-overlay" id="teacherModal">
-  <div class="modal" style="width:480px;max-height:85vh;overflow-y:auto;">
+  <div class="modal" style="width:480px;max-height:calc(85vh / var(--zf));overflow-y:auto;">
     <div class="modal-title" id="teacherModalTitle">👩‍🏫 강사 등록</div>
     <div class="form-row"><label class="form-label">이름 *</label><input class="form-input" id="t-name" placeholder="강사 이름"></div>
     <div class="form-row"><label class="form-label">담당 과목 * <span style="font-size:11px;color:var(--text-muted);">(복수 선택 가능)</span></label>
@@ -2302,16 +2312,21 @@ function renderEnroll(){
         </div>
         ${isEnded(cat)?`<span style="font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(100,100,100,0.12);padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap;">⏹ 수업종료</span>`:''}
       </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
       <div class="catalog-tags">
         <span class="tag">${cat.subject}</span>
         <span class="tag">📅 ${daysStr}요일</span>
         ${(()=>{const n=getTotalSessions(cat);return n?`<span class="tag">🔢 총 ${n}회</span>`:'';})()}
+      </div>
+      <!-- 둘째 줄: 커리큘럼 · 수업 시간 (모든 수업 같은 자리) -->
+      <div class="catalog-tags" style="${(cat.curriculumUrl||(cat.curriculum||[]).length||getClassDurationLabel(cat))?'':'display:none;'}">
         ${cat.curriculumUrl
           ?`<a href="${cat.curriculumUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();event.preventDefault();window.open('${cat.curriculumUrl}','_blank')||(window.location.href='${cat.curriculumUrl}')" class="tag" style="cursor:pointer;text-decoration:none;">📚 커리큘럼</a>`
           :(cat.curriculum||[]).length
             ?`<button onclick="event.stopPropagation();openCurriculumModal('${cat.id}','')" class="tag" style="cursor:pointer;border-radius:20px;font-size:11px;padding:3px 9px;">📚 커리큘럼</button>`
             :''}
         ${(()=>{const d=getClassDurationLabel(cat);return d?`<span class="tag">⏱ ${d} 수업</span>`:'';})()}
+      </div>
       </div>
       ${isEnrolled?`<div style="display:flex;flex-wrap:wrap;gap:5px;">
         ${groups.filter(g=>enrollsForCat.find(e=>e.groupId===g.id)).map(g=>`
@@ -2962,7 +2977,7 @@ function renderMyClasses(){
           <span style="font-family:'Gmarket Sans';font-weight:600;font-size:13px;color:var(--accent4);white-space:nowrap;">${formatAmPmRange(dispStart,dispEnd)}</span>
         </div>
       </td>
-      <td style="min-width:96px;white-space:nowrap;">${progressCell}</td>
+      <td style="min-width:88px;white-space:nowrap;">${progressCell}</td>
       <td id="hw-cell-${e.id}" class="hw-cell">${renderHwLines(e,cat,noticeTxt)}</td>
       <td>${curBtn}</td>
       <td>
